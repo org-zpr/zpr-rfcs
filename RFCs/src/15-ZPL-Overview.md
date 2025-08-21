@@ -2,8 +2,8 @@
 title: "Overview of the ZPL Policy Language"
 author: [Michael Dubno, Mathias Kolehmainen, Danny Hillis]
 publisher: "Applied Invention, LLC"
-date: 2025-07-
-rfcnum: 16
+date: 2025-07-10
+rfcnum: 15
 lang: en-US
 revisions: # List versions in order from oldest to newest
 - version: 0
