@@ -1,0 +1,6 @@
+#to: pdf
+template: ${.}/style/zpr.sty
+standalone: true
+number-sections: true
+metadata:
+  fontfamily: tgschola
