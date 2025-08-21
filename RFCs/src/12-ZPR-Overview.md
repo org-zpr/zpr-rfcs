@@ -2,14 +2,12 @@
 title: "Overview of Zero-trust Packet Routing"
 author: "Danny Hillis"
 publisher: "Applied Invention, LLC"
-date: 2025-05-21
+date: 2025-05-21 # Used for PDF metadata
+firstdraft: {year: 2022, month: 9}
 rfcnum: 12
 lang: en-US
 revisions: # List versions in order from oldest to newest
-- version: 0
-  date: {year: 2022, month: 9}
-- version: 1
-  date: {year: 2023, month: 6, day: 12}
+- date: {year: 2023, month: 6, day: 12}
   changes:
   - Explain the problem ZPR solves.
   - Reorder sections to describe policy before enforcement mechanisms.
@@ -22,28 +20,24 @@ revisions: # List versions in order from oldest to newest
   - Add section on Attributes and trusted services.
   - Remove description of visa distribution which is described in other RFCs.
   - Figure 1 modified to add data attribute tag and move MICV to header.
-- version: 2
-  date: {year: 2023, month: 6, day: 20}
+- date: {year: 2023, month: 6, day: 20}
   changes:
   - Change title and introduction of section 2.5.
   - Rename ZPR endpoints to ZPR-node endpoints to clarify that they exist only within a node.
   - Add example in section 3.2.
   - Explain how visas simplify enforcement in section 3.3.
   - Explain how MICV is checked for ZPR-node endpoints in section 3.
-- version: 3
-  date: {year: 2023, month: 6, day: 22}
+- date: {year: 2023, month: 6, day: 22}
   changes:
   - Point out that identities are primarily used for authentication and logging.
   - Explain adapters in more detail in section 3.1.1.
   - Retitle section 3.2.
-- version: 4
-  date: {year: 2023, month: 6, day: 30}
+- date: {year: 2023, month: 6, day: 30}
   changes:
   - Update policy language example.
   - Explain how visas bind authentication to packets.
   - Explain that assertions can specify alerts when unintended patterns of communication are attempted.
-- version: 5
-  date: {year: 2025, month: 3, day: 8}
+- date: {year: 2025, month: 3, day: 8}
   changes:
   - Rename people to users.
   - Remove permissions based on type of data transmitted.
@@ -52,8 +46,7 @@ revisions: # List versions in order from oldest to newest
   - Simplify ZPL examples.
   - Move configurations to section 3.
   - Take out ZPR-node endpoints, as they are distracting.
-- version: 6
-  date: {year: 2025, month: 5, day: 21}
+- date: {year: 2025, month: 5, day: 21}
   changes:
   - Incorporate new endpoint, user, service identity concept.
   - Add reference to ZPR-RFC-16.

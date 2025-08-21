@@ -6,5 +6,5 @@ STYLE_SHEETS := $(shell find ./style -name '*.sty')
 
 all: $(PDFS)
 
-$(PDF_DIR)/%.pdf: %.md $(STYLE_SHEETS)
+$(PDF_DIR)/%.pdf: %.md defaults.yml $(STYLE_SHEETS)
 	pandoc $< -o $@ --defaults defaults.yml

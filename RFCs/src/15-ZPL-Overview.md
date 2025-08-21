@@ -2,31 +2,32 @@
 title: "Overview of the ZPL Policy Language"
 author: [Michael Dubno, Mathias Kolehmainen, Danny Hillis]
 publisher: "Applied Invention, LLC"
-date: 2025-07-10
+date: 2025-07-10 # Used for PDF metadata
+firstdraft: {year: 2024, month: 10}
 rfcnum: 15
 lang: en-US
 revisions: # List versions in order from oldest to newest
-- version: 0
-  date: {year: 2024, month: 10}
-- version: 1
-  date: {year: 2024, month: 11, day: 9}
+- date: {year: 2024, month: 11, day: 9}
+  author: [DH]
+  description: updated to make `Never` an assertion and explain incremental compilation and attribute change tracking
   changes:
   - In section 2.2, state explicitly that an endpoint may support multiple users or services
   - In sections 2.3 and 2.4, clarify global scope of permissions and assertions
   - In section 2.7, describe attribute service and how it caches values
-  - Change in sections 4.3 and 4.4, explain Never assertions and attribute monitoring
+  - Change in sections 4.3 and 4.4, explain `Never` assertions and attribute monitoring
   - In section 5, explain incremental compilation and the scope of ZPL
-- version: 2
-  date: {year: 2025, month: 2, day: 24}
+- date: {year: 2025, month: 2, day: 24}
+  author: [DH]
+  description: remove postfix attribute notation and eliminate any ZPL specific meaning the word endpoint
   changes:
   - In section 2.2, clarify the relationship between endpoints and the associated identities of their devices, users and services
   - In section 2.3, clarify definition of identity
-- version: 3
-  date: {year: 2025, month: 5, day: 21}
+- date: {year: 2025, month: 5, day: 21}
+  author: [DH]
   changes:
   - Define and use "endpoint" instead "device" where appropriate.
-- version: 4
-  date: {year: 2025, month: 7, day: 10}
+- date: {year: 2025, month: 7, day: 10}
+  author: [DH, MD]
   changes:
   - Add denials
   - Remove assertions
@@ -60,7 +61,7 @@ communication that should never take place. For example, a permission
 statement that allows managed laptops to be used by sales employees to
 access customer databases could be written like this in ZPL:
 
-> Allow sales employees with managed laptops to access customer databases.
+> `Allow sales employees with managed laptops to access customer databases.`
 
 A denial statement might state that the intent of the permissions is
 that no one who is not an employee is allowed to access a customer
@@ -234,11 +235,11 @@ marks. Extra whitespace characters are ignored.
 ZPL has a fixed set of pre-defined and reserved keywords. Keywords
 contain only letters of the English alphabet. For example:
 
-> Allow
+> `Allow`
 >
-> with
+> `with`
 >
-> Define
+> `Define`
 
 A keyword can be written in lowercase, with an initial capital, or in
 all capitals. To allow future language extensions, all English
@@ -257,21 +258,21 @@ point.
 
 For example:
 
-> '12-34' is a string
+> `'12-34'` is a string
 >
-> "12'34" is a string with an apostrophe in the middle position
+> `"12'34"` is a string with an apostrophe in the middle position
 >
-> '1 2 3 4' is a string with spaces
+> `'1 2 3 4'` is a string with spaces
 >
-> 1234 is a string that can represent an integer
+> `1234` is a string that can represent an integer
 >
-> 123.4 is a string that can represent a floating-point number
+> `123.4` is a string that can represent a floating-point number
 
 Single quotes, double quotes and backslash characters may be included in
 a string by preceding them with a backslash. For example, here is a
 string that contains five characters:
 
-> '12\\\\34' has a single backslash in the middle position
+> `'12\\34'` has a single backslash in the middle position
 
 ## Names
 
@@ -286,23 +287,23 @@ default namespace of the context in which it is written.
 
 Here are some examples of valid names without namespace prefixes:
 
-> employee
+> `employee`
 >
-> Web-server
+> `Web-server`
 >
-> 'name with spaces'
+> `'name with spaces'`
 
 The namespaces can be specified explicitly by adding the name of the
 namespace as a prefix to the name, separated by a period. For example,
 here is a name in the sales namespace:
 
-> sales.Web-server
+> `sales.Web-server`
 
 In the above example, the namespace name sales is in the default
 namespace. Namespaces are hierarchical. Here is a name in the support
 namespace that exists within the sales namespace:
 
-> sales.support.Web-server
+> `sales.support.Web-server`
 
 The default namespace at the top of the hierarchy is named global,
 although it is rarely referenced explicitly. Other namespaces are either
@@ -323,18 +324,18 @@ is represented by their presence or absence.
 Single-valued attribute values are written after the attribute name and
 separated by a colon:
 
-> \<attribute-name\>:\<attribute-value\>
+> `<attribute-name>:<attribute-value>`
 
 Attribute values can be strings or integers. For example:
 
-> passphrase:'Speak friend and enter'
+> `passphrase:'Speak friend and enter'`
 >
-> number-usbc-connectors:2
+> `number-usbc-connectors:2`
 
 Multi-valued attribute values are written in curly brackets after the
 colon, separated by commas.
 
-> \<attribute-name\>:{\<attribute-value1\>,\<attribute-value2\>,...}
+> `<attribute-name>:{<attribute-value1>,<attribute-value2>,...}`
 
 Attribute values can reference other entities (endpoints, users, or
 services), allowing access to the referenced entity\'s attributes.
@@ -342,27 +343,27 @@ services), allowing access to the referenced entity\'s attributes.
 ## Classes
 
 ZPL comes with predefined classes of entities that have identity and
-attributes: endpoints, users and services, and a predefined sub-class of
-endpoints called servers, that has a set -valued attribute called
-services. Additional classes can be defined that inherit their
+attributes: `endpoints`, `users` and `services`, and a predefined sub-class of
+`endpoints` called `servers`, that has a set-valued attribute called
+`services`. Additional classes can be defined that inherit their
 attributes from a previously defined class, forming a strict hierarchy.
 The class definitions can also specify additional attributes for members
 of the class. The definition can also restrict the allowable values of
-the attributes that it inherits. For example, a subclass of endpoints
-called mobile-devices can be defined with an attribute named
-device-type. Another class called mobile-phones can be defined as a
-subclass of mobile-devices with an attribute named phone-number and a
-required value of "phone" for the device-type attribute. Permissions
-that are given to mobile-phones will be restricted to mobile devices
+the attributes that it inherits. For example, a subclass of `endpoints`
+called `mobile-devices` can be defined with an attribute named
+`device-type`. Another class called `mobile-phones` can be defined as a
+subclass of `mobile-devices` with an attribute named `phone-number` and a
+required value of "phone" for the `device-type` attribute. Permissions
+that are given to `mobile-phones` will be restricted to mobile devices
 that have this attribute value.
 
 To make policy easier to read, the names of classes are synonymous with
-their standard plurals (adding S or ES). For example, mobile-phone and
-mobile-phones can be used interchangeably, as can service and services,
-user and users, endpoint and endpoints, or server and servers.
+their standard plurals (adding S or ES). For example, `mobile-phone` and
+`mobile-phones` can be used interchangeably, as can `service` and `services`,
+`user` and `users`, `endpoint` and `endpoints`, or `server` and `servers`.
 Non-standard plurals can also be specified, as described in Section
-4.2.\
-\
+4.2.
+
 Class names are case-insensitive, but by convention they normally are
 written in lower case.
 
@@ -373,9 +374,9 @@ As shown in the example above, statements are terminated by a period.
 Punctuation marks are also used for comments. All characters on a line
 after \# or // are ignored by the compiler. For example:
 
-> \# Comments (like this) don't need a period at the end!
+> `# Comments (like this) don't need a period at the end!`
 >
-> // The C/Java comment convention also works.
+> `// The C/Java comment convention also works.`
 
 Comments can be on a line by themselves or at the end of lines within a
 statement.
@@ -397,94 +398,92 @@ Consider the example given earlier of a permission statement that allows
 managed laptops to be used by sales employees to access customer
 databases:
 
-> Allow sales employees with managed laptops to access customer databases.
+> `Allow sales employees with managed laptops to access customer databases.`
 
 In this example employees, laptops, and databases have been defined as
 classes of users, endpoints and services, respectively (How this happens
-is described in section 3.5). The words sales, managed, and customer are
+is described in section 3.5). The words `sales`, `managed`, and `customer` are
 tags. For the permission to apply, the user would need to have to have
-attribute tag sales, the laptop would need to have tag managed, and the
-service would need to have tag customer. The class definition would also
+attribute tag `sales`, the laptop would need to have tag `managed`, and the
+service would need to have tag `customer`. The class definition would also
 specify various required attributes, which would need to be present for
 the permission to apply.
 
 Notice that the relationship of the users to the laptop they are using
-is expressed using the keyword with. It could also use the synonymous
-keyword on, which is sometimes more natural.
+is expressed using the keyword `with`. It could also use the synonymous
+keyword `on`, which is sometimes more natural.
 
 This single statement may give permission to many different pairs of
 laptops and database services. If the permission depends only on the
 attributes of the users and not the devices they are using, it could be
 written like this:
 
-> Allow sales employees to access customer databases.
+> `Allow sales employees to access customer databases.`
 
 This statement allows any endpoint to access the service, as long as the
 user has the required attributes.
 
-If employees have a department attribute instead of a sales tag, the
+If employees have a `department` attribute instead of a `sales` tag, the
 permission would be written differently. In this case, permission could
 be expressed like this:
 
-> Allow department:sales employees with managed laptops to access customer databases.
+> `Allow department:sales employees with managed laptops to access customer databases.`
 
-An expression of the form \<name\>:\<value \> will match either a
+An expression of the form `<name>:<value>` will match either a
 single-valued attribute with the specified value or a multi-valued
 attribute with a set of values that contains the specified value. So, in
 the above example, the permission will be granted to users that have a
-set of departments that includes sales.
+set of departments that includes `sales`.
 
 In the examples above, the statements may give permission to access any
 number of services. It is sometimes useful to write a permission that
 allows access to a single named service. That can be expressed by using
 the name of the service and the permission statement, like this:
 
-> Allow HR employees to access Timesheet-database.
+> `Allow HR employees to access Timesheet-database.`
 
-In this example Timesheet-database is the name of a service, defined in
+In this example `Timesheet-database` is the name of a service, defined in
 the configuration description. By convention, proper names of services
 are capitalized, although this convention is not enforced by the
 compiler.
 
-The named Timesheet-database service might be provided by a load
+The named `Timesheet-database` service might be provided by a load
 balancer that connects to a group of servers through the ZPRnet, in
 which case a permission statement would be needed to allow the load
 balancer to communicate with the servers that implement the service,
 like this:
 
-> Allow cleared government users to access Timesheet-load-balancer.
+> `Allow cleared government users to access Timesheet-load-balancer.`
 >
-> Allow Timesheet-load-balancer to access providing:Timesheet-database servers.
+> `Allow Timesheet-load-balancer to access providing:Timesheet-database servers.`
 
 In other words, both the load balancer and the server endpoints must be
 separately permissioned. Because load balancers are such a common use
 case, ZPL allows both of these permissions to be specified in a single
-statement using the keyword through:
+statement using the keyword `through`:
 
-> Allow cleared government users to access providing:Timesheet-database
-> servers through Timesheet-load-balancer.
+> `Allow cleared government users to access providing:Timesheet-database servers through Timesheet-load-balancer.`
 
 ## Statements that Define New Classes
 
-The only classes that are predefined in ZPL are endpoints, users,
-services and servers (which are a sub-class of endpoints). ZPL also
+The only classes that are predefined in ZPL are `endpoints`, `users`,
+`services`, and `servers` (which are a sub-class of endpoints). ZPL also
 allows new classes to be defined as variants of an existing class with
 additional attributes. For example, a user of type employee might be
 defined to be a user that has additional attributes:
 
-Define employee as a user with an ID-number, roles and optional tags
-full-time, part-time, and intern.
+> `Define employee as a user with an ID-number, roles and optional tags full-time, part-time, and intern.`
 
 There are several syntactic constructions illustrated in this statement.
 The statement uses the keywords a and an, which are ignored by the
 compiler and are included only for readability. The possible tags are
-listed after the keyword pair optional tags.
+listed after the keyword pair `optional tags`.
 
-Here is a statement that defines gateway as a service with a
-single-valued attribute named external-network-connection, with a value
+Here is a statement that defines `gateway` as a `service` with a
+single-valued attribute named `external-network-connection`, with a value
 that specifies the network on the far side of the gateway:
 
-Define gateway as a service with an external-network-connection.
+> `Define gateway as a service with an external-network-connection.`
 
 Any communication outside of the ZPR net would need to go through such a
 gateway, which might only be permissioned to access specific services.
@@ -492,18 +491,16 @@ gateway, which might only be permissioned to access specific services.
 A definition may also specify a specific value for an attribute that it
 inherits. For example:
 
-Define internet-gateway as a gateway with
-
-external-network-connection:public-internet.
+> `Define internet-gateway as a gateway with external-network-connection:public-internet.`
 
 A definition may also specify an alias, such as a nonstandard plural,
 for the class that it defines. This is done by adding an AKA (Also Known
 As) clause before the as keyword:
 
-> Define mouse AKA mice as peripheral with function:pointing.
+> `Define mouse AKA mice as peripheral with function:pointing.`
 
-In this example, both mouses and mice will be defined as synonyms for
-mouse.
+In this example, both `mouses` and `mice` will be defined as synonyms for
+`mouse`.
 
 Redefining ZPL keywords or reserved words is not permitted. Attempts to
 do so will be flagged by the compiler.
@@ -519,16 +516,16 @@ Communication that is not intended to be allowed can be specified by a
 ***denial***. Denials should not contradict permissions, but if they do
 the denial takes priority and the system reports the conflict.
 
-ZPL provides a Never statement for asserting that a specific type of
-communication should not be allowed. A Never statement looks like an
-allow statement with the keyword Never added at the front:
+ZPL provides a `Never` statement for asserting that a specific type of
+communication should not be allowed. A `Never` statement looks like an
+allow statement with the keyword `Never` added at the front:
 
-> Never allow internet-gateways to access internal services.
+> `Never allow internet-gateways to access internal services.`
 >
-> Never allow role:intern users to access classified services.
+> `Never allow role:intern users to access classified services.`
 
-(Note: the keyword Never is used instead of Deny because it is
-consistent with English grammar, and because Deny has different meanings
+(Note: the keyword `Never` is used instead of `Deny` because it is
+consistent with English grammar, and because `Deny` has different meanings
 in other policy languages.)
 
 ## Statements that Depend on Circumstances
@@ -539,13 +536,12 @@ takes place. Their values are always determined at runtime. The time,
 date, and measures of the amount of data recently communicated are
 examples of circumstances.
 
-Any allow or never statement can be conditioned by circumstances. For
+Any `allow` or `never` statement can be conditioned by circumstances. For
 example:
 
-> Never allow backup:nightly servers to access backup-services before
-> 18:00 GMT.
+> `Never allow backup:nightly servers to access backup-services before 18:00 GMT.`
 >
-> Allow Service2 access to Service1, limited to 10Gb/day.
+> `Allow Service2 access to Service1, limited to 10Gb/day.`
 
 (Note: The syntax for describing circumstances is not yet fully
 defined.)
@@ -553,12 +549,12 @@ defined.)
 ## Statements that Cause Signaling
 
 ZPL provides a way to specify a message to be sent to a signal handler
-whenever a permission matches, by appending an and signal clause to an
-allow or never statement. For example, this statement will cause a
+whenever a permission matches, by appending an `and signal` clause to an
+`allow` or `never` statement. For example, this statement will cause a
 specific type of permissioned access to be reported to a logging
 service:
 
-> Allow top-secret users to access top-secret services, and signal "accessing" to Access-logger.
+> `Allow top-secret users to access top-secret services, and signal "accessing" to Access-logger.`
 
 In this example Access-logger is a named service. The message that is
 sent to Access-logger includes the string "accessing" as well as the

@@ -2,14 +2,12 @@
 title: "ZPR's Concept of Identity"
 author: "Danny Hillis"
 publisher: "Applied Invention, LLC"
-date: 2025-05-19
+date: 2025-05-19 # Used for PDF metadata
+firstdraft: {year: 2025, month: 05}
 rfcnum: 16
 lang: en-US
 revisions: # List versions in order from oldest to newest
-- version: 0
-  date: {year: 2025, month: 05}
-- version: 1
-  date: {year: 2025, month: 05, day: 19}
+- date: {year: 2025, month: 05, day: 19}
   changes:
   -  Eliminate any discussion of actors/agents.
   -  Call the devices endpoints.
