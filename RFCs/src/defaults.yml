@@ -1,0 +1,12 @@
+#to: pdf
+template: ${.}/style/zpr.sty
+standalone: true
+number-sections: true
+metadata:
+  fontfamily: tgschola
+  fontsize: 11pt
+  geometry:
+    - top=1in
+    - bottom=1in
+    - left=1in
+    - right=1in
