@@ -40,6 +40,11 @@ revisions: # List versions in order from oldest to newest
   - Remove Oxford comma text, as there are no use cases for it yet
   - Add Unicode support
   - Add early statement example, and reference it
+- date: {year: 2025, month: 8, day: 29}
+  author: [MK]
+  description: details about the `on` keyword
+  changes:
+  - In section 4.1, explain how `on` works and update examples.
 ...
 
 # Introduction
@@ -61,7 +66,7 @@ communication that should never take place. For example, a permission
 statement that allows managed laptops to be used by sales employees to
 access customer databases could be written like this in ZPL:
 
-> `Allow sales employees with managed laptops to access customer databases.`
+> `Allow sales employees on managed laptops to access customer databases.`
 
 A denial statement might state that the intent of the permissions is
 that no one who is not an employee is allowed to access a customer
@@ -398,7 +403,7 @@ Consider the example given earlier of a permission statement that allows
 managed laptops to be used by sales employees to access customer
 databases:
 
-> `Allow sales employees with managed laptops to access customer databases.`
+> `Allow sales employees on managed laptops to access customer databases.`
 
 In this example employees, laptops, and databases have been defined as
 classes of users, endpoints and services, respectively (How this happens
@@ -410,8 +415,7 @@ specify various required attributes, which would need to be present for
 the permission to apply.
 
 Notice that the relationship of the users to the laptop they are using
-is expressed using the keyword `with`. It could also use the synonymous
-keyword `on`, which is sometimes more natural.
+is expressed using the keyword `on`.
 
 This single statement may give permission to many different pairs of
 laptops and database services. If the permission depends only on the
@@ -423,11 +427,22 @@ written like this:
 This statement allows any endpoint to access the service, as long as the
 user has the required attributes.
 
+When the `on` keyword appears before the `to access...` side of a statement
+then it describes endpoint attributes of the accessor. When it appears
+after `to access` and after the service clause it describes endpoint
+attributes of that which is being accessed.  For example:
+
+> `Allow sales employees to access customer databases on sales endpoints.`
+
+The above statement only applies, and permission is only granted if the
+communicator offering the database service has an endpoint tag
+named `sales`.
+
 If employees have a `department` attribute instead of a `sales` tag, the
 permission would be written differently. In this case, permission could
 be expressed like this:
 
-> `Allow department:sales employees with managed laptops to access customer databases.`
+> `Allow department:sales employees on managed laptops to access customer databases.`
 
 An expression of the form `<name>:<value>` will match either a
 single-valued attribute with the specified value or a multi-valued
