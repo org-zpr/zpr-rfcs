@@ -119,6 +119,9 @@ $endif$
 $if(keywords)$
   pdfkeywords={$for(keywords)$$keywords$$sep$, $endfor$},
 $endif$
+  % Strip unwanted metadata
+  pdfproducer={},
+  pdfcreator={},
 $if(colorlinks)$
   colorlinks=true,
   linkcolor={$if(linkcolor)$$linkcolor$$else$Maroon$endif$},
@@ -129,6 +132,10 @@ $else$
   hidelinks,
 $endif$
 }
+\pdftrailerid{} % Remove timestamp-inclusive hash that makes reproducible PDFs difficult
+\pdfsuppressptexinfo15 % Also can cause problems for reproducible PDFs
+\pdfinfoomitdate1 % Remove PDF metadata timestamps for now
+% In the future, maybe set the timestamps to meaningful values like the commit time of the last source change
 \title{\vspace{-5ex}$title$$if(thanks)$\thanks{$thanks$}$endif$\vspace{-2ex}}
 $if(subtitle)$
 \usepackage{etoolbox}
