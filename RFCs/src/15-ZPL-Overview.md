@@ -40,11 +40,12 @@ revisions: # List versions in order from oldest to newest
   - Remove Oxford comma text, as there are no use cases for it yet
   - Add Unicode support
   - Add early statement example, and reference it
-- date: {year: 2025, month: 8, day: 29}
+- date: {year: 2025, month: 9, day: 3}
   author: [MK]
-  description: details about the `on` keyword
   changes:
-  - In section 4.1, explain how `on` works and update examples.
+  - In section 4.1, explain how `on` works and update examples.  
+  - Remove "through" keyword.
+  - Rewrite a load balancer statement.
 ...
 
 # Introduction
@@ -470,14 +471,11 @@ like this:
 
 > `Allow cleared government users to access Timesheet-load-balancer.`
 >
-> `Allow Timesheet-load-balancer to access providing:Timesheet-database servers.`
+> `Allow services:Timesheet-load-balancer servers to access services on services:Timesheet-database servers.`
 
 In other words, both the load balancer and the server endpoints must be
-separately permissioned. Because load balancers are such a common use
-case, ZPL allows both of these permissions to be specified in a single
-statement using the keyword `through`:
+separately permissioned. 
 
-> `Allow cleared government users to access providing:Timesheet-database servers through Timesheet-load-balancer.`
 
 ## Statements that Define New Classes
 
