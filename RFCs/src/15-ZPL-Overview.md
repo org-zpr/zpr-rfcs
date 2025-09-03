@@ -460,7 +460,7 @@ like this:
 
 > `Allow cleared government users to access Timesheet-load-balancer.`
 >
-> `Allow services:Timesheet-load-balancer servers to access services on providing:Timesheet-database servers.`
+> `Allow services:Timesheet-load-balancer servers to access services on services:Timesheet-database servers.`
 
 In other words, both the load balancer and the server endpoints must be
 separately permissioned. 
