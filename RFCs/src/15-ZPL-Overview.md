@@ -43,9 +43,9 @@ revisions: # List versions in order from oldest to newest
 - date: {year: 2025, month: 9, day: 3}
   author: [MK]
   changes:
-  - In section 4.1, explain how `on` works and update examples.  
+  - In section 4.1, explain how `on` works and update examples.
   - Remove "through" keyword.
-  - Rewrite a load balancer statement.
+  - Rewrite a load balancer statement allowing services to appear to the left of "to access".
 ...
 
 # Introduction
@@ -428,9 +428,9 @@ written like this:
 This statement allows any endpoint to access the service, as long as the
 user has the required attributes.
 
-When the `on` keyword appears before the `to access...` side of a statement
+When the `on` keyword appears before the `to access...` phrase
 then it describes endpoint attributes of the accessor. When it appears
-after `to access` and after the service clause it describes endpoint
+after `to access` and after a service clause it describes endpoint
 attributes of that which is being accessed.  For example:
 
 > `Allow sales employees to access customer databases on sales endpoints.`
@@ -471,10 +471,10 @@ like this:
 
 > `Allow cleared government users to access Timesheet-load-balancer.`
 >
-> `Allow services:Timesheet-load-balancer servers to access services on services:Timesheet-database servers.`
+> `Allow Timesheet-load-balancer to access Timesheet-database.`
 
 In other words, both the load balancer and the server endpoints must be
-separately permissioned. 
+separately permissioned.
 
 
 ## Statements that Define New Classes
