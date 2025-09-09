@@ -40,12 +40,13 @@ revisions: # List versions in order from oldest to newest
   - Remove Oxford comma text, as there are no use cases for it yet
   - Add Unicode support
   - Add early statement example, and reference it
-- date: {year: 2025, month: 9, day: 3}
+- date: {year: 2025, month: 9, day: 8}
   author: [MK]
   changes:
-  - In section 4.1, explain how `on` works and update examples.
-  - Remove "through" keyword.
-  - Rewrite a load balancer statement allowing services to appear to the left of "to access".
+  - In section 1 and 4.1 rewrite ZPL examples that were using "with" to use "on" instead.
+  - In section 4.1 explain in more detail how "on" works.
+  - In section 4.1 remove the "through" keyword and rewrite examples that were using it.
+  - Bump version to 15.5.
 ...
 
 # Introduction
