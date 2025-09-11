@@ -1,0 +1,74 @@
+name: Generate PDF
+
+on:
+  pull_request:
+    paths:
+      - 'RFCs/src/**.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  generate-pdf:
+    container:
+      image: docker://ghcr.io/org-zpr/docs:latest
+    name: Generate PDF
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      pull-requests: write
+    steps:
+    - name: Get fetch depth
+      id: fetch-depth
+      run: echo "depth=$(expr ${{ github.event.pull_request.commits }} + 1)" >> $GITHUB_OUTPUT
+
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: ${{ steps.fetch-depth.outputs.depth }}
+
+    - name: Set safe directory
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+    - name: Make PDFs
+      id: make
+      working-directory: RFCs/
+      shell: bash
+      run: |
+        set -vx
+        git fetch origin ${{ github.base_ref }}
+        changed_sources=$(git diff --name-only origin/${{ github.base_ref }}...HEAD --relative ./src/*.md)
+        pdfs=$(echo "$changed_sources" | sed 's/^src\/\(.*\)\.md$/pdf\/\1.pdf/')
+        make $pdfs
+        if git diff --quiet ; then
+          echo "has-diff=false" >> "$GITHUB_OUTPUT"
+        else
+          cd ..
+          mkdir tmp
+          git diff --name-only | xargs cp -t tmp
+          echo "has-diff=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Upload PDFs
+      id: upload
+      if: fromJSON(steps.make.outputs.has-diff)
+      uses: actions/upload-artifact@v4
+      with:
+        name: changed-rfcs
+        path: tmp/*
+        overwrite: true
+
+    - name: Post Comment
+      if: fromJSON(steps.make.outputs.has-diff)
+      run: gh pr comment $PR_NUM --body "$TEXT"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_NUM: ${{ github.event.pull_request.number }}
+        TEXT: "Generated PDFs can be downloaded here: ${{ steps.upload.outputs.artifact-url }}"

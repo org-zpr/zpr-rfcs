@@ -1,5 +1,8 @@
 #to: pdf
 template: ${.}/style/zpr.sty
+resource-path:
+  - .
+  - ${.}/media
 standalone: true
 number-sections: true
 metadata:
