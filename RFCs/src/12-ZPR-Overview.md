@@ -52,6 +52,7 @@ revisions: # List versions in order from oldest to newest
   - Add reference to ZPR-RFC-16.
 ...
 
+
 # The Problem that Needs Solving
 
 The Internet was designed to allow everything to communicate with
@@ -521,7 +522,7 @@ provides the space necessary for the ZPR fields without increasing the
 packet size, preventing fragmentation of packets at or near the path MTU
 of the underlying substrate network.
 
-![IP packet carried by a transit packet through a ZPRnet.](./media/12-image1.png){width="6.5in" height="5.022916666666666in"}
+![IP packet carried by a transit packet through a ZPRnet.](12-image1.png){width="6.5in" height="5.022916666666666in"}
 
 Figure 1 shows an ingress dock converting an IP packet received from an
 adapter into a transit packet for transmission through a ZPR network and
