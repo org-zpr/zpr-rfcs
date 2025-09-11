@@ -58,7 +58,7 @@ jobs:
 
     - name: Upload PDFs
       id: upload
-      if: ${{ steps.make.outputs.has-diff }}
+      if: fromJSON(steps.make.outputs.has-diff)
       uses: actions/upload-artifact@v4
       with:
         name: changed-rfcs
@@ -66,7 +66,7 @@ jobs:
         overwrite: true
 
     - name: Post Comment
-      if: ${{ steps.make.outputs.has-diff }}
+      if: fromJSON(steps.make.outputs.has-diff)
       run: gh pr comment $PR_NUM --body "$TEXT"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
