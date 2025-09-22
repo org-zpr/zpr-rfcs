@@ -5,7 +5,6 @@
 $if(fontsize)$
 	$fontsize$,
 $endif$
-	letter,
 $for(classoption)$
   $classoption$$sep$,
 $endfor$
@@ -33,9 +32,14 @@ $endif$
   \usepackage{parskip}
 }{% else
   \setlength{\parindent}{0pt}
-  \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+  \setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\usepackage{soul}
 \makeatother
 \usepackage{fancyvrb}
+\usepackage{longtable, booktabs, array}
+\usepackage{multirow}
+\usepackage{calc}
 $if(graphics)$
 \usepackage{graphicx}
 \makeatletter
@@ -53,6 +57,13 @@ $if(graphics)$
 $endif$
 \usepackage{titlesec}
 \titleformat % Modify section title formatting
+	{\chapter} % choosing to modify section
+	[block] % shape
+	{\normalfont\bfseries\large} % format
+	{\thechapter.} % Add the . after the section #
+	{0.5em} % sep
+	{} % code preceding title body
+\titleformat % Modify section title formatting
 	{\section} % choosing to modify section
 	[block] % shape
 	{\normalfont\bfseries\large} % format
@@ -63,7 +74,14 @@ $endif$
 	{\subsection} % choosing to modify subsection
 	[block] % shape
 	{\normalfont\bfseries} % format
-	{\thesubsection} % numbering
+	{\thesubsection.} % numbering
+	{0.5em} % sep
+	{} % code preceding title body
+\titleformat % Modify section title formatting
+	{\subsubsection} % choosing to modify subsection
+	[block] % shape
+	{\normalfont\bfseries} % format
+	{\thesubsubsection.} % numbering
 	{0.5em} % sep
 	{} % code preceding title body
 \usepackage{xcolor}
@@ -73,18 +91,6 @@ $endif$
 \setlength{\emergencystretch}{3em} % prevent overfull lines
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
-\usepackage[$lang$]{datetime2}
-\usepackage[]{fancyhdr}
-\fancypagestyle{plain}{
-	\fancyhf{}
-	\fancyhead[C]{\small ZPR RFC-$rfcnum$}
-	\fancyhead[R]{\small\thepage}
-	\fancyfoot[L]{\small $publisher$}
-	\fancyfoot[R]{\small $for(revisions/last)$$it.date:longdate()$$endfor$}
-	\renewcommand{\headrulewidth}{0pt}
-	\renewcommand{\footrulewidth}{0pt}
-}
-\pagestyle{plain}
 $if(lang)$
 \usepackage[bidi=default]{babel}
 $if(babel-lang)$
@@ -100,6 +106,17 @@ $endfor$
 \let\LanguageShortHands\languageshorthands
 \def\languageshorthands#1{}
 $endif$
+\usepackage[]{fancyhdr}
+\fancypagestyle{plain}{
+	\fancyhf{}
+	\fancyhead[C]{\small ZPR RFC-$rfcnum$}
+	\fancyhead[R]{\small\thepage}
+	\fancyfoot[L]{\small $publisher$}
+	\fancyfoot[R]{\small $if(updated)$$updated$$else$$firstdraft$$endif$}
+	\renewcommand{\headrulewidth}{0pt}
+	\renewcommand{\footrulewidth}{0pt}
+}
+\pagestyle{plain}
 $for(header-includes)$
 $header-includes$
 $endfor$
@@ -144,9 +161,12 @@ $if(subtitle)$
 \makeatother
 \subtitle{$subtitle$}
 $endif$
-\author{$for(author)$$author$$sep$, $endfor$$if(firstdraft)$, $firstdraft:shortdate()$$endif$}
-\date{\vspace{-3ex}(Updated $for(revisions/last)$$it.date:shortdate()$$endfor$)\vspace{-2ex}}
-
+\author{$for(author)$$author$$sep$, $endfor$$if(firstdraft)$, $firstdraft$$endif$}
+$if(updated)$
+\date{\vspace{-3ex}(Updated $updated$)\vspace{-2ex}}
+$else$
+\date{}
+$endif$
 \begin{document}
 $if(has-frontmatter)$
 \frontmatter
@@ -190,7 +210,7 @@ $if(revisions)$
 \section{Revision History}
 \begin{enumerate}
 $for(revisions)$
-	\item Revision as of $it.date:longdate()$$if(it.description)$, $it.description$$endif$$if(it.author)$ ($for(it.author)$$it$$sep$, $endfor$)$endif$
+	\item Revision as of $it.date$$if(it.description)$, $it.description$$endif$$if(it.author)$ ($for(it.author)$$it$$sep$, $endfor$)$endif$
 	\begin{enumerate}
 		$for(it.changes)$
 			\item $it$
