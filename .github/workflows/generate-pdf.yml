@@ -39,7 +39,6 @@ jobs:
 
     - name: Make PDFs
       id: make
-      working-directory: RFCs/
       shell: bash
       run: |
         set -vx
@@ -50,7 +49,6 @@ jobs:
         if git diff --quiet ; then
           echo "has-diff=false" >> "$GITHUB_OUTPUT"
         else
-          cd ..
           mkdir tmp
           git diff --name-only | xargs cp -t tmp
           echo "has-diff=true" >> "$GITHUB_OUTPUT"
