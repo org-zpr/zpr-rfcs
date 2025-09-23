@@ -14,8 +14,6 @@ env:
 
 jobs:
   generate-pdf:
-    container:
-      image: docker://ghcr.io/org-zpr/docs:latest
     name: Generate PDF
     runs-on: ubuntu-latest
     permissions:
@@ -38,14 +36,12 @@ jobs:
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
     - name: Make PDFs
-      id: make
+      uses: docker://ghcr.io/org-zpr/docs:latest
+
+    - name: Check diff
+      id: diff
       shell: bash
       run: |
-        set -vx
-        git fetch origin ${{ github.base_ref }}
-        changed_sources=$(git diff --name-only origin/${{ github.base_ref }}...HEAD --relative ./src/*.md)
-        pdfs=$(echo "$changed_sources" | sed 's/^src\/\(.*\)\.md$/pdf\/\1.pdf/')
-        make $pdfs
         if git diff --quiet ; then
           echo "has-diff=false" >> "$GITHUB_OUTPUT"
         else
@@ -56,7 +52,7 @@ jobs:
 
     - name: Upload PDFs
       id: upload
-      if: fromJSON(steps.make.outputs.has-diff)
+      if: fromJSON(steps.diff.outputs.has-diff)
       uses: actions/upload-artifact@v4
       with:
         name: changed-rfcs
@@ -64,7 +60,7 @@ jobs:
         overwrite: true
 
     - name: Post Comment
-      if: fromJSON(steps.make.outputs.has-diff)
+      if: fromJSON(steps.diff.outputs.has-diff)
       run: gh pr comment $PR_NUM --body "$TEXT"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
