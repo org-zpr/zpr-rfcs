@@ -1,3 +1,22 @@
+---
+title: "ZPR Terminology"
+author: [Dave Douglas, Frank Kastenholtz, Steve Willis]
+publisher: "Applied Invention, LLC"
+date: 2025-08-28
+firstdraft: "September 2020"
+updated: "August 28, 2025"
+rfcnum: 4
+lang: en-US
+revisions: # List versions in order from oldest to newest
+- date: "August 28, 2025"
+  changes:
+  - Updated list of terms
+...
+
+# Introduction
+
+This document defines terms used when discussing ZPR and its various components.
+
 # ZPR Glossary
 
 | Term | Definition |
