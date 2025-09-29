@@ -1,10 +1,12 @@
 #to: pdf
-template: ${.}/style/zpr.sty
+data-dir: ${.}/../
+template: zpr.sty
 resource-path:
   - .
-  - ${.}/media
+  - ${.}/../media
 standalone: true
 number-sections: true
+table-caption-position: below
 metadata:
   fontfamily: tgschola
   fontsize: 11pt

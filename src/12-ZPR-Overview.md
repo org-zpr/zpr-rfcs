@@ -3,11 +3,12 @@ title: "Overview of Zero-trust Packet Routing"
 author: "Danny Hillis"
 publisher: "Applied Invention, LLC"
 date: 2025-05-21 # Used for PDF metadata
-firstdraft: {year: 2022, month: 9}
+firstdraft: "September 2022"
+updated: "May 21, 2025"
 rfcnum: 12
 lang: en-US
 revisions: # List versions in order from oldest to newest
-- date: {year: 2023, month: 6, day: 12}
+- date: "June 12, 2023"
   changes:
   - Explain the problem ZPR solves.
   - Reorder sections to describe policy before enforcement mechanisms.
@@ -20,24 +21,24 @@ revisions: # List versions in order from oldest to newest
   - Add section on Attributes and trusted services.
   - Remove description of visa distribution which is described in other RFCs.
   - Figure 1 modified to add data attribute tag and move MICV to header.
-- date: {year: 2023, month: 6, day: 20}
+- date: "June 20, 2023"
   changes:
   - Change title and introduction of section 2.5.
   - Rename ZPR endpoints to ZPR-node endpoints to clarify that they exist only within a node.
   - Add example in section 3.2.
   - Explain how visas simplify enforcement in section 3.3.
   - Explain how MICV is checked for ZPR-node endpoints in section 3.
-- date: {year: 2023, month: 6, day: 22}
+- date: "June 22, 2023"
   changes:
   - Point out that identities are primarily used for authentication and logging.
   - Explain adapters in more detail in section 3.1.1.
   - Retitle section 3.2.
-- date: {year: 2023, month: 6, day: 30}
+- date: "June 30, 2023"
   changes:
   - Update policy language example.
   - Explain how visas bind authentication to packets.
   - Explain that assertions can specify alerts when unintended patterns of communication are attempted.
-- date: {year: 2025, month: 3, day: 8}
+- date: "March 8, 2025"
   changes:
   - Rename people to users.
   - Remove permissions based on type of data transmitted.
@@ -46,7 +47,7 @@ revisions: # List versions in order from oldest to newest
   - Simplify ZPL examples.
   - Move configurations to section 3.
   - Take out ZPR-node endpoints, as they are distracting.
-- date: {year: 2025, month: 5, day: 21}
+- date: "May 21, 2025"
   changes:
   - Incorporate new endpoint, user, service identity concept.
   - Add reference to ZPR-RFC-16.
@@ -196,12 +197,12 @@ assertions of intent, or definitions of new classes.
 A permission for users with an attribute tag top-secret could be
 expressed in the policy language like this:
 
-> Allow top-secret users to access top-secret services.
+> `Allow top-secret users to access top-secret services.`
 
 An assertion that no internet-gateway should be allowed to access
 internal services could be expressed this:
 
-> Never allow internet-gateways to access internal services.
+> `Never allow internet-gateways to access internal services.`
 
 In these examples top-secret and internal are tags, and internet-gateway
 is a class of devices that is defined by its attributes.
@@ -522,7 +523,7 @@ provides the space necessary for the ZPR fields without increasing the
 packet size, preventing fragmentation of packets at or near the path MTU
 of the underlying substrate network.
 
-![IP packet carried by a transit packet through a ZPRnet.](12-image1.png){width="6.5in" height="5.022916666666666in"}
+![IP packet carried by a transit packet through a ZPRnet.](packet-path.png){width="6.5in" height="5.022916666666666in"}
 
 Figure 1 shows an ingress dock converting an IP packet received from an
 adapter into a transit packet for transmission through a ZPR network and

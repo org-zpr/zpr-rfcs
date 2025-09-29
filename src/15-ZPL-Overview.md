@@ -3,11 +3,12 @@ title: "Overview of the ZPL Policy Language"
 author: [Michael Dubno, Mathias Kolehmainen, Danny Hillis]
 publisher: "Applied Invention, LLC"
 date: 2025-07-10 # Used for PDF metadata
-firstdraft: {year: 2024, month: 10}
+firstdraft: "October 2024"
+updated: "September 8, 2025"
 rfcnum: 15
 lang: en-US
 revisions: # List versions in order from oldest to newest
-- date: {year: 2024, month: 11, day: 9}
+- date: "November 9, 2024"
   author: [DH]
   description: updated to make `Never` an assertion and explain incremental compilation and attribute change tracking
   changes:
@@ -16,17 +17,17 @@ revisions: # List versions in order from oldest to newest
   - In section 2.7, describe attribute service and how it caches values
   - Change in sections 4.3 and 4.4, explain `Never` assertions and attribute monitoring
   - In section 5, explain incremental compilation and the scope of ZPL
-- date: {year: 2025, month: 2, day: 24}
+- date: "February 24, 2025"
   author: [DH]
   description: remove postfix attribute notation and eliminate any ZPL specific meaning the word endpoint
   changes:
   - In section 2.2, clarify the relationship between endpoints and the associated identities of their devices, users and services
   - In section 2.3, clarify definition of identity
-- date: {year: 2025, month: 5, day: 21}
+- date: "May 21, 2025"
   author: [DH]
   changes:
   - Define and use "endpoint" instead "device" where appropriate.
-- date: {year: 2025, month: 7, day: 10}
+- date: "July 10, 2025"
   author: [DH, MD]
   changes:
   - Add denials
@@ -40,7 +41,7 @@ revisions: # List versions in order from oldest to newest
   - Remove Oxford comma text, as there are no use cases for it yet
   - Add Unicode support
   - Add early statement example, and reference it
-- date: {year: 2025, month: 9, day: 8}
+- date: "September 8, 2025"
   author: [MK]
   changes:
   - In section 1 and 4.1 rewrite ZPL examples that were using "with" to use "on" instead.
