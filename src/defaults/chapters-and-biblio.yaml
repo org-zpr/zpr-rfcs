@@ -1,0 +1,16 @@
+bibliography: references.bibtex
+toc: true
+toc-depth: 4
+lof: true
+lot: true
+filters:
+  - pandoc-crossref
+  - citeproc
+top-level-division: chapter
+metadata: # These override whatever's in other metadata files
+  documentclass: report
+  classoption: openany
+  autoSectionLabels: true
+  secPrefix:
+    - \S
+    - \S

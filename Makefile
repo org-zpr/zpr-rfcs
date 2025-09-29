@@ -1,10 +1,13 @@
-SRCS := $(dir $(wildcard src/*/*.md))
-PDFS := $(SRCS:src/%/=pdf/%.pdf)
-TEMPLATES := $(shell find ./src/templates -name '*.latex')
-DEFAULTS := ./src/defaults/defaults.yml
+srcdir = ./src
+pdfdir = ./pdf
+SRCS := $(dir $(wildcard $(srcdir)/*/*.md))
+PDFS := $(SRCS:$(srcdir)/%/=$(pdfdir)/%.pdf)
+TEMPLATES := $(shell find $(srcdir)/templates -name '*.latex')
+DEFAULTS := $(srcdir)/defaults/defaults.yaml
 
 all: $(PDFS)
 
-pdf/%.pdf: src/%/* $(DEFAULTS) $(TEMPLATES)
+$(pdfdir)/17-ZPR-Data-Protocol.pdf: DEFAULTS := $(DEFAULTS) $(srcdir)/defaults/chapters-and-biblio.yaml
+$(pdfdir)/%.pdf: $(srcdir)/%/* $(DEFAULTS) $(TEMPLATES)
 	SOURCE_DATE_EPOCH=$(shell git log -1 --pretty="format:%ct" $<) \
-	pandoc src/$*/*.md -o $@ --defaults ${DEFAULTS} --resource-path src/$* --metadata-file src/$*/metadata.yaml
+	pandoc $(srcdir)/$*/*.md -o $@ --defaults ${DEFAULTS} --resource-path $(srcdir)/$* --metadata-file $(srcdir)/$*/metadata.yaml

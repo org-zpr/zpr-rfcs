@@ -1,0 +1,7 @@
+#to: pdf
+data-dir: ${.}/../
+template: zpr.latex
+metadata-file: metadata-defaults.yaml
+standalone: true
+number-sections: true
+table-caption-position: below
