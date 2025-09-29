@@ -16,6 +16,8 @@ jobs:
   generate-pdf:
     name: Generate PDF
     runs-on: ubuntu-latest
+    container:
+      image: docker://ghcr.io/org-zpr/docs:latest
     permissions:
       actions: read
       contents: read
@@ -36,7 +38,7 @@ jobs:
       run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
     - name: Make PDFs
-      uses: docker://ghcr.io/org-zpr/docs:latest
+      run: make
 
     - name: Check diff
       id: diff
