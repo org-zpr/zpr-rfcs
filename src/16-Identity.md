@@ -14,121 +14,149 @@ revisions: # List versions in order from oldest to newest
   -  Call the devices endpoints.
   -  Allow entire system to be an endpoint.
   -  Clarify use of multiple authentication services.
+- date: "August 2025"
+  changes:
+  -  Add headings Devices and Recursive Identity Attributes.
 ...
 
 # **Identity**
 
-In Zero-trust Packet Routing (ZPR), an identity is a retrieval key that
-is used for looking up attributes, which are name/value pairs associated
-with the identity. The identity is associated with an individual
-endpoint, user or service.
+In Zero-trust Packet Routing (ZPR), an ***identity*** is a key that can
+be used for looking up attribute values. It may have one or more names
+as attributes, but these names are not the identity. An identity may be
+associated with different names in different identity services, but one
+of the attributes is a canonical name that is used within the ZPRnet for
+logging.
 
-Every endpoint, user or service in a ZPR network (ZPRnet) has an
-identity that is unique within the ZPRnet. User Identity is usually
-associated with username tied to credentials (e.g., passwords, tokens,
-certificates) and often managed via systems like LDAP or Active
-Directory. Device Identity is usually a device ID associated with a MAC
-address, certificate, or hardware identifier such as Trusted Platform
-Modules (TPMs). A Service Identity is associated with a service name,
-usually tied to the service by cryptographic certificates.
+In ZPR, all flows of communication packets must be permissioned to
+travel through the network based on attributes of the identities
+associated with the endpoints of the flow. Since identity is used to
+decide whether to allow a flow, the identity's association with the
+endpoint must be authenticated. After authentication, an identity is
+used to look up attribute values from the ZPRnet's trusted sources that
+store attributes as name/value pairs associated with the identity. The
+permission to communicate depends on these attribute values.
 
-An identity may be associated with multiple names through attribute
-values, but these names should not be confused with the retrieval key
-that is the identity.
+Every endpoint, device, user or service in a ZPRnet has an identity that
+is unique within the ZPRnet.
+
+# **Devices**
+
+There are always at least two network-connected devices involved in a
+communication flow, the transmitter and the receiver. Each of these has
+an identity and associated attributes. They may be physical devices such
+a processor, adaptor dongle or network interface card, or virtual
+devices such a software adaptor or a VNIC.
+
+Conceptually, all authentication is accomplished by associating an
+identity with a device. How this is actually implemented will vary
+across implementations.
+
+Devices are associated with a newly created identity each time a ZPRnet
+is configured.
+
+Physical devices will usually authenticate their identity through
+hardware security modules or Trusted Platform Modules (TPMs) in the
+device that stores serial numbers and cryptographic keys. Virtual
+devices will usually authenticate through the operating system. The
+authentication ensures that the authentication attributes of the device
+match the attributes of the device identity.
 
 # **Endpoints**
 
-In ZPR, an endpoint is the device that implements the interface between
-ZPR protocols and standard IP protocols. The endpoint may be a virtual
-device (software adapter, vNIC), a physical interface device (adapter
-dongle, NIC) that connects to the ZPRnet or an entire host or client
-device (sever, desktop). The essential purpose of the ZPRnet is to
-enable endpoints to communicate when, and only when, such communication
-is authorized by policy.
+The conceptual communicator that transmits or receives a flow of
+communication packets is called an ***endpoint.*** Since each endpoint
+has a device, it is tempting to think of the endpoint as the device, but
+different endpoints may use the same device. For example, if multiple
+services are associated with a single server, the device that is the
+server may have a different endpoint for each service. So, endpoints can
+have multiple associated elements that are involved in a communication
+flow.
 
-It is only possible to treat the entire host or client as an endpoint if
-it presents a single ZPR interface to the ZPRnet. For systems with
-multiple ZPRnet interfaces, such as a server with several ZPRnet NICs,
-it is necessary to treat each interface as an endpoint.
+The endpoint has an identity. The endpoint has a real or virtual device
+that connects to the network. It may also have a user and/or a service
+that can be involved in the communication flow. More specifically, the
+endpoint is a 4-tuple of the endpoint identity, the identity of a
+network-connected device that handles the endpoint's flows, an optional
+user identity, and an optional service identity. These four identities
+are called ***elements*** of the endpoint. Whenever a new packet flow is
+initiated, ZPR will look for existing endpoints with elements that match
+the flow. If such an endpoint does not already exist, it will create one
+with a new identity.
 
-There are always at least two endpoints involved in a packet flow. Each
-endpoint has an identity with associated attributes. Flows can be
-authorized based on attributes of either or both endpoints of the flow.
+At the time the packet is transmitted or received, an endpoint must be
+associated with an IP address or an address/ports combination. That
+address is an attribute value of the endpoint's device. The port
+numbers, if any, share an attribute value of the endpoint's service.
 
 # **Users**
 
 A user is a person or authority that can be associated with a
 communication flow. Each user also has an identity and associated
-attributes, just like each endpoint. Flows can also be authorized based
-on attributes of the users involved in the flow.
+attributes, just like each device.
 
-Users can only be associated with a flow through an endpoint. An
-endpoint may have zero, one, or multiple users. In the case where the
-endpoint has one user, the endpoint\'s communication can be associated
+Not all communication can be uniquely associated with a user. An
+endpoint device may have no user, one user, or many users. In the case
+where the endpoint has one user, the communication can be associated
 with that user. In the case where the endpoint has multiple users, the
-endpoint is sometimes able to associate a packet flow with a single
-user. If a single user cannot be associated with the flow, then no
-permissions that depend on user attributes will apply.
+communication can sometimes be associated with the user that is
+controlling the process that is communicating.
 
-When a single user can be associated with a flow, ZPR can enforce
-policies based on the attributes of the source user and/or destination
-user. When no user can be associated with a flow, ZPR can only authorize
-the flow based on policies that do not depend on user attributes.
+ZPR Policy Language (ZPL) can express policy statements that allow
+communication based on the source user and/or destination user, based on
+the attributes of that user. It can also express policy statements that
+allow communication regardless of whether or not that communication is
+associated with a user.
 
-Users may use different names in different parts of the ZPRnet, but ZPR
-can be configured to map multiple names to the same user identity.
+Users may have different names in different parts of the ZPR network,
+and the ZPR configuration file can specify a trusted source for the
+correspondence between these names. User names may be assigned
+identities at configuration time, or when they first communicate.
+Whenever ZPR encounters a user name, it checks to see to see if it has
+already assigned an identity to that user, and if not, it creates one.
+Authentications of a user's association with a flow may require the
+endpoint's device to communicate with an identity service, or it may be
+established through biometric devices, card readers, or user responses
+to security challenges.
 
 # **Services**
 
-Services in ZPR are applications that listen for communications packets
-and respond and/or act on them. Services may also initiate communication
-to other services. Services can have identities and associated
-attributes, and flows can be authorized based on attributes of any
-service with identity involved in the flow.
+Services in ZPR also have identities and associated attributes. A least
+one of these attributes is usually a list of port numbers through which
+communication with the service can be initiated.
 
-Flows can only be associated with a service through the endpoint.
-Typically, each service served by an endpoint has a list of port numbers
-as an attribute value, so the endpoint can determine which service is
-involved in the flow by examining the packets\' port numbers.
+A service is typically an application that responds to requests.
+Services may also make requests to other services and accept responses.
 
-Services may also have different names in different parts of the ZPRnet,
-and a ZPRnet can be configured to map these names to the same identity.
-
-At the time the packet is transmitted or received, both the source and
-destination endpoints must be associated with an IP address. That
-address is an attribute value of the endpoint, but ZPR policies are not
-normally based on IP addresses.
-
-# **Authentication of Identity**
-
-Conceptually, all authentication is accomplished by confirming the
-association of an identity with an endpoint, user, or service. How this
-is implemented will vary across implementations.
-
-It\'s important to keep in mind that authenticating identity means not
-just authenticating that it is a valid identity but also authenticating
-that it is associated with the authorized packet flow. In the case of an
-endpoint, this means authenticating the physical or virtual device
-itself. In the case of a user or service, the association must be made
-through the endpoint.
-
-The authentication also ensures that certain attribute values of the
-identity, known as identity attributes, match the attributes of the
-device, user, or service being authenticated. For example, an endpoint
-serial number might be an identity attribute of an endpoint.
-
-Authentications of any user\'s identity association with a flow may
-require the endpoint to communicate with an identity service, or it may
-be established through biometric devices, card readers, or user
-responses to security challenges. ZPR can make use of multiple identity
-authentication services in the same ZPRnet. This is important for
-dealing with multiple clouds and customer locations where some
-identities are authenticated on different services than others.
+Services may also have different names in different parts of the ZPR
+network, and the ZPR configuration file can specify a trusted source for
+the correspondence between these names. Service names may be assigned
+identities at configuration time. Whenever ZPR encounters a service
+name, it checks to see if it has already assigned an identity to that
+service, and if not, it creates one.
 
 Services will typically be authenticated by cryptographic certificates
 that prove the association of the identity of the service with the
-endpoint. The certificate includes or references the authorized port
-numbers as claims, allowing verification that the service is
-legitimately operating on its claimed ports. This creates a binding
-between the service identity, its endpoint, and the specific ports it
-uses.
+device and with any optional port numbers.
+
+# **Authentication of Identity**
+
+It's important to keep in mind that authenticating identity means not
+just authenticating that it is a valid identity but also authenticating
+that it is associated with the endpoint's communication. ZPR
+authentication policies specify the required method of authentication.
+
+ZPL can make use of multiple user identity services in the same ZPR
+network. This is important for dealing with multiple clouds and customer
+locations where uses of the different attribute values can be
+authenticated differently. For example, users may authenticate their
+identity differently on different parts of the same ZPRnet, and they may
+even use different user names in different parts of the network.
+
+# **Recursive Identity Attributes**
+
+ZPR allows, but does not require, values of attributes to be identities
+that must be authenticated before they are used to look up attribute
+values. For example, user names, device names, and service names are
+authenticatable identities, and they may have attribute values that are
+also identities.
