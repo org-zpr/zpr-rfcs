@@ -2,52 +2,10 @@
 title: "Overview of the ZPL Policy Language"
 author: [Michael Dubno, Mathias Kolehmainen, Danny Hillis]
 publisher: "Applied Invention, LLC"
-date: 2025-07-10 # Used for PDF metadata
 firstdraft: "October 2024"
 updated: "September 8, 2025"
 rfcnum: 15
 lang: en-US
-revisions: # List versions in order from oldest to newest
-- date: "November 9, 2024"
-  author: [DH]
-  description: updated to make `Never` an assertion and explain incremental compilation and attribute change tracking
-  changes:
-  - In section 2.2, state explicitly that an endpoint may support multiple users or services
-  - In sections 2.3 and 2.4, clarify global scope of permissions and assertions
-  - In section 2.7, describe attribute service and how it caches values
-  - Change in sections 4.3 and 4.4, explain `Never` assertions and attribute monitoring
-  - In section 5, explain incremental compilation and the scope of ZPL
-- date: "February 24, 2025"
-  author: [DH]
-  description: remove postfix attribute notation and eliminate any ZPL specific meaning the word endpoint
-  changes:
-  - In section 2.2, clarify the relationship between endpoints and the associated identities of their devices, users and services
-  - In section 2.3, clarify definition of identity
-- date: "May 21, 2025"
-  author: [DH]
-  changes:
-  - Define and use "endpoint" instead "device" where appropriate.
-- date: "July 10, 2025"
-  author: [DH, MD]
-  changes:
-  - Add denials
-  - Remove assertions
-  - Remove from and multiple keywords
-  - Add on as synonym for with keyword
-  - Add through keyword for load balancers
-  - Allow both single of double quotes for strings
-  - Comments start with \# or //
-  - Allow inline comments
-  - Remove Oxford comma text, as there are no use cases for it yet
-  - Add Unicode support
-  - Add early statement example, and reference it
-- date: "September 8, 2025"
-  author: [MK]
-  changes:
-  - In section 1 and 4.1 rewrite ZPL examples that were using "with" to use "on" instead.
-  - In section 4.1 explain in more detail how "on" works.
-  - In section 4.1 remove the "through" keyword and rewrite examples that were using it.
-  - Bump version to 15.5.
 ...
 
 # Introduction
@@ -97,7 +55,7 @@ It is helpful to understand a few of the key concepts mentioned above in
 more detail before diving into the syntax of ZPL. After reading this
 section, it may be worth rereading the introduction.
 
-## *What is a ZPRnet?*
+## What is a ZPRnet?
 
 ZPL security policies apply to a real or virtual network or to a group
 of co-managed interconnected networks, such as an enterprise's internal
@@ -149,8 +107,8 @@ either one.
 A user is an individual or authority that can be associated with a
 communication flow. Each user has an identity and associated attributes,
 just like each endpoint. Whenever a single user can be associated with
-an endpoint, permissions can be based on both the user\'s and the
-endpoint\'s attributes.
+an endpoint, permissions can be based on both the user's and the
+endpoint's attributes.
 
 Services are applications that listen for communications packets and
 respond and/or act on them. There is always at least one service
@@ -187,7 +145,7 @@ the name roles could have a set of values that are strings representing
 different roles. A policy can depend on attribute values or on the
 presence or absence of tags.
 
-## *What are* Denials?
+## What are Denials?
 
 Denials are statements of intent that limit what permissions are
 allowed. They are written using the keyword never. Denials apply to the
@@ -201,7 +159,7 @@ conflicts at different times. While the compiler can check for conflicts
 between denials and permissions, denials must also be rechecked while
 network is operating because attribute values can change.
 
-## *What are* Trusted Sources?
+## What are Trusted Sources?
 
 Trusted Sources are where attribute values come from. They are called
 "Trusted" because ZPL/ZPR uses these, and only these sources for policy
@@ -219,7 +177,7 @@ notifications to update its cache. An API is also provided to change
 attribute values through the attribute service, in which case such
 changes will also update the cached values.
 
-## *What is a Configuration Description*?
+## What is a Configuration Description?
 
 ZPL separates security policies from network configuration. All
 configuration-specific information is specified in the configuration
@@ -253,7 +211,7 @@ A keyword can be written in lowercase, with an initial capital, or in
 all capitals. To allow future language extensions, all English
 prepositions that are not keywords are reserved.
 
-## 3.2. Strings {#strings .unnumbered}
+## Strings
 
 In ZPL, strings are case-sensitive sequences of UTF-8 characters
 enclosed in quotation marks, or unquoted sequences of numerals with an
@@ -337,7 +295,7 @@ separated by a colon:
 Attribute values can be strings or integers. For example:
 
 > `passphrase:'Speak friend and enter'`
->
+
 > `number-usbc-connectors:2`
 
 Multi-valued attribute values are written in curly brackets after the
@@ -346,7 +304,7 @@ colon, separated by commas.
 > `<attribute-name>:{<attribute-value1>,<attribute-value2>,...}`
 
 Attribute values can reference other entities (endpoints, users, or
-services), allowing access to the referenced entity\'s attributes.
+services), allowing access to the referenced entity's attributes.
 
 ## Classes
 
@@ -472,7 +430,7 @@ balancer to communicate with the servers that implement the service,
 like this:
 
 > `Allow cleared government users to access Timesheet-load-balancer.`
->
+
 > `Allow Timesheet-load-balancer to access Timesheet-database.`
 
 In other words, both the load balancer and the server endpoints must be
@@ -536,7 +494,7 @@ communication should not be allowed. A `Never` statement looks like an
 allow statement with the keyword `Never` added at the front:
 
 > `Never allow internet-gateways to access internal services.`
->
+
 > `Never allow role:intern users to access classified services.`
 
 (Note: the keyword `Never` is used instead of `Deny` because it is
@@ -555,7 +513,7 @@ Any `allow` or `never` statement can be conditioned by circumstances. For
 example:
 
 > `Never allow backup:nightly servers to access backup-services before 18:00 GMT.`
->
+
 > `Allow Service2 access to Service1, limited to 10Gb/day.`
 
 (Note: The syntax for describing circumstances is not yet fully
@@ -597,3 +555,60 @@ resource, or all services that can be accessed from the Internet
 gateway. These reports may be helpful in the approval or auditing of
 policies.
 
+# Revision History
+
+1.  Revision as of November 9, 2024,
+    updated to make `Never` an assertion and explain incremental compilation and attribute change tracking (DH)
+
+    1.  In section 2.2, state explicitly that an endpoint may support multiple users or services
+
+    2.  In sections 2.3 and 2.4, clarify global scope of permissions and assertions
+
+    3.  In section 2.7, describe attribute service and how it caches values
+
+    4.  Change in sections 4.3 and 4.4, explain `Never` assertions and attribute monitoring
+
+    5.  In section 5, explain incremental compilation and the scope of ZPL
+
+2.  Revision as of February 24, 2025,
+    remove postfix attribute notation and eliminate any ZPL specific meaning the word endpoint (DH)
+
+    1.  In section 2.2, clarify the relationship between endpoints and the associated identities of their devices, users and services
+
+    2.  In section 2.3, clarify definition of identity
+
+3.  Revision as of May 21, 2025 (DH)
+
+    1.  Define and use "endpoint" instead "device" where appropriate.
+
+4.  Revision as of July 10, 2025 (DH, MD)
+
+    1.  Add denials
+
+    2.  Remove assertions
+
+    3.  Remove from and multiple keywords
+
+    4.  Add on as synonym for with keyword
+
+    5.  Add through keyword for load balancers
+
+    6.  Allow both single of double quotes for strings
+
+    7.  Comments start with \# or //
+
+    8.  Allow inline comments
+
+    9.  Remove Oxford comma text, as there are no use cases for it yet
+
+    10. Add Unicode support
+
+    11. Add early statement example, and reference it
+
+5.  Revision as of September 8, 2025 (MK)
+
+    1.  In section 1 and 4.1 rewrite ZPL examples that were using "with" to use "on" instead.
+
+    2.  In section 4.1 explain in more detail how "on" works.
+
+    3.  In section 4.1 remove the "through" keyword and rewrite examples that were using it.

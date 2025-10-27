@@ -2,24 +2,13 @@
 title: "ZPR's Concept of Identity"
 author: "Danny Hillis"
 publisher: "Applied Invention, LLC"
-date: 2025-05-19 # Used for PDF metadata
 firstdraft: "May 2025"
 updated: "May 19, 2025"
 rfcnum: 16
 lang: en-US
-revisions: # List versions in order from oldest to newest
-- date: "May 19, 2025"
-  changes:
-  -  Eliminate any discussion of actors/agents.
-  -  Call the devices endpoints.
-  -  Allow entire system to be an endpoint.
-  -  Clarify use of multiple authentication services.
-- date: "August 2025"
-  changes:
-  -  Add headings Devices and Recursive Identity Attributes.
 ...
 
-# **Identity**
+# Identity
 
 In Zero-trust Packet Routing (ZPR), an ***identity*** is a key that can
 be used for looking up attribute values. It may have one or more names
@@ -40,7 +29,7 @@ permission to communicate depends on these attribute values.
 Every endpoint, device, user or service in a ZPRnet has an identity that
 is unique within the ZPRnet.
 
-# **Devices**
+# Devices
 
 There are always at least two network-connected devices involved in a
 communication flow, the transmitter and the receiver. Each of these has
@@ -62,7 +51,7 @@ devices will usually authenticate through the operating system. The
 authentication ensures that the authentication attributes of the device
 match the attributes of the device identity.
 
-# **Endpoints**
+# Endpoints
 
 The conceptual communicator that transmits or receives a flow of
 communication packets is called an ***endpoint.*** Since each endpoint
@@ -89,7 +78,7 @@ associated with an IP address or an address/ports combination. That
 address is an attribute value of the endpoint's device. The port
 numbers, if any, share an attribute value of the endpoint's service.
 
-# **Users**
+# Users
 
 A user is a person or authority that can be associated with a
 communication flow. Each user also has an identity and associated
@@ -119,7 +108,7 @@ endpoint's device to communicate with an identity service, or it may be
 established through biometric devices, card readers, or user responses
 to security challenges.
 
-# **Services**
+# Services
 
 Services in ZPR also have identities and associated attributes. A least
 one of these attributes is usually a list of port numbers through which
@@ -139,7 +128,7 @@ Services will typically be authenticated by cryptographic certificates
 that prove the association of the identity of the service with the
 device and with any optional port numbers.
 
-# **Authentication of Identity**
+# Authentication of Identity
 
 It's important to keep in mind that authenticating identity means not
 just authenticating that it is a valid identity but also authenticating
@@ -153,10 +142,26 @@ authenticated differently. For example, users may authenticate their
 identity differently on different parts of the same ZPRnet, and they may
 even use different user names in different parts of the network.
 
-# **Recursive Identity Attributes**
+# Recursive Identity Attributes
 
 ZPR allows, but does not require, values of attributes to be identities
 that must be authenticated before they are used to look up attribute
 values. For example, user names, device names, and service names are
 authenticatable identities, and they may have attribute values that are
 also identities.
+
+# Revision History
+
+1.  Revision as of May 19, 2025
+
+    1.  Eliminate any discussion of actors/agents.
+
+    2.  Call the devices endpoints.
+
+    3.  Allow entire system to be an endpoint.
+
+    4.  Clarify use of multiple authentication services.
+
+2.  Revision as of August 2025
+
+    1.  Add headings Devices and Recursive Identity Attributes.
