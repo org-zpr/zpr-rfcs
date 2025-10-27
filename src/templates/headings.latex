@@ -1,0 +1,41 @@
+\usepackage{titlesec}
+\titleformat % Modify section title formatting
+	{\chapter} % choosing to modify section
+	[block] % shape
+	{\normalfont\bfseries\large} % format
+	{\thechapter.} % Add the . after the section #
+	{0.5em} % sep
+	{} % code preceding title body
+\titlespacing{\chapter}{0pt}{0pt}{0.5em}
+\titleformat % Modify section title formatting
+	{\section} % choosing to modify section
+	[block] % shape
+	{\normalfont\bfseries\large} % format
+	{\thesection.} % Add the . after the section #
+	{0.5em} % sep
+	{} % code preceding title body
+\titleformat % Modify section title formatting
+	{\subsection} % choosing to modify subsection
+	[block] % shape
+	{\normalfont\bfseries} % format
+	{\thesubsection.} % numbering
+	{0.5em} % sep
+	{} % code preceding title body
+\titleformat % Modify section title formatting
+	{\subsubsection} % choosing to modify subsection
+	[block] % shape
+	{\normalfont\bfseries} % format
+	{\thesubsubsection.} % numbering
+	{0.5em} % sep
+	{} % code preceding title body
+\usepackage[]{fancyhdr}
+\fancypagestyle{plain}{
+	\fancyhf{}
+	\fancyhead[C]{\small ZPR RFC-$rfcnum$}
+	\fancyhead[R]{\small\thepage}
+	\fancyfoot[L]{\small Applied Invention, LLC}
+	\fancyfoot[R]{\small $if(updated)$$updated$$else$$firstdraft$$endif$}
+	\renewcommand{\headrulewidth}{0pt}
+	\renewcommand{\footrulewidth}{0pt}
+}
+\pagestyle{plain}

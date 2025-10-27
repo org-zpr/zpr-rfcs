@@ -1,6 +1,6 @@
 SRCS := $(shell find src/ -name '*.md')
 PDFS := $(SRCS:src/%.md=pdf/%.pdf)
-TEMPLATES := $(shell find ./src/templates -name '*.sty')
+TEMPLATES := $(shell find ./src/templates -name '*.latex')
 DEFAULTS := ./src/defaults/defaults.yml
 
 all: $(PDFS)

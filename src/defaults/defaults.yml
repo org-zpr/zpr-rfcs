@@ -1,6 +1,6 @@
 #to: pdf
 data-dir: ${.}/../
-template: zpr.sty
+template: zpr.latex
 resource-path:
   - .
   - ${.}/../media
@@ -8,6 +8,7 @@ standalone: true
 number-sections: true
 table-caption-position: below
 metadata:
+  documentclass: article
   fontfamily: tgschola
   fontsize: 11pt
   geometry:
