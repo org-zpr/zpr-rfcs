@@ -5,7 +5,6 @@ publisher: "Applied Invention, LLC"
 firstdraft: "May 2025"
 updated: "May 19, 2025"
 rfcnum: 16
-lang: en-US
 ...
 
 # Identity
@@ -149,19 +148,3 @@ that must be authenticated before they are used to look up attribute
 values. For example, user names, device names, and service names are
 authenticatable identities, and they may have attribute values that are
 also identities.
-
-# Revision History
-
-1.  Revision as of May 19, 2025
-
-    1.  Eliminate any discussion of actors/agents.
-
-    2.  Call the devices endpoints.
-
-    3.  Allow entire system to be an endpoint.
-
-    4.  Clarify use of multiple authentication services.
-
-2.  Revision as of August 2025
-
-    1.  Add headings Devices and Recursive Identity Attributes.

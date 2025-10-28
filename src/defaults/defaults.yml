@@ -1,14 +1,12 @@
 #to: pdf
 data-dir: ${.}/../
 template: zpr.latex
-resource-path:
-  - .
-  - ${.}/../media
 standalone: true
 number-sections: true
 table-caption-position: below
 metadata:
   documentclass: article
+  lang: en-US
   fontfamily: tgschola
   fontsize: 11pt
   geometry:

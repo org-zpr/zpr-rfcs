@@ -5,7 +5,6 @@ publisher: "Applied Invention, LLC"
 firstdraft: "September 2020"
 updated: "August 28, 2025"
 rfcnum: 4
-lang: en-US
 ...
 
 # Introduction
@@ -61,8 +60,3 @@ This document defines terms used when discussing ZPR and its various components.
 | ZPR | Zero-Trust Packet Routing; a network architecture that enforces communication policies within the network. |
 | ZPR Endpoint | A user, device, or service with an authenticated identity participating in communication via ZPRnet. |
 | ZPRnet | A network or group of interconnected ZPR nodes that enforce communication policies using visas, compliant flows, and ZPL rules. |
-
-# Revision History
-
-1.  Revision as of August 28, 2025
-    1.  Updated list of terms
