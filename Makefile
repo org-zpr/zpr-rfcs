@@ -1,10 +1,10 @@
-SRCS := $(shell find src/ -name '*.md')
-PDFS := $(SRCS:src/%.md=pdf/%.pdf)
+SRCS := $(dir $(wildcard src/*/*.md))
+PDFS := $(SRCS:src/%/=pdf/%.pdf)
 TEMPLATES := $(shell find ./src/templates -name '*.latex')
 DEFAULTS := ./src/defaults/defaults.yml
 
 all: $(PDFS)
 
-pdf/%.pdf: src/%.md $(DEFAULTS) $(TEMPLATES)
+pdf/%.pdf: src/%/* $(DEFAULTS) $(TEMPLATES)
 	SOURCE_DATE_EPOCH=$(shell git log -1 --pretty="format:%ct" $<) \
-	pandoc $< -o $@ --defaults ${DEFAULTS}
+	pandoc src/$*/*.md -o $@ --defaults ${DEFAULTS} --resource-path src/$*
