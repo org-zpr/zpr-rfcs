@@ -1,16 +1,31 @@
+# Standard options
+data-dir: ${.}/../
+template: zpr.latex
+metadata-file: metadata-defaults.yaml
+standalone: true
+number-sections: true
+table-caption-position: below
+
+# Additional options
 bibliography: references.bibtex
 toc: true
 toc-depth: 4
 lof: true
 lot: true
 filters:
+  - /usr/local/share/pandoc/filters/diagram.lua
   - pandoc-crossref
   - citeproc
 top-level-division: chapter
 metadata: # These override whatever's in other metadata files
+  diagram:
+    engine:
+      dot: false
+      plantuml: true
+      asymptote: false
+      tikz: false
+      mermaid:
+        execpath: ['mmdc', '-p', '/etc/puppeteer-conf.json']
   documentclass: report
   classoption: openany
   autoSectionLabels: true
-  secPrefix:
-    - \S
-    - \S

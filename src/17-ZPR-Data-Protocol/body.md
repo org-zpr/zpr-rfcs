@@ -1,11 +1,3 @@
----
-title: "ZDP Protocol Definition"
-author: "Frank Kastenholz"
-publisher: "Applied Invention, LLC"
-firstdraft: "September 2, 2025"
-rfcnum: 17
-...
-
 # Introduction
 
 This document defines the ZPR-2020 Data Protocols (ZDP). These protocols 1) manage the interactions of Adapters and Nodes with their immediate neighbors and 2) transport Endpoint Packets from Ingress Adapter to Egress Adapter.
@@ -85,6 +77,10 @@ Stream
 Flow
 :   A Flow is the actual sequence of bytes going from the source Endpoint to the destination Endpoint. It is carried in ZDP Transit packets.  This is sometimes referred to as a Traffic Flow.
 
+## Version
+
+This document describes version 1 of ZDP.
+
 # Protocol Stack
 
 The following diagram shows the abstract ZPR-2020 protocol stack, showing the relationships between the various elements.
@@ -105,7 +101,7 @@ The following diagram shows the abstract ZPR-2020 protocol stack, showing the re
                     +-------------------+----------------+
                     |                   |                |
                     | ZPR Data Protocol | ZPR Management |
-                    | (ZDP              | Messages       |
+                    | (ZDP)             | Messages       |
                     +-------------------+----------------+
                         +--------+-+--------+ - - - - - - -
                         |        | |        |  Adaptation
@@ -307,910 +303,579 @@ This section provides the high-level sequence of events for bringing Nodes and E
 
 ZPR Links and Docking Sessions operate using simple finite state machines (FSMs). The FSMs for each are only slightly different and the description of them is as common as possible (in order to avoid repeatedly defining the same events, states, or transitions with the possibility that the definitions, which are intended to be the same, in fact diverge).
 
-The following three diagrams show the primary state transitions for the FSMs for managing the state of a Forwarder to Forwarder Link, the Dock side of a Docking Session and the Adapter side of a Docking session, respectively. Figure 6 and Figure 7 show the full FSM specification.
+The following three diagrams show the primary state transitions for the FSMs for managing the state of a Forwarder to Forwarder Link, the Dock side of a Docking Session and the Adapter side of a Docking session, respectively. [@Tbl:link-fsm-1; @Tbl:link-fsm-2; @Tbl:link-fsm-3] show the full FSM specification.
 
-\begin{figure}
-\begin{verbatim}
-+---------+       +----------+       +--------+
-| INITIAL |--CD-->| INACTIVE |--ST-->| KEYING |
-+---------+       +----------+       +--------+
-    ^                  ^               | |  |
-    |                  |   +------KDe--+ |  +--KDu--------+
-    |                  CC  |       C    KDo               |
-    |                  |   V             V                V
-    |              +---------+  HDe  +----------+     +----------+
-    |              | CLOSING |<--C---| HELLOING |     | HELLOING |
-    |              +---------+       +----------+     | SILENT   |
-    R                  ^                  |   |       +----------+
-    |                  |                 HDo HDu          |    |
-    |                  C                  |   |          HDu   C
-    |                  |                  |   +------+   HDo  HDe
-    |                  |                  V          V    V     |
-    |                  | KDe, C, KF   +--------+    +--------+  |
-    |                  +----------+---| ACTIVE |--->| ACTIVE |  |
-    |                             |   +--------+ KDu| SILENT |  |
-    +<-R-[ANY STATE]               \                +--------+  |
-    |                               \                   |       |
-+-------+                            \                  C       |
-| ERROR |<-- Error -- [ANY STATE]     \                 |       |
-+-------+                              +----------------+-------+
-\end{verbatim}
-\caption{Link FSM}
-\end{figure}
+``` mermaid {#fig:link-fsm caption="Link FSM"}
+---
+config:
+  deterministicIds: true
+  themeVariables:
+    fontSize: 20
+  flowchart:
+    curve: monotoneY
+    nodeSpacing: 0
+    rankSpacing: 0
+    padding: 5
+    subGraphTitleMargin:
+      top: 5
+---
+flowchart TB
+    U@{ label: "Unconfigured", shape: start }
+    I[Inactive]
+    C[Closing]
 
-\begin{figure}
-\begin{verbatim}
-+---------+       +----------+       +-----------+      +--------+
-| INITIAL |--CD-->| INACTIVE |--ST-->| LISTENING |-RKM->| KEYING |
-+---------+       +----------+       +-----------+      +--------+
-    ^                  ^                    |             | |  |
-    |                  |   +------KDe------- -------------+ |  +--KDu--+
-    |                  CC  |       C        |              KDo         |
-    |                  |   |                +- RHM---+   +--+          |
-    |                  |   V                         V   V             V
-    |              +---------+              HDe   +----------+  +----------+
-    |              | CLOSING |<---------------C---| HELLOING |  | HELLOING |
-    |              +---------+                    +----------+  | SILENT   |
-    R                  ^                               |   |    +----------+
-    |                  |                              HDo HDu        |    |
-    |                  C             +-----------------+   |      HDo,HDu C
-    |                  |             |             +-------+<--------+   HDe
-    |                  |             V             |                      |
-    |                  |        +-------------+  +-------------+          |
-    |                  +<-RADe--| REGISTER EA |  | REGISTER EA |          |
-    |                  |   C    +-------------+  |    SILENT   |-----C--->+
-    |                  |              |    |     +-------------+          |
-    |                  |             RADo  RADu     |                     |
-    |                  |              |    |       RAD                    |
-    |              +---+              |    +-----+  |                     |
-    |              |                  V          V  V                     |
-    |              | KDe, RADe, C +--------+    +--------+                |
-    |              +----------+---| ACTIVE |--->| ACTIVE |                |
-    |                 KF      |   +--------+KDu,| SILENT |                |
-    +<-R-[ANY STATE]           \           RADu +--------+                |
-    |                           \                   |                     |
-+-------+                        \                  C                     |
-| ERROR |<-- Error - [ANY STATE]  \                 |                     |
-+-------+                          +----------------+---------------------+
-\end{verbatim}
-\caption{Docking Session FSM (Dock Side)}
-\end{figure}
+    subgraph "**Operational**"
+        direction TB
+        K[Keying]
+        H[Helloing]
+        A[Active]
+    end
 
-\begin{figure}
-\begin{verbatim}
-+---------+       +----------+                          +--------+
-| INITIAL |--CD-->| INACTIVE |--ST--------------------->| KEYING |
-+---------+       +----------+                          +--------+
-    ^                  ^                                  | |  |
-    |                  |   +------KDe---------------------+ |  +--KDu-----+
-    |                  CC  |       C                       KDo            |
-    |                  |   |                                |             |
-    |                  |   V                                V             V
-    |              +---------+             HDe   +----------+  +----------+
-    |              | CLOSING |<--------------C---| HELLOING |  | HELLOING |
-    |              +---------+                   +----------+  | SILENT   |
-    R                  ^                              |   |    +----------+
-    |                  |                             HDo HDu        |    |
-    |                  C            +-----------------+   |      HDu,HDo C
-    |                  |            |             +-------+<--------+   HDe
-    |                  |            V             |                      |
-    |                  |       +-------------+  +-------------+          |
-    |                  +<-RADe-| REGISTER EA |  | REGISTER EA |          |
-    |                  |   C   +-------------+  |    SILENT   |----C---->+
-    |                  |             |    |     +-------------+          |
-    |                  |            RADo  RADu     |                     |
-    |             +----+             |    |       RAD                    |
-    |             |                  |    +-----+  |                     |
-    |             |                  V          V  V                     |
-    |             | KDe, RADe, C +--------+    +--------+                |
-    |             +----------+---| ACTIVE |--->| ACTIVE |                |
-    |                  KF    |   +--------+KDu,| SILENT |                |
-    +<-R-[ANY STATE]          \           RADu +--------+                |
-    |                          \                   |                     |
-+-------+                       \                  C                     |
-| ERROR |<- Error - [ANY STATE]  \                 |                     |
-+-------+                         +----------------+---------------------+
-\end{verbatim}
-\caption{Docking Session FSM (Adapter side)}
-\end{figure}
+    subgraph "**Silent**"
+        direction TB
+        HS["*Helloing*"]
+        AS["*Active*"]
+    end
 
-The States in the FSM are as follows:
+    U  -->  |"Config Done"| I
+    I  -->  |"Start"| K
 
-+---------------+------------------------------------------------------+
-| State         | Description                                          |
-+===============+======================================================+
-| Initial       | The initial state of the Link or Docking Session. It |
-|               | can do nothing in this state except receive a        |
-|               | configuration.                                       |
-|               |                                                      |
-|               | This is the "power on" condition of the Link and     |
-|               | Docking Session.                                     |
-|               |                                                      |
-|               | Any packets received while in this state MUST be     |
-|               | silently discarded. They are not considered to be    |
-|               | errors or policy violations.                         |
-+---------------+------------------------------------------------------+
-| Inactive      | The Link or Docking Session has been configured but  |
-|               | has not started. The Link or Docking Session is      |
-|               | started only under certain conditions, as defined by |
-|               | ZPR Policies. When those conditions occur, a START   |
-|               | event is issued to the relevant Link or Docking      |
-|               | Session.                                             |
-|               |                                                      |
-|               | Any packets received while in this state MUST be     |
-|               | silently discarded. They are not considered to be    |
-|               | errors or Policy violations.                         |
-|               |                                                      |
-|               | When this state is reached:                          |
-|               |                                                      |
-|               | 1)  If keys are predistributed then the              |
-|               |     configuration MUST have created the Security     |
-|               |     Associations (SAs) to be used,                   |
-|               |                                                      |
-|               | 2)  If dynamic keying is done, then SA 0 (the NULL   |
-|               |     SA, [@sec:the-null-security-association])   |
-|               |     MUST be created and available to process keying  |
-|               |     messages.                                        |
-+---------------+------------------------------------------------------+
-| Keying        | If predistributed keys are used, then this state is  |
-|               | a NO-OP. The Dock, Adapter, or Forwarder notes that  |
-|               | an SA is available and automatically issues a        |
-|               | KEYING_DONE, OK event (This eliminates a special     |
-|               | case in the FSM).                                    |
-|               |                                                      |
-|               | If a keying protocol is used, then that protocol     |
-|               | executes. The two sides of the Link or Dock Session  |
-|               | attempt to establish an initial Security Association |
-|               | (SA) to use for subsequent messages.                 |
-|               |                                                      |
-|               | The Keying Protocol has its own, internal FSM, that  |
-|               | it uses to establish the SA. We assume that this FSM |
-|               | can produce one of three results:                    |
-|               |                                                      |
-|               | -   SA Established -- the SA has been created and is |
-|               |     available for use. A KEYING_DONE, OK (KDo) event |
-|               |     is then generated.                               |
-|               |                                                      |
-|               | -   Error -- some (unrecoverable) error has          |
-|               |     occurred. The error should be reported, state    |
-|               |     cleaned up and resources recovered, and the Link |
-|               |     or Docking Session returned to its previous      |
-|               |     state. These errors are things like running out  |
-|               |     of memory, not being able to agree on an         |
-|               |     algorithm, or network failure. In this case a    |
-|               |     KEYING_DONE, Error (KDe) event is generated.     |
-|               |                                                      |
-|               | -   Unacceptable -- the operation terminates but the |
-|               |     peer is deemed to be unacceptable for some       |
-|               |     policy-based reason (*e.g.*, a certificate has   |
-|               |     been revoked or the signer is unknown or         |
-|               |     unacceptable). In this case a KEYING DONE,       |
-|               |     Unacceptable (KDu) event is issued.              |
-|               |                                                      |
-|               | > NOTE WELL: additional keying protocol operations   |
-|               | > (such as updating keys, managing SAs, etc) may     |
-|               | > occur, as needed by the keying protocol, but only  |
-|               | > after the KEYING state has terminated              |
-|               | > successfully.                                      |
-+---------------+------------------------------------------------------+
-| Helloing      | The HELLOING state is used by the peers to exchange  |
-|               | information: the version of ZDP that the peer is     |
-|               | using and the ID of the policy by which the peer has |
-|               | started the Link or Docking Session.                 |
-|               |                                                      |
-|               | The peer receiving the hello information evaluates   |
-|               | the information. If it is deemed unacceptable for    |
-|               | any reason, the peer terminates the Docking Session  |
-|               | or Link but "goes silent" with respect to the peer |
-|               | (that is, any Transit Packets sent by the peer are   |
-|               | silently discarded).                                 |
-|               |                                                      |
-|               | The Hello operation performs its own, internal, FSM. |
-|               | It can have one of three results:                    |
-|               |                                                      |
-|               | 1)  OK. The hello operation completed, all data is   |
-|               |     acceptable, and the Link or Docking Session can  |
-|               |     proceed to the next step. In this case, the      |
-|               |     HELLOING DONE, OK (HDo) event is issued.         |
-|               |                                                      |
-|               | 2)  Error -- Some kind of error occurred, and the    |
-|               |     operation is deemed to have failed. Resources    |
-|               |     are recovered and the Link or Docking Session    |
-|               |     returns to the INACTIVE state. In this case, the |
-|               |     HELLOING DONE, Error (HDe) event is issued.      |
-|               |                                                      |
-|               | 3)  Unacceptable -- The operation completed but the  |
-|               |     information in the Hello message was             |
-|               |     unacceptable for some reason AND the disclosure  |
-|               |     of the fact that the information was             |
-|               |     unacceptable could leak sensitive Policy or      |
-|               |     Configuration information. In this case the      |
-|               |     HELLOING DONE, Unaceptable (HDu) event is        |
-|               |     issued.                                          |
-+---------------+------------------------------------------------------+
-| Closing       | The Link or Docking Session has started to close.    |
-|               | Forwarding has stopped and resources are being       |
-|               | recovered. When the close completes, the Link or     |
-|               | Docking Session goes to the INACTIVE state.          |
-|               |                                                      |
-|               | While in this state:                                 |
-|               |                                                      |
-|               | -   Any buffers containing packets received on or    |
-|               |     scheduled for transmission out of the CLOSING    |
-|               |     Link or Docking Session are silently discarded,  |
-|               |                                                      |
-|               | -   Any QOS or other network resource reservations   |
-|               |     or allocations on the Substrate network or       |
-|               |     interface over which the Link or Docking Session |
-|               |     operates are released,                           |
-|               |                                                      |
-|               | -   Any Endpoint Addresses that have been registered |
-|               |     on the Docking Session are withdrawn from the    |
-|               |     ZPR network (Dock only),                         |
-|               |                                                      |
-|               | -   Any security associations established by a       |
-|               |     keying protocol are terminated.                  |
-+---------------+------------------------------------------------------+
-| Helloing      | In this state, the node pretends to complete the     |
-| Silent        | helloing operations successfully, regardless of      |
-|               | whether the hello information received from the peer |
-|               | is acceptable or not. It is entered only if the      |
-|               | keying completes unsuccessfully (KDu). The intent is |
-|               | to fool the peer into thinking that "all is well"    |
-|               | even when it is not (and thereby not revealing any   |
-|               | sensitive policy, etc, information). The HD event is |
-|               | issued when the helloing finishes.                   |
-+---------------+------------------------------------------------------+
-| Active        | All initial configuration and startup have been      |
-|               | done. ZDP packets are being forwarded via the link.  |
-|               |                                                      |
-|               | Additional Keying and Endpoint Address registration  |
-|               | operations may occur. If either results in an error  |
-|               | (KDe or RADe) then the Link or Docking Session is    |
-|               | terminated as if a CLOSE event had been issued. If   |
-|               | the operations terminate unacceptably (that is, some |
-|               | part of the operation would violate policy or        |
-|               | otherwise expose sensitive information to a          |
-|               | potential attacker) then the KDu or RADu events are  |
-|               | issued and the Link or Docking Session transitions   |
-|               | to the Active Silent state.                          |
-+---------------+------------------------------------------------------+
-| Active Silent | In the Active Silent state node appears to the peer  |
-|               | to be in ACTIVE state, but in fact, the node         |
-|               | discards all ZDP transit traffic received from the   |
-|               | peer and discards any transit traffic it would have  |
-|               | sent to the peer. Active Silent is only entered when |
-|               | some management operation (*e.g.*, establishing new  |
-|               | keys) fails due to a Policy violation and exposing   |
-|               | this failure to the peer would expose the Policy to  |
-|               | a potential attacker. The intent is that the node    |
-|               | then "pretends that everything is normal" so as not  |
-|               | to reveal the failure to the peer.                   |
-|               |                                                      |
-|               | Any management messages received from the peer are   |
-|               | responded to in an affirmative manner (that is, as   |
-|               | if the operation succeeded), though the operation(s) |
-|               | that would result from the message are not           |
-|               | performed.                                           |
-|               |                                                      |
-|               | Traffic received from the ZPR network (or Endpoint)  |
-|               | to be transmitted via the Link or Docking Session    |
-|               | MUST NOT be so transmitted. It MUST be dropped.      |
-|               |                                                      |
-|               | The node MAY elect to conduct a more complex         |
-|               | deception by sending an appropriate ICMP Destination |
-|               | Unreachable in response to receiving packets via the |
-|               | Link or Docking Session.                             |
-+---------------+------------------------------------------------------+
-| Listening     | This state applies only to the Dock side of a        |
-|               | Docking Session.                                     |
-|               |                                                      |
-|               | In this state, a Dock is waiting for an              |
-|               | Endpoint/Adapter to attempt to connect to the ZPR    |
-|               | Network. The Endpoint/Adapter initiates the          |
-|               | connection by sending either the first keying        |
-|               | protocol message (in which case a Receive Keying     |
-|               | Message (RKM) event is issued) or the first message  |
-|               | of the hello protocol (in which case a Receive Hello |
-|               | Message (RHM) event is issued).                      |
-|               |                                                      |
-|               | This state is required (and limited to Docks) since  |
-|               | Docks passively wait for Adapters to start           |
-|               | connecting to the network.                           |
-+---------------+------------------------------------------------------+
-| Register EA   | The REGISTERING EA (Endpoint Address) state is used  |
-|               | only by Adapters and Docks with respect to           |
-|               | individual Dock Sessions.                            |
-|               |                                                      |
-|               | When an Adapter has successfully established keys    |
-|               | and completed the hello operation, it MUST register  |
-|               | at least one Endpoint Address with the Dock. This    |
-|               | performed in the Registering Endpoint Address state. |
-|               |                                                      |
-|               | The Register EA state operates its own internal FSM. |
-|               | It can produce one of three results:                 |
-|               |                                                      |
-|               | 1)  Endpoint Address registered successfully. A      |
-|               |     Register EA Done, OK (RADo) event is issued.     |
-|               |                                                      |
-|               | 2)  Error occurred while registering address (such   |
-|               |     as no memory or network error). In this case the |
-|               |     operation terminates and a Register EA Done,     |
-|               |     Error (RADe) event is issued.                    |
-|               |                                                      |
-|               | 3)  Attempt to register an address that violates a   |
-|               |     Policy or the success/failure of such a          |
-|               |     registration would reveal sensitive internal     |
-|               |     state of the network to a potential adversary.   |
-|               |     In this case the attempt is deemed to be         |
-|               |     unacceptable, and a Register EA Done,            |
-|               |     Unacceptable (RADu) event is issued.             |
-|               |                                                      |
-|               | NOTE WELL: additional Endpoint Address protocol      |
-|               | operations (such as registering additional addresses |
-|               | or retracting addresses) may occur, but only after   |
-|               | the REGISTER EA state has terminated successfully.   |
-+---------------+------------------------------------------------------+
-| Register EA   | The Register EA Silent state is entered only as a    |
-| Silent        | result of a previous state terminating unacceptably  |
-|               | (*e.g.*, HELLOING terminated with a Helloing Done,   |
-|               | Unacceptable (HDu) event). In this case, the         |
-|               | register-EA operations are allowed to proceed, but   |
-|               | the node MUST NOT register those addresses with the  |
-|               | ZPR network. When the register EA finishes, a        |
-|               | "Register EA Done" is issued (regardless of the      |
-|               | reason) and ACTIVE, Silent is entered, black-holing  |
-|               | the peer's traffic.                                  |
-+---------------+------------------------------------------------------+
-| Error         | Some kind of error that is not automatically         |
-|               | recoverable has occurred.                            |
-+---------------+------------------------------------------------------+
+    K  -->  |"Keying Unacceptable"| HS
+    K  -->  |"Keying OK"| H
+    K  -->  |"Keying Error<BR>Close"| C
 
-: Link and Docking Session FSM States {#tbl:link-fsm-states}
+    H  -->  |"Hello Unacceptable"| AS
+    H  -->  |"Hello OK"| A
+    H  -->  |"Hello Error<BR>Close"| C
 
-The events in the FSMs are:
+    HS -->  |"Hello Error<BR>Close"| C
+    HS -->  |"Hello OK<BR>Hello Unacceptable"| AS
 
-+-------+---------------------------------------------------------------+
-| Event | Description                                                   |
-|       |                                                               |
-+=======+===============================================================+
-| C     | CLOSE                                                         |
-|       |                                                               |
-|       | A request has been made (*e.g.*, via a local management       |
-|       | operation or due to a Policy directive) to terminate the      |
-|       | connection. The close operation is then performed (Terminate  |
-|       | Request and Response messages are exchanged).                 |
-|       |                                                               |
-|       | Any Endpoint Data packets received for or from a Link or      |
-|       | Docking Session against which a CLOSE event has occurred are  |
-|       | silently discarded. These are not considered errors.          |
-+-------+---------------------------------------------------------------+
-| CC    | CLOSE COMPLETE                                                |
-|       |                                                               |
-|       | When the close completes (that is, either the Terminate       |
-|       | Indication has been sent, or the Terminate Request and        |
-|       | Response have been exchanged, allocated resources have been   |
-|       | reclaimed, etc) then the "CLOSE COMPLETE" event occurs.       |
-|       |                                                               |
-|       | Note that with the close, there is no "error" condition -- if |
-|       | an error occurs then the close is still deemed to be          |
-|       | successful.                                                   |
-+-------+---------------------------------------------------------------+
-| CD    | CONFIG DONE                                                   |
-|       |                                                               |
-|       | All configuration information necessary to bring up a Link or |
-|       | Docking Session has been received. This includes, but is not  |
-|       | limited to, the Substrate Address, the Substrate Address of   |
-|       | the other end of the Link, cryptographic information          |
-|       | necessary to establish the secure link, Policies dictating    |
-|       | when the Link or Docking Session should be brought up, and so |
-|       | on.                                                           |
-|       |                                                               |
-|       | When CONFIG_DONE is issued:                                   |
-|       |                                                               |
-|       | 1)  If dynamic keying is to be used, SA 0 (the "Null SA")     |
-|       |     MUST be available for the keying protocol to use,         |
-|       |                                                               |
-|       | 2)  If predistributed keys are used, then the SAs for those   |
-|       |     keys MUST be available.                                   |
-|       |                                                               |
-|       | If the Link's or Docking Session's configuration is           |
-|       | inconsistent, incomplete, or otherwise unacceptable (or       |
-|       | unworkable) then the CONFIG_DONE MUST NOT occur. An           |
-|       | implementation MUST either:                                   |
-|       |                                                               |
-|       | -   Issue an ERROR event (going to the ERROR state). This     |
-|       |     might indicate some kind of unrecoverable error in the    |
-|       |     configuration.                                            |
-|       |                                                               |
-|       | -   Remain in INITIAL state. This might be used if, for       |
-|       |     example, more configuration data is required and can be   |
-|       |     reasonably expected.                                      |
-|       |                                                               |
-|       | A CONFIG DONE in any state other than INITIAL is explicitly   |
-|       | defined as a NOOP (that is, the state does not change and no  |
-|       | actions are taken). The reason is that the administrators may |
-|       | not wish to place in service the configuration changes that   |
-|       | caused the CONFIG DONE event to occur. The administrators     |
-|       | must explicitly place the changes into service by restarting  |
-|       | the Link or Docking Session.                                  |
-+-------+---------------------------------------------------------------+
-| ERROR | ERROR                                                         |
-|       |                                                               |
-|       | This event can occur in any state and is some form of error   |
-|       | or other condition that prevents the Link from operating in   |
-|       | the normal manner AND from which automated recovery *(e.g*.,  |
-|       | "retransmitting a packet") is not possible.                   |
-|       |                                                               |
-|       | In all cases, this results in an immediate transition to the  |
-|       | ERROR state.                                                  |
-|       |                                                               |
-|       | Given that ERROR events may indicate internal problems that   |
-|       | may preclude generating packets, a node MAY send a Terminate  |
-|       | Indication ([@sec:terminate-indication]) but MUST NOT rely    |
-|       | on the peer receiving the indication.                         |
-|       |                                                               |
-|       | The only way to exit the ERROR state is via a RESET.          |
-+-------+---------------------------------------------------------------+
-| HDe   | HELLOING DONE, ERROR                                          |
-|       |                                                               |
-|       | This event indicates that an error (other than a security or  |
-|       | policy violation, below) occurred in attempting to perform a  |
-|       | Hello.                                                        |
-|       |                                                               |
-|       | Errors in this category are things like                       |
-|       |                                                               |
-|       | -   Lack of resources,                                        |
-|       |                                                               |
-|       | -   Network communications failures,                          |
-|       |                                                               |
-|       | -   Peer not responding after designated number of            |
-|       |     retransmissions,                                          |
-|       |                                                               |
-|       | -   Etc.                                                      |
-|       |                                                               |
-|       | In short, as opposed to the "unacceptable" case, below, the   |
-|       | occurrence and reporting of these conditions do not reveal    |
-|       | any sensitive policy or configuration information.            |
-|       |                                                               |
-|       | A Terminate Indication indicating the error                   |
-|       | ([@sec:terminate-indication]) SHOULD be sent.                 |
-+-------+---------------------------------------------------------------+
-| HDo   | HELLOING DONE, OK                                             |
-|       |                                                               |
-|       | This indicates that the hello protocol has successfully       |
-|       | exchanged the relevant hello information.                     |
-|       |                                                               |
-|       | When a Link has sent a HELLO REQUEST and received a matching  |
-|       | HELLO RESPONSE AND has received a HELLO REQUEST and sent an   |
-|       | appropriate HELLO RESPONSE then the HELLO DONE event occurs.  |
-+-------+---------------------------------------------------------------+
-| HDu   | HELLOING DONE, UNACCEPTABLE                                   |
-|       |                                                               |
-|       | The info in the hello is not acceptable and revealing this to |
-|       | the peer would expose sensitive policy information to a       |
-|       | potential attacker. An HDu is issued in this case.            |
-|       |                                                               |
-|       | The peer MUST NOT send a Terminate Indication or Request or   |
-|       | otherwise inform the unacceptable peer of the situation. The  |
-|       | rationale for this is that the unacceptable peer may be       |
-|       | attempting some kind of attack (such as scanning) and getting |
-|       | an indication back may leak information regarding the ZPR     |
-|       | Networks policies, configuration, and so on.                  |
-+-------+---------------------------------------------------------------+
-| HD    | HELLOING DONE (any result - error, OK, or Unacceptable)       |
-|       |                                                               |
-|       | This event is issued only when in the HELLOING, SILENT,       |
-|       | state. In this case, it does not matter whether the hello     |
-|       | completed successfully or not since the node is "silent" with |
-|       | respect to the peer, so everything must "look good".          |
-+-------+---------------------------------------------------------------+
-| KDe   | KEYING DONE, ERROR                                            |
-|       |                                                               |
-|       | This event indicates that some kind of error (other than a    |
-|       | security or policy violation) occurred in attempting to       |
-|       | establish keys.                                               |
-|       |                                                               |
-|       | Errors in this category are things like                       |
-|       |                                                               |
-|       | -   Lack of resources,                                        |
-|       |                                                               |
-|       | -   Network communications failures,                          |
-|       |                                                               |
-|       | -   Peer not responding after designated number of            |
-|       |     retransmissions,                                          |
-|       |                                                               |
-|       | -   Etc.                                                      |
-|       |                                                               |
-|       | In short, as opposed to the "unacceptable" case, the          |
-|       | occurrence and reporting of these conditions do not reveal    |
-|       | any sensitive policy or configuration information.            |
-|       |                                                               |
-|       | If this event occurs in the INITIAL or INACTIVE states it     |
-|       | SHOULD be treated as a programming error since it cannot      |
-|       | happen (the keying operations are not started until the START |
-|       | event transitions from INACTIVE to KEYING). The next state is |
-|       | ERROR.                                                        |
-|       |                                                               |
-|       | If this occurs in the ERROR or CLOSING states it is a NOOP.   |
-|       |                                                               |
-|       | If it occurs in any other state, it is treated as an error;   |
-|       | start the process of closing the Link or Docking Session and  |
-|       | transition to the CLOSING state.                              |
-|       |                                                               |
-|       | Indicating the error to the peer is left to the keying        |
-|       | protocols because sending a Terminate Indication would be     |
-|       | unsecure.                                                     |
-+-------+---------------------------------------------------------------+
-| KDo   | KEYING DONE, OK                                               |
-|       |                                                               |
-|       | This event occurs when the Link is in the KEYING state and    |
-|       | enough cryptographic material is available for the Link to    |
-|       | use session keys for all traffic.                             |
-|       |                                                               |
-|       | If session keys are pre-distributed, this event automatically |
-|       | occurs after entering the KEYING state.                       |
-|       |                                                               |
-|       | If a keying protocol is in use, then it occurs when the       |
-|       | protocol has created session keys and installed them in the   |
-|       | Link. This typically occurs after several packets have been   |
-|       | exchanged between the two end points of the link.             |
-|       |                                                               |
-|       | This event occurs when the Link is in the KEYING state and    |
-|       | enough cryptographic material is available for the Link to    |
-|       | use session keys for all traffic.                             |
-|       |                                                               |
-|       | If session keys are pre-distributed, this event automatically |
-|       | occurs after entering the KEYING state.                       |
-|       |                                                               |
-|       | If a keying protocol is in use, then it occurs when the       |
-|       | protocol has created session keys and installed them in the   |
-|       | Link. This typically occurs after several packets have been   |
-|       | exchanged between the two end points of the link.             |
-|       |                                                               |
-|       | If this event occurs in the INITIAL or INACTIVE states it     |
-|       | SHOULD be treated as a programming error since it cannot      |
-|       | happen (the keying operations are not started until the START |
-|       | event transitions from INACTIVE to KEYING). The next state is |
-|       | ERROR.                                                        |
-|       |                                                               |
-|       | If this occurs in the ERROR or CLOSING states it is a NOOP.   |
-|       |                                                               |
-|       | In any other state, this event is treated as a NOOP. The      |
-|       | assumption is that the keying protocol is running, performing |
-|       | whatever operations it normally performs, and these           |
-|       | operations are completing without error (*e.g.*, updating     |
-|       | session keys). This has no effect on the FSM.                 |
-+-------+---------------------------------------------------------------+
-| KDu   | KEYING DONE, UNACCEPTABLE                                     |
-|       |                                                               |
-|       | If a security violation is detected (such as the peer fails   |
-|       | some authentication check, a certificate is presented with an |
-|       | unknown or unacceptable signer, etc) then the keying          |
-|       | terminates with an "unacceptable" condition.                  |
-|       |                                                               |
-|       | The peer MUST NOT send a Terminate Indication or Request or   |
-|       | otherwise inform the unacceptable peer of the situation. The  |
-|       | rationale for this is that the unacceptable peer may be       |
-|       | attempting some kind of attack (such as scanning) and getting |
-|       | an indication back may leak information regarding the ZPR     |
-|       | Networks policies, configuration, and so on.                  |
-|       |                                                               |
-|       | If this event occurs in the INITIAL or INACTIVE states it     |
-|       | SHOULD be treated as a programming error since it cannot      |
-|       | happen (the keying operations are not started until the START |
-|       | event transitions from INACTIVE to KEYING). The next state is |
-|       | ERROR.                                                        |
-|       |                                                               |
-|       | If this occurs in the ERROR or CLOSING states it is a NOOP.   |
-+-------+---------------------------------------------------------------+
-| KF    | Keepalive Failure\                                            |
-|       | This event occurs if A) A keepalive is enabled on a Link or   |
-|       | Docking Session and B) the keepalive is deemed to have        |
-|       | failed. If keepalive is not enabled then this event cannot    |
-|       | occur.                                                        |
-+-------+---------------------------------------------------------------+
-| R     | RESET                                                         |
-|       |                                                               |
-|       | The RESET event is an event that may be used in error         |
-|       | recovery. If issued, the Link or Docking Session should be    |
-|       | restored to its power-on state. The new FSM state is to       |
-|       | INITIAL -- the Link or Docking Session is now in a condition  |
-|       | to receive a new configuration and attempt to start up. The   |
-|       | notion is that this clears any bad accumulated state,         |
-|       | restoring the Link or Docking Session to a known good         |
-|       | condition.                                                    |
-|       |                                                               |
-|       | If not in any of the silent states (e.g., HELLOING SILENT) or |
-|       | a state where it is impossible to send a packet *(e.g.,*      |
-|       | ERROR or INITIAL state) then the node SHOULD send a Terminate |
-|       | Indication to the peer indicating that the Link has been      |
-|       | reset.                                                        |
-|       |                                                               |
-|       | RESET MAY be used to shut down a Link or Docking Session as a |
-|       | part of the process of shutting down a Node.                  |
-|       |                                                               |
-|       | All resources obtained for the Link or Docking Session MUST   |
-|       | be reclaimed.                                                 |
-+-------+---------------------------------------------------------------+
-| RADe  | REGISTER EA DONE, ERROR                                       |
-|       |                                                               |
-|       | Some error has occurred while registering an Endpoint         |
-|       | Address. These errors are such that disclosure of them to a   |
-|       | potentially compromised peer would not leak sensitive         |
-|       | information. Such errors include running out of storage,      |
-|       | network transmit or receive issues, or too many               |
-|       | retransmissions.                                              |
-|       |                                                               |
-|       | A Terminate Indication indicating the error                   |
-|       | ([@sec:terminate-indication]) SHOULD be sent and the          |
-|       | Docking Session closed.                                       |
-+-------+---------------------------------------------------------------+
-| RADo  | REGISTER EA DONE, OK                                          |
-|       |                                                               |
-|       | This event occurs only on Docks and Adapters, with respect to |
-|       | a Docking Session.                                            |
-|       |                                                               |
-|       | The Adapter has successfully registered at least one Endpoint |
-|       | Address with the Dock.                                        |
-|       |                                                               |
-|       | The Dock distributes a binding of the Endpoint Address and    |
-|       | the Dock Session Address to the rest of the ZPR Network,      |
-|       | enabling Endpoint Packets addressed to the Endpoint to be     |
-|       | forwarded to the correct Dock. This process is done by the    |
-|       | Admin Service.                                                |
-+-------+---------------------------------------------------------------+
-| RADu  | REGISTER EA DONE, UNACCEPTABLE                                |
-|       |                                                               |
-|       | An anomalous situation has occurred. This situation is such   |
-|       | that disclosure of the situation to a potentially compromised |
-|       | peer would leak sensitive information. Such errors include    |
-|       | attempting to register an unapproved Endpoint Address.        |
-+-------+---------------------------------------------------------------+
-| RAD   | REGISTER EA DONE, any result                                  |
-|       |                                                               |
-|       | This event is issued only when in the REGISTER EA, SILENT,    |
-|       | state. In this case, it does not matter whether the hello     |
-|       | completed successfully or not since the node is "silent" with |
-|       | respect to the peer, so everything must "look good".          |
-+-------+---------------------------------------------------------------+
-| RHM   | RECEIVE HELLO MESSAGE                                         |
-|       |                                                               |
-|       | This event occurs only on a Dock with regard to a Docking     |
-|       | Session that is in the LISTENING state.                       |
-|       |                                                               |
-|       | This event indicates that a Hello management message has been |
-|       | received from an Adapter. The message is passed to the hello  |
-|       | protocol and the protocol started.                            |
-|       |                                                               |
-|       | This message is valid only if predistributed keys are used.   |
-|       | If not, it is discarded and an error occurs.                  |
-|       |                                                               |
-|       | In effect, this means that an Adapter is attempting to "sign  |
-|       | on" to the ZPR Network.                                       |
-+-------+---------------------------------------------------------------+
-| RKM   | RECEIVE KEYING MESSAGE                                        |
-|       |                                                               |
-|       | This event occurs only on a Dock with regard to a Docking     |
-|       | Session that is in the LISTENING state.                       |
-|       |                                                               |
-|       | This event indicates that a keying message has been received  |
-|       | from an Adapter. The message is passed to the keying protocol |
-|       | and the protocol started.                                     |
-|       |                                                               |
-|       | This event is valid only if predistributed keys are not used. |
-|       | If not, it is discarded, and an error event occurs.           |
-|       |                                                               |
-|       | In effect, this means that an Adapter is attempting to "sign  |
-|       | on" to the ZPR Network.                                       |
-+-------+---------------------------------------------------------------+
-| ST    | START                                                         |
-|       |                                                               |
-|       | Start is an external event, driven by a management process.   |
-|       | It occurs when that process decides that a Link should be     |
-|       | started. *Typically,* this is driven by a set of ZPR Policies |
-|       | that define when a link should be started. Note that one such |
-|       | policy may be "always bring up the Link".                     |
-|       |                                                               |
-|       | If a START event occurs in any state other than INACTIVE, it  |
-|       | MUST be treated as NOOP. It MAY be reported as a programming  |
-|       | or execution error via the logging system.                    |
-+-------+---------------------------------------------------------------+
+    A  -->  |"Keying Unacceptable"| AS
+    A  -->  |"Keying Error<BR>Keepalive Failure<BR>Close"| C
 
-: Link and Docking Session FSM Events {#tbl:link-fsm-events}
+    AS ---> |"Keying Error<BR>Keepalive Failure<BR>Close"| C
 
-Event/State combinations not shown in Figure 3, Figure 4, or Figure 5 are treated as no-ops. They do not cause state transitions nor do they initiate any processing or protocol operations. They MAY be logged and/or counted.
+    C  -->  |"Close Complete"| I
+```
 
-The following table shows the complete FSM:
+``` mermaid {#fig:dock-sess-fsm-dock caption="Docking Session FSM (Dock Side)"}
+---
+config:
+  deterministicIds: true
+  themeVariables:
+    fontSize: 20
+  flowchart:
+    curve: monotoneY
+    nodeSpacing: 0
+    rankSpacing: 0
+    padding: 5
+    subGraphTitleMargin:
+      top: 5
+---
+flowchart TB
+    U@{ label: "Unconfigured", shape: start }
+    I[Inactive]
+    C[Closing]
 
-  -------------------------------------------------------------------------------------
-  State    CD        ST        KDe      KDo      KDu        C        CC        HDe
-  -------- --------- --------- -------- -------- ---------- -------- --------- --------
-  INIT     \>NCTV1   noop      \>Err    \>Err    \>Err      \>CLNG   \>Err     \>Err
+    subgraph "**Operational**"
+        direction TB
+        L[Listening]
+        K[Keying]
+        H[Helloing]
+        A[Active]
+        R["Register EA"]
+    end
 
-  NCTV\    noop      \>KYNG\   \>Err    \>Err    \>Err      \>CLNG   \>Err     \>Err
-  (Link)             \>HLNG\
-                     (1)
+    subgraph "**Silent**"
+        direction TB
+        HS["*Helloing*"]
+        RS["*Register EA*"]
+        AS["*Active*"]
+    end
 
-  NCTV\    noop      \>LSTN    \>Err    \>Err    \>Err      \>CLNG   \>Err     \>Err
-  (Dock)
+    U  -->  |"Config Done"| I
+    I  -->  |"Start"| L
+    L  -->  |"Received Keying Message"| K
+    L  -->  |"Received Hello Message"| H
 
-  NCTV\    noop      \>KYNG\   \>Err    \>Err    \>Err      \>CLNG   \>Err     \>Err
-  (AGAD)             \>HLNG\
-                     (1)
+    K  -->  |"Keying Unacceptable"| HS
+    K  -->  |"Keying OK"| H
+    K  -->  |"Keying Error<BR>Close"| C
 
-  KYNG     noop      Noop      \>CLNG   \>HLNG   \>HLNGS    \>CLNG   \>Err     \>Err
+    H  -->  |"Hello Unacceptable"| RS
+    H  -->  |"Hello OK"| R
+    H  -->  |"Hello Error<BR>Close"| C
 
-  CLNG     noop      Noop      \>Noop   Noop     Noop       Noop     \>NCTV2   Noop
+    HS -->  |"Hello Error<BR>Close"| C
+    HS -->  |"Hello OK<BR>Hello Unacceptable"| RS
 
-  HLNG\    noop      Noop      \>CLNG   Noop     \>HLNGS\   \>CLNG   \>Err     \>CLNG
-  (Link)                                         (2)
+    R  -->  |"Register EA Unacceptable"| AS
+    R  -->  |"Register EA OK"| A
+    R  -->  |"Register EA Error"| C
 
-  HLNG\    noop      Noop      \>CLNG   Noop     \>HLNGS\   \>CLNG   \>Err     \>CLNG
-  (Dock)                                         (2)
+    RS -->  |"Register EA OK<BR>Register EA Unacceptable"| AS
 
-  HLNG\    Noop      Noop      \>CLNG   Noop     \>HLNGS\   \>CLNG   \>Err     \>CLNG
-  (Agad)                                         (2)
+    A  -->  |"Keying Unacceptable"| AS
+    A  -->  |"Keying Error<BR>Keepalive Failure<BR>Close"| C
 
-  HLNGS\   Noop      Noop      \>CLNG   Noop     Noop       \>CLNG   \>Err     \>CLNG
-  (Link)
+    AS ---> |"Keying Error<BR>Keepalive Failure<BR>Close"| C
 
-  HLNGS\   Noop      Noop      \>CLNG   Noop     Noop       \>CLNG   \>Err     \>CLNG
-  (Dock)
+    C  -->  |"Close Complete"| I
+```
 
-  HLNGS\   Noop      Noop      \>CLNG   Noop     Noop       \>CLNG   \>Err     \>CLNG
-  (Agad)
+``` mermaid {#fig:dock-sess-fsm-adapter caption="Docking Session FSM (Adapter Side)"}
+---
+config:
+  deterministicIds: true
+  themeVariables:
+    fontSize: 20
+  flowchart:
+    curve: monotoneY
+    nodeSpacing: 0
+    rankSpacing: 0
+    padding: 5
+    subGraphTitleMargin:
+      top: 5
+---
+flowchart TB
+    U@{ label: "Unconfigured", shape: start }
+    I[Inactive]
+    C[Closing]
 
-  ACTV     Noop      Noop      \>CLNG   Noop     \>ACTVs\   \>CLNG   \>Err     \>CLNG
-                                                 (2)
+    subgraph "**Operational**"
+        direction TB
+        K[Keying]
+        H[Helloing]
+        A[Active]
+        R["Register EA"]
+    end
 
-  ACTVS    Noop      Noop      \>CLNG   Noop     Noop       \>CLNG   \>Err     \>CLNG
+    subgraph "**Silent**"
+        direction TB
+        HS["*Helloing*"]
+        RS["*Register EA*"]
+        AS["*Active*"]
+    end
 
-  ERR      Noop      Noop      Noop     Noop     Noop       Noop     Noop      Noop
+    U  -->  |"Config Done"| I
+    I  -->  |"Start"| K
 
-  LSTN     Noop      Noop      \>Err    \>Err    \>Err      \>CLNG   \>Err     \>Err
+    K  -->  |"Keying Unacceptable"| HS
+    K  -->  |"Keying OK"| H
+    K  -->  |"Keying Error<BR>Close"| C
 
-  RGEA     Noop      Noop      \>CLNG   Noop     \>RGEAS\   \>CLNG   \>Err     \>CLNG
-                                                 (2)
+    H  -->  |"Hello Unacceptable"| RS
+    H  -->  |"Hello OK"| R
+    H  -->  |"Hello Error<BR>Close"| C
 
-  RGEAS    Noop      Noop      \>CLNG   Noop     Noop       \>CLNG   \>Err     \>CLNG
-  -------------------------------------------------------------------------------------
+    HS -->  |"Hello Error<BR>Close"| C
+    HS -->  |"Hello OK<BR>Hello Unacceptable"| RS
 
-: Full Link/Docking Session FSM (part 1) {#tbl:link-fsm-1}
+    R  -->  |"Register EA Unacceptable"| AS
+    R  -->  |"Register EA OK"| A
+    R  -->  |"Register EA Error"| C
 
-Notes:
+    RS -->  |"Register EA OK<BR>Register EA Unacceptable"| AS
 
-(1) Either \>HLNG or \>KYNG is done, depending on whether predistributed keys or a keying protocol are used, respectively.
+    A  -->  |"Keying Unacceptable"| AS
+    A  -->  |"Keying Error<BR>Keepalive Failure<BR>Close"| C
 
-(2) If the transition to a SILENT form occurs due to an unacceptable KEY DONE event then (for these cases) the transition occurs while a protocol is executing. The protocol's state MUST be carried over to the new state so that the protocol may continue "as if nothing had happened".
+    AS ---> |"Keying Error<BR>Keepalive Failure<BR>Close"| C
 
-  -------------------------------------------------------------------------------------------------------
-           HDo       Hdu        E(3)    R        RHM      RKM      RADo      RADu       RADe     KF
-  -------- --------- ---------- ------- -------- -------- -------- --------- ---------- -------- --------
-  INIT     \>Err     \>Err      \>Err   \>INIT   \>Err    \>Err    \>Err     \>err      \>err    Noop
+    C  -->  |"Close Complete"| I
+```
 
-  NCTV\    \>Err     \>err      \>Err   \>INIT   \>Err    \>Err    \>Err     \>err      \>err    Noop
-  (Link)
+### States
 
-  NCTV\    \>Err     \>Err      \>Err   \>INIT   \>Err    \>Err    \>Err     \>err      \>err    Noop
-  (Dock)
+Initial
+:   The initial state of the Link or Docking Session. It can do nothing in this state except receive a configuration.
 
-  NCTV\    \>Err     \>Err      \>Err   \>INIT   \>err    \>Err    \>Err     \>err      \>err    Noop
-  (agad)
+    This is the "power on" condition of the Link and Docking Session.
 
-  KYNG     \>Err     \>Err      \>Err   \>INIT   \>Err    Noop     \>Err     \>err      \>err    Noop
+    Any packets received while in this state MUST be silently discarded. They are not considered to be errors or policy violations.
 
-  CLNG     Noop      Noop       \>Err   \>INIT   Noop     Noop     Noop      Noop       Noop     Noop
+Inactive
+:   The Link or Docking Session has been configured but has not started. The Link or Docking Session is started only under certain conditions, as defined by ZPR Policies. When those conditions occur, a START event is issued to the relevant Link or Docking Session.
 
-  HLNG\    \>ACTV    \>ACTVS    \>Err   \>INIT   Noop     Noop     \>Err     \>Err      \>Err    Noop
-  (Link)
+    Any packets received while in this state MUST be silently discarded. They are not considered to be errors or Policy violations.
 
-  HLNG\    \>RGEA    \>RGEAS    \>Err   \>INIT   Noop     Noop     \>Err     \>Err      \>Err    Noop
-  (Dock)
+    When this state is reached:
 
-  HLNG\    \>RGEA    \>RGEAS    \>Err   \>INIT   Noop     Noop     \>Err     \>Err      \>Err    Noop
-  (agad)
+    1)  If keys are predistributed then the configuration MUST have created the Security Associations (SAs) to be used,
 
-  HLNGS\   \>ACTVs   \>ACTVS    \>Err   \>INIT   Noop     Noop     \>Err     \>Err      \>Err    Noop
-  (Link)
+    2)  If dynamic keying is done, then SA 0 (the NULL SA, [@sec:the-null-security-association]) MUST be created and available to process keying messages.
+Keying
+:   If predistributed keys are used, then this state is a NO-OP. The Dock, Adapter, or Forwarder notes that an SA is available and automatically issues a KEYING DONE, OK event (This eliminates a special case in the FSM).
 
-  HLNGS\   \>RGEAs   \>RGEAS    \>Err   \>INIT   Noop     Noop     \>Err     \>Err      \>Err    Noop
-  (Dock)
+    If a keying protocol is used, then that protocol executes. The two sides of the Link or Dock Session attempt to establish an initial Security Association (SA) to use for subsequent messages.
 
-  HLNGS\   \>RGEAs   \>RGEAS    \>Err   \>INIT   Noop     Noop     \>Err     \>Err      \>Err    Noop
-  (Agad)
+    The Keying Protocol has its own, internal FSM, that it uses to establish the SA. We assume that this FSM can produce one of three results:
 
-  ACTV     Noop      \>ACTVs\   \>Err   \>INIT   Noop     Noop     Noop      \>ACTVs\   \>CLNG   \>CLNG
-                     (1)                                                     (1)
+    -   SA Established -- the SA has been created and is available for use. A KEYING_DONE, OK (KDo) event is then generated.
 
-  ACTVS    Noop      Noop       \>Err   \>INIT   noop     Noop     Noop      Noop       \>CLNG   \>CLNG
+    -   Error -- some (unrecoverable) error has occurred. The error should be reported, state cleaned up and resources recovered, and the Link or Docking Session returned to its previous state. These errors are things like running out of memory, not being able to agree on an algorithm, or network failure. In this case a KEYING_DONE, Error (KDe) event is generated.
 
-  ERR      Noop      Noop       noop    \>INIT   noop     Noop     Noop      Noop       Noop     Noop
+    -   Unacceptable -- the operation terminates but the peer is deemed to be unacceptable for some policy-based reason (*e.g.*, a certificate has been revoked or the signer is unknown or unacceptable). In this case a KEYING DONE, Unacceptable (KDu) event is issued.
 
-  LSTN     \>Err     \>err      \>Err   \>INIT   \>HLNG   \>KYNG   \>Err     \>Err      \>Err    Noop
+    NOTE WELL: additional keying protocol operations (such as updating keys, managing SAs, etc) may occur, as needed by the keying protocol, but only after the KEYING state has terminated successfully.
 
-  RGEA     Noop      \>RGEAS\   \>Err   \>INIT   Noop     Noop     \>ACTV    \_ACTVS    \>CLNG   Noop
-                     (2)
+Helloing
+:   The HELLOING state is used by the peers to exchange information: the version of ZDP that the peer is using and the ID of the policy by which the peer has started the Link or Docking Session.
 
-  RGEAS    Noop      Noop       \>Err   \>INIT   noop     Noop     \>ACTVS   \>ACTVS    \>CLNG   Noop
-  -------------------------------------------------------------------------------------------------------
+    The peer receiving the hello information evaluates the information. If it is deemed unacceptable for any reason, the peer terminates the Docking Session or Link but "goes silent" with respect to the peer (that is, any Transit Packets sent by the peer are silently discarded).
 
-: Full Link/Docking Session FSM (part 2) {#tbl:link-fsm-2}
+    The Hello operation performs its own, internal, FSM. It can have one of three results:
 
-Notes
+    1)  OK. The hello operation completed, all data is acceptable, and the Link or Docking Session can proceed to the next step. In this case, the HELLOING DONE, OK (HDo) event is issued.
 
-(1) In this case, changing from ACTIVE to ACTIVE, SILENT, the internal state of the Dock Session or Link remains the same EXCEPT that it "goes silent". Received Endpoint Data Packets and Endpoint Data Packets to be transmitted are silently discarded.
+    2)  Error -- Some kind of error occurred, and the operation is deemed to have failed. Resources are recovered and the Link or Docking Session returns to the INACTIVE state. In this case, the HELLOING DONE, Error (HDe) event is issued.
 
-(2) Internal state remains the same, but the Link or Dock Session "goes silent".
+    3)  Unacceptable -- The operation completed but the information in the Hello message was unacceptable for some reason AND the disclosure of the fact that the information wasunacceptable could leak sensitive Policy or Configuration information. In this case the HELLOING DONE, Unaceptable (HDu) event is issued.
 
-(3) In all states, if an ERROR event occurs then the error MUST be reported to the error reporting system. The error reporting system is responsible for error flow control and rate limiting, etc.
+Closing
+:   The Link or Docking Session has started to close. Forwarding has stopped and resources are being recovered. When the close completes, the Link or Docking Session goes to the INACTIVE state.
 
-The transitions have the following meanings:
+    While in this state:
 
-+--------+-------------------------------------------------------------+
-|  Code  | Meaning                                                     |
-+========+=============================================================+
-| \>NCTV1| Transition to INACTIVE state.\                              |
-|        | Perform no actions.                                         |
-+--------+-------------------------------------------------------------+
-| \>NCTV2| Transition to INACTIVE state.\                              |
-|        | Reclaim all resources held by or allocated to the Link or   |
-|        | Docking Session.                                            |
-+--------+-------------------------------------------------------------+
-| \>KYNG | Transition to KEYING state\                                 |
-|        | Initiate Keying protocol\                                   |
-|        | Accept only keying messages.                                |
-+--------+-------------------------------------------------------------+
-| \>LSTN | Transition to LISTEN state\                                 |
-|        | Accept only hello and keying messages.                      |
-+--------+-------------------------------------------------------------+
-| \>CLNG | Transition to closing state.\                               |
-|        | Initiate the closing (terminate) procedure.                 |
-+--------+-------------------------------------------------------------+
-| \>HLNG | Transition to HELLOING state\                               |
-|        | Initiate the HELLO protocol.                                |
-+--------+-------------------------------------------------------------+
-| \>HLNGS| Transition to HELLOING SILENT state\                        |
-|        | Initiate the helloing protocol, but in such a way that any  |
-|        | hello data is declared acceptable.                          |
-+--------+-------------------------------------------------------------+
-| \>ACTVs| Transition to ACTIVE SILENT state\                          |
-|        | Silently discard any Endpoint Data packets received on or   |
-|        | to be transmitted on the Link or Docking Session.           |
-+--------+-------------------------------------------------------------+
-| \>ACTV | Transition to ACTVE state\                                  |
-|        | Forward Endpoint Data packets in the normal manner.         |
-+--------+-------------------------------------------------------------+
-| \>RGEAs| Transition to Register Endpoint ADDRESS state\              |
-|        | Start the Endpoint Address Registration process but so that |
-|        | any address to be registered is considered acceptable.      |
-+--------+-------------------------------------------------------------+
-| \>RGEA | Transition to Register Endpoint ADDRESS state\              |
-|        | Start the Endpoint Address Registration process             |
-+--------+-------------------------------------------------------------+
-| \>Err  | Transition to the ERROR state\                              |
-|        | DO NOT recover/etc. resources (they may be useful for       |
-|        | debugging, etc.)\                                           |
-|        | DO stop forwarding ZDP Transit Packets\                     |
-|        | DO silently ignore all other packets received on the        |
-|        | link/Dock Session                                           |
-|        |                                                             |
-|        | DO NOT update counters, etc., for any reason (such as       |
-|        | packets being received on the Link or DS.)                  |
-+--------+-------------------------------------------------------------+
-| \>INIT | Transition to the INITIAL state\                            |
-|        | Recover/release/etc. all resources that may be held by the  |
-|        | Link or Docking session.                                    |
-|        |                                                             |
-|        | Discard any configuration of the Link or DS (informing any  |
-|        | ZPR Admin/etc. service, as needed).                         |
-+--------+-------------------------------------------------------------+
-| Noop   | Is not a state transition. It indicates that the            |
-|        | state/event combination does not result in a transition,    |
-|        | nor are any actions taken.                                  |
-+--------+-------------------------------------------------------------+
+    -   Any buffers containing packets received on or scheduled for transmission out of the CLOSING Link or Docking Session are silently discarded,
 
-: Transition codes {#tbl:link-fsm-codes}
+    -   Any QOS or other network resource reservations or allocations on the Substrate network or interface over which the Link or Docking Session operates are released,
+
+    -   Any Endpoint Addresses that have been registered on the Docking Session are withdrawn from the ZPR network (Dock only),
+
+    -   Any security associations established by a keying protocol are terminated.
+
+Helloing Silent
+:   In this state, the node pretends to complete the helloing operations successfully, regardless of whether the hello information received from the peer is acceptable or not. It is entered only if the keying completes unsuccessfully (KDu). The intent is to fool the peer into thinking that "all is well" even when it is not (and thereby not revealing any sensitive policy, etc, information). The HD event is issued when the helloing finishes.
+
+Active
+:   All initial configuration and startup have been done. ZDP packets are being forwarded via the link.
+
+    Additional Keying and Endpoint Address registration operations may occur. If either results in an error (KDe or RADe) then the Link or Docking Session is terminated as if a CLOSE event had been issued. If the operations terminate unacceptably (that is, some part of the operation would violate policy or otherwise expose sensitive information to a potential attacker) then the KDu or RADu events are issued and the Link or Docking Session transitions to the Active Silent state.
+
+Active Silent
+:   In the Active Silent state node appears to the peer to be in ACTIVE state, but in fact, the node discards all ZDP transit traffic received from the peer and discards any transit traffic it would have sent to the peer. Active Silent is only entered when some management operation (*e.g.*, establishing new keys) fails due to a Policy violation and exposing this failure to the peer would expose the Policy to a potential attacker. The intent is that the node then "pretends that everything is normal" so as not to reveal the failure to the peer.
+
+    Any management messages received from the peer are responded to in an affirmative manner (that is, as if the operation succeeded), though the operation(s) that would result from the message are not performed.
+
+    Traffic received from the ZPR network (or Endpoint) to be transmitted via the Link or Docking Session MUST NOT be so transmitted. It MUST be dropped.
+
+    The node MAY elect to conduct a more complex deception by sending an appropriate ICMP Destination Unreachable in response to receiving packets via the Link or Docking Session.
+
+Listening
+:   This state applies only to the Dock side of a Docking Session.
+
+    In this state, a Dock is waiting for an Endpoint/Adapter to attempt to connect to the ZPR Network. The Endpoint/Adapter initiates the connection by sending either the first keying protocol message (in which case a Receive Keying Message (RKM) event is issued) or the first message of the hello protocol (in which case a Receive Hello Message (RHM) event is issued).
+
+    This state is required (and limited to Docks) since Docks passively wait for Adapters to start connecting to the network.
+
+Register EA
+:   The REGISTERING EA (Endpoint Address) state is used only by Adapters and Docks with respect to individual Dock Sessions.
+
+    When an Adapter has successfully established keys and completed the hello operation, it MUST register at least one Endpoint Address with the Dock. This performed in the Registering Endpoint Address state.
+
+    The Register EA state operates its own internal FSM. It can produce one of three results:
+
+    1)  Endpoint Address registered successfully. A Register EA Done, OK (RADo) event is issued.
+
+    2)  Error occurred while registering address (such as no memory or network error). In this case the operation terminates and a Register EA Done, Error (RADe) event is issued.
+
+    3)  Attempt to register an address that violates a Policy or the success/failure of such a registration would reveal sensitive internal state of the network to a potential adversary. In this case the attempt is deemed to be unacceptable, and a Register EA Done, Unacceptable (RADu) event is issued.
+
+    NOTE WELL: additional Endpoint Address protocol operations (such as registering additional addresses or retracting addresses) may occur, but only after the REGISTER EA state has terminated successfully.
+
+Register EA Silent
+:   The Register EA Silent state is entered only as a result of a previous state terminating unacceptably (*e.g.*, HELLOING terminated with a Helloing Done, Unacceptable (HDu) event). In this case, the register-EA operations are allowed to proceed, but the node MUST NOT register those addresses with the ZPR network. When the register EA finishes, a "Register EA Done" is issued (regardless of the reason) and ACTIVE, Silent is entered, black-holing the peer's traffic.
+
+Error
+:   Some kind of error that is not automatically recoverable has occurred.
+
+### Events
+
+Close
+:   A request has been made (*e.g.*, via a local management operation or due to a Policy directive) to terminate the connection. The close operation is then performed (Terminate Request and Response messages are exchanged).
+
+    Any Endpoint Data packets received for or from a Link or Docking Session against which a CLOSE event has occurred are silently discarded. These are not considered errors.
+
+Close Complete
+:   When the close completes (that is, either the Terminate Indication has been sent, or the Terminate Request and Response have been exchanged, allocated resources have been reclaimed, etc) then the "CLOSE COMPLETE" event occurs.
+
+    Note that with the close, there is no "error" condition -- if an error occurs then the close is still deemed to be successful.
+
+Config Done
+:   All configuration information necessary to bring up a Link or Docking Session has been received. This includes, but is not limited to, the Substrate Address, the Substrate Address of the other end of the Link, cryptographic information necessary to establish the secure link, Policies dictating when the Link or Docking Session should be brought up, and so on.
+
+    When CONFIG DONE is issued:
+
+    1)  If dynamic keying is to be used, SA 0 (the "Null SA") MUST be available for the keying protocol to use,
+
+    2)  If predistributed keys are used, then the SAs for those keys MUST be available.
+
+    If the Link's or Docking Session's configuration is inconsistent, incomplete, or otherwise unacceptable (or unworkable) then the CONFIG_DONE MUST NOT occur. An implementation MUST either:
+
+    -   Issue an ERROR event (going to the ERROR state). This might indicate some kind of unrecoverable error in the configuration.
+
+    -   Remain in INITIAL state. This might be used if, for example, more configuration data is required and can be reasonably expected.
+
+    A CONFIG DONE in any state other than INITIAL is explicitly defined as a NOOP (that is, the state does not change and no actions are taken). The reason is that the administrators may not wish to place in service the configuration changes that caused the CONFIG DONE event to occur. The administrators must explicitly place the changes into service by restarting the Link or Docking Session.
+
+Error
+:   This event can occur in any state and is some form of error or other condition that prevents the Link from operating in the normal manner AND from which automated recovery (*e.g*., "retransmitting a packet") is not possible.
+
+    In all cases, this results in an immediate transition to the ERROR state.
+
+    Given that ERROR events may indicate internal problems that may preclude generating packets, a node MAY send a Terminate Indication ([@sec:terminate-indication]) but MUST NOT rely on the peer receiving the indication.
+
+    In all states, if an ERROR event occurs then the error MUST be reported to the error reporting system. The error reporting system is responsible for error flow control and rate limiting, etc.
+
+    The only way to exit the ERROR state is via a RESET.
+
+Helloing Done, Error
+:   This event indicates that an error (other than a security or policy violation, below) occurred in attempting to perform a Hello.
+
+    Errors in this category are things like
+    -   Lack of resources,
+    -   Network communications failures,
+    -   Peer not responding after designated number of retransmissions,
+    -   Etc.
+
+    In short, as opposed to the "unacceptable" case, below, the occurrence and reporting of these conditions do not reveal any sensitive policy or configuration information.
+
+    A Terminate Indication indicating the error ([@sec:terminate-indication]) SHOULD be sent.
+
+Helloing Done, OK
+:   This indicates that the hello protocol has successfully exchanged the relevant hello information.
+
+    When a Link has sent a HELLO REQUEST and received a matching HELLO RESPONSE AND has received a HELLO REQUEST and sent an appropriate HELLO RESPONSE then the HELLO DONE event occurs.
+
+Helloing Done, Unacceptable
+:   The info in the hello is not acceptable and revealing this to the peer would expose sensitive policy information to a potential attacker. An HDu is issued in this case.
+
+    The peer MUST NOT send a Terminate Indication or Request or otherwise inform the unacceptable peer of the situation. The rationale for this is that the unacceptable peer may be attempting some kind of attack (such as scanning) and getting an indication back may leak information regarding the ZPR Networks policies, configuration, and so on.
+
+Keying Done, Error
+:   This event indicates that some kind of error (other than a security or policy violation) occurred in attempting to establish keys.
+
+    Errors in this category are things like
+    -   Lack of resources,
+    -   Network communications failures,
+    -   Peer not responding after designated number of retransmissions,
+    -   Etc.
+
+    In short, as opposed to the "unacceptable" case, the occurrence and reporting of these conditions do not reveal any sensitive policy or configuration information.
+
+    If this event occurs in the INITIAL or INACTIVE states it SHOULD be treated as a programming error since it cannot happen (the keying operations are not started until the START event transitions from INACTIVE to KEYING). The next state is ERROR.
+
+    If this occurs in the ERROR or CLOSING states it is a NOOP.
+
+    If it occurs in any other state, it is treated as an error; start the process of closing the Link or Docking Session and transition to the CLOSING state.
+
+    Indicating the error to the peer is left to the keying protocols because sending a Terminate Indication would be unsecure.
+
+Keying Done, OK
+:   This event occurs when the Link is in the KEYING state and enough cryptographic material is available for the Link to use session keys for all traffic.
+
+    If session keys are pre-distributed, this event automatically occurs after entering the KEYING state.
+
+    If a keying protocol is in use, then it occurs when the protocol has created session keys and installed them in the Link. This typically occurs after several packets have been exchanged between the two end points of the link.
+
+    This event occurs when the Link is in the KEYING state and enough cryptographic material is available for the Link to use session keys for all traffic.
+
+    If session keys are pre-distributed, this event automatically occurs after entering the KEYING state.
+
+    If a keying protocol is in use, then it occurs when the protocol has created session keys and installed them in the Link. This typically occurs after several packets have been exchanged between the two end points of the link.
+
+    If this event occurs in the INITIAL or INACTIVE states it SHOULD be treated as a programming error since it cannot happen (the keying operations are not started until the START event transitions from INACTIVE to KEYING). The next state is ERROR.
+
+    If this occurs in the ERROR or CLOSING states it is a NOOP.
+
+    In any other state, this event is treated as a NOOP. The assumption is that the keying protocol is running, performing whatever operations it normally performs, and these operations are completing without error (*e.g.*, updating session keys). This has no effect on the FSM.
+
+Keying Done, Unacceptable
+:   If a security violation is detected (such as the peer fails some authentication check, a certificate is presented with an unknown or unacceptable signer, etc) then the keying terminates with an "unacceptable" condition.
+
+    The peer MUST NOT send a Terminate Indication or Request or otherwise inform the unacceptable peer of the situation. The rationale for this is that the unacceptable peer may be attempting some kind of attack (such as scanning) and getting an indication back may leak information regarding the ZPR Networks policies, configuration, and so on.
+
+    If this event occurs in the INITIAL or INACTIVE states it SHOULD be treated as a programming error since it cannot happen (the keying operations are not started until the START event transitions from INACTIVE to KEYING). The next state is ERROR.
+
+    If this occurs in the ERROR or CLOSING states it is a NOOP.
+
+Keepalive Failure
+:   This event occurs if A) A keepalive is enabled on a Link or Docking Session and B) the keepalive is deemed to have failed. If keepalive is not enabled then this event cannot occur.
+
+Reset
+:   The RESET event is an event that may be used in error recovery. If issued, the Link or Docking Session should be restored to its power-on state. The new FSM state is to INITIAL -- the Link or Docking Session is now in a condition to receive a new configuration and attempt to start up. The notion is that this clears any bad accumulated state, restoring the Link or Docking Session to a known good condition.
+
+    If not in any of the silent states (e.g., HELLOING SILENT) or a state where it is impossible to send a packet *(e.g.,* ERROR or INITIAL state) then the node SHOULD send a Terminate Indication to the peer indicating that the Link has been reset.
+
+    RESET MAY be used to shut down a Link or Docking Session as a part of the process of shutting down a Node.
+
+    All resources obtained for the Link or Docking Session MUST be reclaimed.
+
+Register EA Done, Error
+:   Some error has occurred while registering an Endpoint Address. These errors are such that disclosure of them to a potentially compromised peer would not leak sensitive information. Such errors include running out of storage, network transmit or receive issues, or too many retransmissions.
+
+    A Terminate Indication indicating the error ([@sec:terminate-indication]) SHOULD be sent and the Docking Session closed.
+
+Register EA Done, OK
+:   This event occurs only on Docks and Adapters, with respect to a Docking Session.
+
+    The Adapter has successfully registered at least one Endpoint Address with the Dock.
+
+    The Dock distributes a binding of the Endpoint Address and the Dock Session Address to the rest of the ZPR Network, enabling Endpoint Packets addressed to the Endpoint to be forwarded to the correct Dock. This process is done by the Admin Service.
+
+Register EA Done, Unacceptable
+:   An anomalous situation has occurred. This situation is such that disclosure of the situation to a potentially compromised peer would leak sensitive information. Such errors include attempting to register an unapproved Endpoint Address.
+
+Receive Hello Message
+:   This event occurs only on a Dock with regard to a Docking Session that is in the LISTENING state.
+
+    This event indicates that a Hello management message has been received from an Adapter. The message is passed to the hello protocol and the protocol started.
+
+    This message is valid only if predistributed keys are used. If not, it is discarded and an error occurs.
+
+    In effect, this means that an Adapter is attempting to "sign on" to the ZPR Network.
+
+Receive Keying Message
+:   This event occurs only on a Dock with regard to a Docking Session that is in the LISTENING state.
+
+    This event indicates that a keying message has been received from an Adapter. The message is passed to the keying protocol and the protocol started.
+
+    This event is valid only if predistributed keys are not used. If not, it is discarded, and an error event occurs.
+
+    In effect, this means that an Adapter is attempting to "sign on" to the ZPR Network.
+
+Start
+:   Start is an external event, driven by a management process. It occurs when that process decides that a Link should be started. *Typically,* this is driven by a set of ZPR Policies that define when a link should be started. Note that one such policy may be "always bring up the Link".
+
+    If a START event occurs in any state other than INACTIVE, it MUST be treated as NOOP. It MAY be reported as a programming or execution error via the logging system.
+
+Event/State combinations not shown in [@Fig:link-fsm; @Fig:dock-sess-fsm-dock; @Fig:dock-sess-fsm-adapter] are treated as no-ops. They do not cause state transitions nor do they initiate any processing or protocol operations. They MAY be logged and/or counted.
+
+The following tables show the complete FSM:
+
++------------------------+-----------+:------------------:+----------+-----------+---------+
+| **Event**              |**Initial**| **Inactive**       |**Listen**|**Closing**|**Error**|
+|                        |           +----------+---------+          |           |         |
+|                        |           | Link/Adap| Dock    |          |           |         |
++========================+===========+==========+=========+==========+===========+=========+
+| Config Done            | Inactive  | --       | --      | --       |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Start                  | --        | H/K[^A]  | Listen  | --       |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Keying Done~Any~       | Error     | Error    | Error   | Error    |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Helloing Done~Any~     | Error     | Error    | Error   | Error    |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| RegisterEA Done~Any~   | Error     | Error    | Error   | Error    |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Rx Keying Msg          | Error     | Error    | Error   | Keying   |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Rx Hello Msg           | Error     | Error    | Error   | Helloing |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Close                  | --        | Closing  | Closing | Closing  |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Close Complete         | Error     | Error    | Error   | Error    | Inactive  |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Reset                  | Initial   | Initial  | Initial | Initial  | Initial   | Initial |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Error                  | Error     | Error    | Error   | Error    | Error     |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+| Keepalive Failure      | --        | --       | --      | --       |  --       |  --     |
++------------------------+-----------+----------+---------+----------+-----------+---------+
+
+: Full Link/Docking Session FSM (unconnected states) {#tbl:link-fsm-1}
+
+[^A]: Either Helloing or Keying is done, depending on whether predistributed keys or a keying protocol are used, respectively.
+
++----------------------+-------------+:--------------------------:+---------------+-----------+
+| **Event**            | **Keying**  | **Helloing**               | **RegisterEA**| **Active**|
+|                      |             +-------------+--------------+               |[^D]       |
+|                      |             | Link        | Dock/Adap    |               |           |
++======================+=============+=============+==============+===============+===========+
+| Config Done          | --          | --          | --           | --            | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Start                | --          | --          | --           | --            | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Keying Done~O~       | Helloing    | --          | --           | --            | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Keying Done~U~[^B]   | Helloing~S~ | Helloing~S~ | Helloing~S~  | RegisterEA~S~ | Active~S~ |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Keying Done~E~       | Closing     | Closing     | Closing      | Closing       | Closing   |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Helloing Done~O~     | Error       | Active      | RegisterEA   | --            | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Helloing Done~U~     | Error       | Active~S~   | RegisterEA~S~| RegisterEA~S~ | Active~S~ |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Helloing Done~E~     | Error       | Closing     | Closing      | Closing       | Closing   |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| RegisterEA Done~O~   | Error       | Error       | Error        | Active        | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| RegisterEA Done~U~   | Error       | Error       | Error        | Active~S~[^C] | Active~S~ |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| RegisterEA Done~E~   | Error       | Error       | Error        | Closing       | Closing   |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Rx Keying Msg        | --          | --          | --           | --            | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Rx Hello Msg         | Error       | --          | --           | --            | --        |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Close                | Closing     | Closing     | Closing      | Closing       | Closing   |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Close Complete       | Error       | Error       | Error        | Error         | Error     |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Reset                | Initial     | Initial     | Initial      | Initial       | Initial   |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Error                | Error       | Error       | Error        | Error         | Error     |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+| Keepalive Failure    | --          | --          | --           | --            | Closing   |
++----------------------+-------------+-------------+--------------+---------------+-----------+
+
+: Full Link/Docking Session FSM (operational states) {#tbl:link-fsm-2}
+
+[^B]: If the transition to a SILENT form occurs due to an unacceptable KEY DONE event from a state other than KEYING, then the transition occurs while a protocol is executing. The protocol's state MUST be carried over to the new state so that the protocol may continue "as if nothing had happened".
+
+[^C]: Internal state remains the same, but the Link or Dock Session "goes silent".
+
+[^D]: Changing from ACTIVE to ACTIVE, SILENT, the internal state of the Dock Session or Link remains the same EXCEPT that it "goes silent". Received Endpoint Data Packets and Endpoint Data Packets to be transmitted are silently discarded.
+
++----------------------+:-------------------------:+-----------------+-------------+
+| **Event**            | **Helloing~S~**           |**RegisterEA~S~**|**Active~S~**|
+|                      +-----------+---------------+                 |             |
+|                      | Link      | Dock/Adap     |                 |             |
++======================+===========+===============+=================+=============+
+| Config Done          | --        | --            | --              | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| Start                | --        | --            | --              | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| Keying Done~O/U~     | --        | --            | --              | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| Keying Done~E~       | Closing   | Closing       | Closing         | Closing     |
++----------------------+-----------+---------------+-----------------+-------------+
+| Helloing Done~O/U~   | Active~S~ | RegisterEA~S~ | --              | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| Helloing Done~E~     | Closing   | Closing       | Closing         | Closing     |
++----------------------+-----------+---------------+-----------------+-------------+
+| RegisterEA Done~O/U~ | Error     | Error         | Active~S~       | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| RegisterEA Done~E~   | Error     | Error         | Closing         | Closing     |
++----------------------+-----------+---------------+-----------------+-------------+
+| Rx Keying Msg        | --        | --            | --              | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| Rx Hello Msg         | --        | --            | --              | --          |
++----------------------+-----------+---------------+-----------------+-------------+
+| Close                | Closing   | Closing       | Closing         | Closing     |
++----------------------+-----------+---------------+-----------------+-------------+
+| Close Complete       | Error     | Error         | Error           | Error       |
++----------------------+-----------+---------------+-----------------+-------------+
+| Reset                | Initial   | Initial       | Initial         | Initial     |
++----------------------+-----------+---------------+-----------------+-------------+
+| Error                | Error     | Error         | Error           | Error       |
++----------------------+-----------+---------------+-----------------+-------------+
+| Keepalive Failure    | --        | --            | --              | Closing     |
++----------------------+-----------+---------------+-----------------+-------------+
+
+: Full Link/Docking Session FSM (silent states) {#tbl:link-fsm-3}
 
 More details on the various transitions and procedures are presented in following sections.
 
@@ -1808,7 +1473,7 @@ All ZPR packets carry sequence numbers for replay protection.
 
 Sequence numbers are per Security Association. They MUST be long enough so that they cannot roll over within the lifetime of the security association (we recommend that they be 64-bits long as a counter of that size will not roll over for any realistic packet rate). If a sequence number gets close to wrapping, a new security association (with new keys and, by definition, a new sequence number that starts at 0) MUST be installed.
 
-Not all bits of the sequence number may be carried in the ZDP header.  The ZPR Configuration indicates how many bits are in the header (for the baseline configuration, only the low-order 16-bits are carried). The entire sequence number, even if only some bits are included in the header, are included in the MICV.
+Not all bits of the sequence number may be carried in the ZDP header. The entire sequence number, even if only some bits are included in the header, are included in the MICV.
 
 The sequence number is an unsigned counter that increases by 1 for each packet sent.
 
@@ -1856,7 +1521,7 @@ SAs have two conceptual states:
 
 -   Inactive -- the SA may not be used to transmit a packet. The receiver, however, MUST be prepared to receive and process a packet that specifies an inactive SA. This allows packets using a to-be-deleted SA to drain from the network and be successfully processed prior to removing the SA.
 
-The SA controlling the cryptography applied to a particular ZDP packet is indicated by the ZPI (ZDP Parameters Index) field of the ZDP header ([@sec:zpi-mapping]). Multiple ZPIs may specify the same SA.
+The SA controlling the cryptography applied to a particular ZDP packet is indicated by the ZPI (ZDP Parameters Index) field of the ZDP header ([@sec:base-zdp-fields]). Multiple ZPIs may specify the same SA.
 
 The ZPI's scope is the individual Link or Docking Session.
 
@@ -1880,11 +1545,7 @@ ZPI 0 is a NULL SA, with no security. It is defined as having:
 
 -   The MICV is 2 bytes long,
 
--   The ZPR Configuration to be used is the Baseline Configuration (see [@sec:zpr-baseline-configuration]).
-
 The rationale for this is that A) when bringing up the first SA there are no other SA's available to use and B) Key management protocols are self-securing.
-
-ZPI 0 also selects the ZPR Baseline Configuration (see [@sec:zpr-baseline-configuration]).
 
 ## Endpoint Packet Compression and Expansion
 
@@ -1900,7 +1561,7 @@ Compression is done in two parts:
 
 First, the Ingress Adapter ALWAYS removes the IP Addresses from packets it receives from the Endpoint. These addresses are bound with the Ingress Dock via the Bind Endpoint Addresses message ([@sec:bind-unbind]). This informs the Dock that packets for Stream ID *S* have source and destination IP addresses *SA* and *DA*. These addresses are passed to the Egress Dock, which then notifies the Egress Adapter of the binding.  The Egress Adapter then reconstitutes the original Endpoint Packet by putting the addresses back in the packet.
 
-Compression lessens the impact of ZDP headers. For IPv4 packets, the 8 bytes of address represents a significant part of the ZDP header (8 out of 9 bytes with the baseline config), not counting the MICV. For IPV6, the entire ZDP header is provided for, as well as about ½ of a typical MICV value. This reduces the likelihood of the packet from growing too large and causing an MTU problem someplace in the network.
+Compression lessens the impact of ZDP headers. For IPv4 packets, the 8 bytes of address represents a significant part of the ZDP header (8 out of 9 bytes), not counting the MICV. For IPV6, the entire ZDP header is provided for, as well as about 1/2 of a typical MICV value. This reduces the likelihood of the packet from growing too large and causing an MTU problem someplace in the network.
 
 Second, additional fields MAY be compressed out of the header. This compression is performed by the Ingress Adapter (and decompression by the Egress Adapter). The Visa directs which additional fields are compressed out.
 
@@ -1949,20 +1610,19 @@ IP Options
 
 The compressed IPv4 header format is
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|H H H H F 0 0 0|     TOS       |                 ID            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|Flags|     Frag. Offset        |        TTL    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                          IP Options...                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Compressed IPv4 header}
-\end{figure}
+``` mermaid
+%%| fig-cap: Compressed IPv4 header
+packet
++4: "Hdr Len"
++1: "F"
++3: "Reserved"
+8-15: "TOS"
+16-31: "ID"
+32-35: "Flags"
+36-47: "Frag. Offset"
+48-55: "TTL"
+56-63: "IP Options... (variable length)"
+```
 
 Where:
 
@@ -2018,18 +1678,14 @@ Destination IP Address
 
 The compressed IPv6 header format is
 
-\begin{figure}
-\begin{verbatim}
-  0                   1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|0 1 1 0|   Class       |            Flow Label                 |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   Hop Limit   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Compressed IPv6 header}
-\end{figure}
+``` mermaid
+%%| fig-cap: Compressed IPv6 header
+packet
++4: "0110"
++8: "Class"
++16: "Flow Label"
++8: "Hop Limit"
+```
 
 Where:
 
@@ -2063,16 +1719,11 @@ Checksum
 
 The compressed UDP header format is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Checksum           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Compressed UDP header}
-\end{figure}
+``` mermaid
+%%| fig-cap: Compressed Udp header
+packet
++16: "Checksum"
+```
 
 ### TCP header fields
 
@@ -2108,21 +1759,16 @@ TCP Options
 
 The compressed TCP header format is
 
-\begin{figure}
-\begin{verbatim}
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                           Sequence Number                     |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                              ACK Number                       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  DO   |         Flags         |           Window Size         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Urgent Pointer        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Compressed TCP header}
-\end{figure}
+``` mermaid
+%%| fig-cap: Compressed TCP header
+packet
++32: "Sequence Number"
++32: "Acknowledgement Number"
++4: "DO"
++12: "Flags"
++16: "Window Size"
++16: "Urgent Pointer"
+```
 
 Where:
 
@@ -2155,278 +1801,183 @@ There are two ZPR Authentication procedures:
 
 The sequence of operations is:
 
-\begin{figure}
-\begin{verbatim}
-      Adapter/Endpoint                    Dock
- 0          |<=====Dock Sess. Auth========>|
-            |                              |
- 1          |-------Hello Request 1 ------>|
- 2          |                              | Evaluate 1
- 3          |                              | Install Auth. Visa
- 4          |<------Hello Response 2 ------|
-            |          Includes AAA, ASA   |
- 5          |<------ Hello Request 2 ------|
- 6 Evaluate |                              |
- 7          |-------- Hello Response ----->|
- 8     FTS->|                              |
- 9          |-----Bind Request 1 --------->|
-10          |<----Bind Reject 1 -----------|
-            |                              |
-11          |<----Init AuthenticationReq---| Because of 10 or for any
-11.1        |-----Init AuthenticationRsp-->|       other reason
-            |                              |
-12          |---- Bind Request 2 --------->|
-            |        with AAA,ASA          |
-13          |<-- Bind Response 2 ----------|
-            |        stream ID             |
-            |                              |
-14          |<====Authenticate============>|
-15          |<--- You Win, <BLOB> ---------|
-            |                              |
-16          |---- Acquire ZPR Address----->|
-17          |                (BLOB)        |---> To xxx Service
-18          |                              |<--- Addr From xxx Service
-19          |<----- ZPR Address -----------|
-            |                              |
-20    FTS'->|                              |
-21          |-------Bind Request---------->|
-22          |                              |---> Visa Install
-23          |<------Bind Response----------|
-            |                              |
-24    FTS"->|                              |
-25          |-------Bind Request---------->|
-26          |<======== Auth ? ============>|
-27          |                              |---> Visa Install
-28          |<------Bind Response----------|
-\end{verbatim}
-\caption{Authentication Packet Flow}
-\end{figure}
+``` mermaid {#fig:auth-packet-flow caption="Authentication Packet Flow"}
+---
+config:
+  sequence:
+    useMaxWidth: false
+    mirrorActors: false
+    diagramMarginY: 5
+    height: 30
+    messageMargin: 10
+---
+sequenceDiagram
+    actor Endpoint
+    participant Adapter
+    participant Dock
+    participant Visa as Visa Service
 
-+-----+----------------------------------------------------------------+
-| Line| Explanation                                                    |
-+=====+================================================================+
-| 0   | **Dock Sess. Auth**\                                           |
-|     | The Adapter and dock authenticate to each other and            |
-|     | establish session keys for later ZDP messages. Any scheme can  |
-|     | be used so long as the results are that the Adapter and Dock   |
-|     | know each other's identity[^5] with cryptographic certainty    |
-|     | and have established session keys to use in encrypting ZDP     |
-|     | traffic.                                                       |
-+-----+----------------------------------------------------------------+
-| 1   | **Hello Request 1**\                                           |
-|     | The Adapter sends a Hello Request (see                         |
-|     | [@sec:hello-request-and-response]) to the Dock. The            |
-|     | information included in the Hello Response is set by policy.   |
-|     | It may include things like a protocol version, hardware asset  |
-|     | number, GPS location, and so on.                               |
-+-----+----------------------------------------------------------------+
-| 2   | **Evaluate 1**\                                                |
-|     | The Dock evaluates the Hello Request to decide whether to      |
-|     | accept the request or not. This evaluation MAY take into       |
-|     | account current conditions on the Dock (*e.g.*, its current    |
-|     | load) and MAY involve other entities in the network.           |
-|     |                                                                |
-|     | If the Dock elects not to proceed then the process aborts and  |
-|     | a Hello Response indicating failure is sent to the Adapter.    |
-|     | The Docking Session is NOT terminated.                         |
-+-----+----------------------------------------------------------------+
-| 3   | **Authentication Visa Request**\                               |
-|     | The Dock requests that the Visa Service install a constrained  |
-|     | Visa that will allow the Adapter to send ZDP messages to, and  |
-|     | receive them from, the Auth service. These messages are used   |
-|     | to establish strong ZPR authentication.                        |
-|     |                                                                |
-|     | This request includes identity information established in step |
-|     | 0 as well as any relevant information in the Hello Request.    |
-|     |                                                                |
-|     | The Visas are constrained because the Endpoint has not been    |
-|     | strongly authenticated. The constraints limit the data rate    |
-|     | and message types in order to mitigate attacks.                |
-|     |                                                                |
-|     | The Visa service may decline the request in which case this    |
-|     | process ends. The Docking Session is NOT terminated.           |
-+-----+----------------------------------------------------------------+
-| 4   | **Hello Response 2**\                                          |
-|     | The Dock Sends a Hello Response to the Adapter indicating      |
-|     | success. The response must include:                            |
-|     |                                                                |
-|     | -   An Endpoint Authentication ZPR Address (EAZA): This is the |
-|     |     ZPR Address that the Adapter uses as the "source" address  |
-|     |     for all packets sent to the Auth Service.                  |
-|     |                                                                |
-|     | -   An Authentication Service ZPR Address (ASZA): The ZPR      |
-|     |     Address that the Adapter MUST use as the "destination"     |
-|     |     address when sending ZPR Authentication messages to the    |
-|     |     Auth Service.                                              |
-|     |                                                                |
-|     | Other TLVs MAY be included in the Hello Response.              |
-+-----+----------------------------------------------------------------+
-|     | The following three steps are the mirror of steps 1 through 4, |
-|     | except that no Visa installation is done. They are the Dock    |
-|     | saying hello to the Adapter. They may happen in parallel with  |
-|     | and/or intermingled with steps 1-4.                            |
-+-----+----------------------------------------------------------------+
-| 5   | **Hello Request 2**\                                           |
-|     | The Dock sends a Hello Request to the Adapter.                 |
-+-----+----------------------------------------------------------------+
-| 6   | **Evaluate 2**\                                                |
-|     | The Adapter evaluates the request.                             |
-+-----+----------------------------------------------------------------+
-| 7   | **Hello Response 2**\                                          |
-|     | The adapter sends a response, indicating whether the Hello     |
-|     | succeeds or not. If not, the process terminates.               |
-+-----+----------------------------------------------------------------+
-|     | After the hello process, what happens next depends on what the |
-|     | Adapter, Endpoint and Dock do.                                 |
-|     | -   The Endpoint may try to send a data packet to some other   |
-|     |     node using ZDP to start a connection or session of some    |
-|     |     sort. (We refer to this as the "First TCP Syn" – FTS –     |
-|     |     though it may not be, in fact, a TCP Syn),                 |
-|     | -   The Dock may decide, for whatever reason, to initiate      |
-|     |     authentication with the Adapter/Endpoint. If the Endpoint  |
-|     |     is an application server and does not send FTS's then this |
-|     |     method is used to get the Endpoint/Adapter up and running, |
-|     |     or                                                         |
-|     | -   The Adapter may wish, for some reason other than the       |
-|     |     above, to authenticate. The Adapter can use this to get an |
-|     |     application server Agent up and running.                   |
-+-----+----------------------------------------------------------------+
-| 8   | **Endpoint sends FTS**\                                        |
-|     | The application sends the FTS packet. The packet is            |
-|     | determined to be an FTS when the Adapter looks up the packet   |
-|     | in its forwarding tables in order to determine the PEP and     |
-|     | Stream ID to use in forwarding the packet, and it does not     |
-|     | find an entry for the packet.                                  |
-+-----+----------------------------------------------------------------+
-| 9   | **Bind Request 1**\                                            |
-|     | The adapter sends a Bind Endpoint Address (see                 |
-|     | [@sec:bind-unbind])                                            |
-|     | to the Dock with the FTS packet. The packet is not buffered,   |
-|     | it is discarded.                                               |
-+-----+----------------------------------------------------------------+
-| 10  | **Bind Reject 1**\                                             |
-|     | The Dock notes that the Adapter/Endpoint has not performed     |
-|     | the required ZPR Authentication. It rejects the Bind Request   |
-|     | with a "Not Authenticated" error code.                         |
-+-----+----------------------------------------------------------------+
-| 11  | **Init Authentication Req**\                                   |
-|     | The Dock sends an Init Authentication                          |
-|     | ([@sec:initiate-authentication-request-and-response])          |
-|     | message to the Adapter. The Bind Reject causes the Dock to     |
-|     | send this. The Dock may send this message for other reasons as |
-|     | well (in particular, it may do this so that a server can       |
-|     | authenticate itself to the ZPR Network.                        |
-|     |                                                                |
-|     | The purpose of this message is to get the Adaptor/Endpoint to  |
-|     | authenticate itself with the ZPR Auth Service.                 |
-+-----+----------------------------------------------------------------+
-| 11.1| **Init Authentication Rsp**\                                   |
-|     | Acknowledges receipt of the Init Authentcation Request.        |
-+-----+----------------------------------------------------------------+
-| 12  | **Bind Request 2**\                                            |
-|     | The Adapter sends a second Bind Request to the Dock (see       |
-|     | [@sec:bind-unbind]).                                           |
-|     | This request includes just the Endpoint Authentication ZPR     |
-|     | Address as the source address and Authentication Service ZPR   |
-|     | Address as the destination.                                    |
-|     |                                                                |
-|     | The intent here is to get a Stream ID for the Adapter to use   |
-|     | in communicating with the Auth. Service.                       |
-+-----+----------------------------------------------------------------+
-| 13  | **Bind Response 2**\                                           |
-|     | The Dock evaluates the Bind request. Since the request         |
-|     | matches the two ZPR addresses associated with the constrained  |
-|     | Authentication Visa (see step 3) the Dock installs a PEP, etc. |
-|     | and returns a Stream ID for the Adapter to use when            |
-|     | communicating with the Auth. Service in the following steps.   |
-+-----+----------------------------------------------------------------+
-| 14  | **ZPR Authentication**\                                        |
-|     | The Adapter performs authentication with the Auth. Service.    |
-|     | This is a series of authentication messages that are exchanged |
-|     | by the Adapter and the Auth Service. These messages travel     |
-|     | over the ZPR Net as ZDP packets, using the Stream ID obtained  |
-|     | in the "Bind Response 2" step, above. These packets use the    |
-|     | Visa installed in step 3.                                      |
-|     |                                                                |
-|     | These messages are normal ZPR Data Protocol messages.          |
-|     |                                                                |
-|     | The authentication protocol is presumed to end-to-end encrypt, |
-|     | or otherwise protect, its messages so that they are not        |
-|     | visible to attackers, spoofable, etc.                          |
-|     |                                                                |
-|     | Note Also that the Adapter/Endpoint may decide, for any reason |
-|     | of its own, to initiate authentication and start this process. |
-|     | (As described above, the Adapter, knowing its Agent is an      |
-|     | application server, may start the process so that the server   |
-|     | is connected to the network).                                  |
-|     |                                                                |
-|     | If this authentication process starts without having received  |
-|     | an FTS, then it is a 'generic' authentication. Presumably it   |
-|     | might be good for many different connections, none of which    |
-|     | are specified.                                                 |
-+-----+----------------------------------------------------------------+
-| 15  | **Authentication Finishes**\                                   |
-|     | Eventually the Authentication process ends with a              |
-|     | "Successfully Authenticated" message to the Adapter. This      |
-|     | message includes Authentication Token (the Blob). (This        |
-|     | message is actually a part of the exchange of messages in step |
-|     | 14 but is called out separately to indicate that it includes   |
-|     | the blob).                                                     |
-+-----+----------------------------------------------------------------+
-| 16  | **Acquire ZPR Address Request**\                               |
-|     | The Adapter requests the ZPR Address for the identity that     |
-|     | was proven in the Authentication Steps 14 & 15, above. It      |
-|     | includes the Blob it received in step 15 as proof that it is   |
-|     | the indicated identity.                                        |
-|     | See [@sec:acquire-zpr-address-request-and-response].           |
-+-----+----------------------------------------------------------------+
-| 17  | **ZPR Address Forwarding**\                                    |
-|     | The Dock takes the Blob & the CNAME (established in 1) and     |
-|     | sends it to the XXX service. This is sent via normal ZDP       |
-|     | messages. **WHAT SERVICE IS THIS? TBD**                        |
-+-----+----------------------------------------------------------------+
-| 18  | **ZPR Address Request Evaluation**\                            |
-|     | The XXX services evaluate the Blob/CNAME combination and       |
-|     | send the ZPR Address to the Dock. This is sent via normal ZDP  |
-|     | messages.                                                      |
-+-----+----------------------------------------------------------------+
-| 19  | **Grant ZPR Address**\                                         |
-|     | The Dock sends the ZPR Address to the Endpoint/Adapter. See    |
-|     | [@sec:grant-zpr-address-request-and-response] via a Grant      |
-|     | ZPR Address message.                                           |
-+-----+----------------------------------------------------------------+
-| 20  | **FTS Retransmission**\                                        |
-|     | If the process started by the Adapter receiving the First TCP  |
-|     | Syn (FTS) from the Endpoint, the Endpoint will eventually      |
-|     | retransmit the SYN (FTS'). The Adapter receives the message    |
-|     | and attempts to find a Stream ID to use for it.                |
-+-----+----------------------------------------------------------------+
-| 21  | **Bind Request 3**\                                            |
-|     | The Adapter does not find a Stream ID to use, so it sends a    |
-|     | Bind Request (see [@sec:bind-unbind])                          |
-|     | to the Dock.                                                   |
-+-----+----------------------------------------------------------------+
-| 22  | **Visa Install**\                                              |
-|     | The Dock requests a Visa from the Visa Service. The Visa       |
-|     | Service creates a Visa and installs it in the ZPR Network. The |
-|     | authentication needed to allocate this Visa was done in step   |
-|     | 14.                                                            |
-+-----+----------------------------------------------------------------+
-| 23  | **Bind Response 3**\                                           |
-|     | When the dock has been notified that the Visa has been         |
-|     | installed it sends a Bind Response ([@sec:bind-unbind])        |
-|     | to the Adapter, giving it the Stream ID to use.                |
-|     |                                                                |
-|     | Data may then flow through the network.                        |
-+-----+----------------------------------------------------------------+
-| 24  | **FTS''**\                                                     |
-|     | If a different FTS is sent by the Endpoint, it will require a  |
-|     | different authentication, etc. round. Since the constrained    |
-|     | visa is in place, the steps required to install it are not     |
-|     | performed.                                                     |
-+-----+----------------------------------------------------------------+
+    autonumber 1
+    Adapter<<-->>Dock: Connection, Docking Session Authentication
+    Adapter->>Dock: Hello Request
+    Note over Dock: Evaluate Request
+    Dock->>Visa: Request Authentication Visa
+    autonumber 3
+    Visa-->>Dock: Grant Authentication Visa
+    Dock-->>Adapter: Hello Response (with AAA, ASA)
+    opt
+        Endpoint->>Adapter: FTS
+        Adapter->>Dock: Bind Request 1
+        Dock-->>Adapter: Bind Reject 1
+    end
+    Dock->>+Adapter: Init Authentication Request
+    Adapter-->>Dock: Init Authentication Response
+    Adapter->>Dock: Auth Bind Request (with AAA, ASA)
+    Dock-->>Adapter: Auth Bind Response (with stream ID)
+    Adapter<<-->>Dock: Authenticate
+    Dock->>Adapter: Authentication Success
+    Adapter->>Dock: Acquire ZPR Address (with Auth proof)
+    Note over Dock: Allocate or Request IP
+    Dock-->>Adapter: ZPR Address
+    Endpoint->>Adapter: FTS'
+    Adapter->>Dock: Bind Request 3
+    Dock->>Visa: Request Visa
+    autonumber 18
+    Visa-->>Dock: Grant Visa
+    Dock-->>Adapter: Bind Response 3
+    Endpoint->>Adapter: FTS"
+    Adapter->>Dock: Bind Request
+    Adapter<<-->>Dock: Re-Authenticate (optional)
+    Dock->>Visa: Request Visa
+    autonumber 23
+    Visa-->>Dock: Grant Visa
+    Dock-->>Adapter: Bind Response
+```
 
-: Table Hello Response Status Codes {#tbl:hello-resp-status-codes}
+1.  **Docking Session Authentication**
+
+    The Adapter and dock authenticate to each other and establish session keys for later ZDP messages. Any scheme can be used so long as the results are that the Adapter and Dock know each other's identity[^5] with cryptographic certainty and have established session keys to use in encrypting ZDP traffic.
+
+2.  **Hello Request**
+
+    The Adapter sends a Hello Request (see [@sec:hello-request-and-response]) to the Dock. The information included in the Hello Response is set by policy.  It may include things like a protocol version, hardware asset number, GPS location, and so on.
+
+    a. **Evaluate Hello Request**
+        The Dock evaluates the Hello Request to decide whether to accept the request or not. This evaluation MAY take into account current conditions on the Dock (*e.g.*, its current load) and MAY involve other entities in the network.
+
+        If the Dock elects not to proceed then the process aborts and a Hello Response indicating failure is sent to the Adapter.  The Docking Session is NOT terminated.
+
+3.  **Authentication Visa Request**
+
+    The Dock requests that the Visa Service install a constrained Visa that will allow the Adapter to send ZDP messages to, and receive them from, the Auth service. These messages are used to establish strong ZPR authentication.
+
+    This request includes identity information established in step 0 as well as any relevant information in the Hello Request.
+
+    The Visas are constrained because the Endpoint has not been strongly authenticated. The constraints limit the data rate and message types in order to mitigate attacks.
+
+    The Visa service may decline the request in which case this process ends. The Docking Session is NOT terminated.
+
+4.  **Hello Response**
+
+    The Dock Sends a Hello Response to the Adapter indicating success. The response must include:
+
+    -   An Endpoint Authentication ZPR Address (EAZA): This is the ZPR Address that the Adapter uses as the "source" address for all packets sent to the Auth Service.
+
+    -   An Authentication Service ZPR Address (ASZA): The ZPR Address that the Adapter MUST use as the "destination" address when sending ZPR Authentication messages to the Auth Service.
+
+    Other TLVs MAY be included in the Hello Response.
+
+* * * *
+
+After the hello process, what happens next depends on what the Adapter, Endpoint and Dock do.
+
+-   The Endpoint may try to send a data packet to some other node using ZDP to start a connection or session of some sort. (We refer to this as the "First TCP Syn" – FTS – though it may not be, in fact, a TCP Syn),
+-   The Dock may decide, for whatever reason, to initiate authentication with the Adapter/Endpoint. If the Endpoint is an application server and does not send FTS's then this method is used to get the Endpoint/Adapter up and running, or
+-   The Adapter may wish, for some reason other than the above, to authenticate. The Adapter can use this to get an application server Agent up and running.
+
+* * * *
+
+5.  **Endpoint sends FTS**
+
+    The application sends the FTS packet. The packet is determined to be an FTS when the Adapter looks up the packet in its forwarding tables in order to determine the PEP and Stream ID to use in forwarding the packet, and it does not find an entry for the packet.
+
+6.  **Bind Request 1**
+
+    The adapter sends a Bind Endpoint Address (see [@sec:bind-unbind]) to the Dock with the FTS packet. The packet is not buffered, it is discarded.
+
+7.  **Bind Reject 1**
+
+    The Dock notes that the Adapter/Endpoint has not performed the required ZPR Authentication. It rejects the Bind Request with a "Not Authenticated" error code.
+
+8.  **Init Authentication Reqquest**
+
+    The Dock sends an Init Authentication ([@sec:initiate-authentication-request-and-response]) message to the Adapter. The Bind Reject causes the Dock to send this. The Dock may send this message for other reasons as well (in particular, it may do this so that a server can authenticate itself to the ZPR Network.
+
+    The purpose of this message is to get the Adaptor/Endpoint to authenticate itself with the ZPR Auth Service.
+
+9.  **Init Authentication Response**
+
+    Acknowledges receipt of the Init Authentcation Request.
+
+10. **Authentication Bind Request**
+
+    The Adapter sends a second Bind Request to the Dock (see [@sec:bind-unbind]).  This request includes just the Endpoint Authentication ZPR Address as the source address and Authentication Service ZPR Address as the destination.
+
+    The intent here is to get a Stream ID for the Adapter to use in communicating with the Auth. Service.
+
+11. **Authentication Bind Response**
+
+    The Dock evaluates the Bind request. Since the request matches the two ZPR addresses associated with the constrained Authentication Visa (see step 3) the Dock installs a PEP, etc.  and returns a Stream ID for the Adapter to use when communicating with the Auth. Service in the following steps.
+
+12. **ZPR Authentication**
+
+    The Adapter performs authentication with the Auth. Service.  This is a series of authentication messages that are exchanged by the Adapter and the Auth Service. These messages travel over the ZPR Net as ZDP packets, using the Stream ID obtained in the "Bind Response 2" step, above. These packets use the Visa installed in step 3.
+
+    These messages are normal ZPR Data Protocol messages.
+
+    The authentication protocol is presumed to end-to-end encrypt, or otherwise protect, its messages so that they are not visible to attackers, spoofable, etc.
+
+    Note Also that the Adapter/Endpoint may decide, for any reason of its own, to initiate authentication and start this process.  (As described above, the Adapter, knowing its Agent is an application server, may start the process so that the server is connected to the network).
+
+    If this authentication process starts without having received an FTS, then it is a 'generic' authentication. Presumably it might be good for many different connections, none of which are specified.
+
+13. **Authentication Finishes**
+
+    Eventually the Authentication process ends with a "Successfully Authenticated" message to the Adapter. This message includes Authentication Token (the Blob). (This message is actually a part of the exchange of messages in step 14 but is called out separately to indicate that it includes the blob).
+
+14. **Acquire ZPR Address Request**
+
+    The Adapter requests the ZPR Address for the identity that was proven in the Authentication Steps 14 & 15, above. It includes the Blob it received in step 15 as proof that it is the indicated identity.  See [@sec:acquire-zpr-address-request-and-response].
+
+    a.  **ZPR Address Allocation**
+
+        Based on configuration and policy, the Dock will either be allowed to allocate an address from its own pool or need to reach out to another service to acquire an address for this endpoint.
+
+15. **Grant ZPR Address**
+
+    The Dock sends the ZPR Address to the Endpoint/Adapter. See [@sec:grant-zpr-address-request-and-response] via a Grant ZPR Address message.
+
+16. **FTS Retransmission**
+
+    If the process started by the Adapter receiving the First TCP Syn (FTS) from the Endpoint, the Endpoint will eventually retransmit the SYN (FTS'). The Adapter receives the message and attempts to find a Stream ID to use for it.
+
+17. **Bind Request 3**
+
+    The Adapter does not find a Stream ID to use, so it sends a Bind Request (see [@sec:bind-unbind]) to the Dock.
+
+18. **Visa Install**
+
+    The Dock requests a Visa from the Visa Service. The Visa Service creates a Visa and installs it in the ZPR Network. The authentication needed to allocate this Visa was done in step 14.
+
+19. **Bind Response 3**
+
+    When the dock has been notified that the Visa has been installed it sends a Bind Response ([@sec:bind-unbind]) to the Adapter, giving it the Stream ID to use.
+
+    Data may then flow through the network.
+
+20. **FTS''**
+
+    If a different FTS is sent by the Endpoint, it will require a different authentication, etc. round. Since the constrained visa is in place, the steps required to install it are not performed.
 
 ## Path MTU Management
 
@@ -2590,7 +2141,7 @@ ZDP Header Security Association (ZHSA)
 
     This flag is required because the amount of the packet that is encrypted depends on the packet type. Transit Packets have only the ZDP header encrypted and covered by a MICV. All other packets are completely encrypted and covered by the MICV. The issue is that the type field is encrypted so it cannot be used to determine whether how much of the packet is protected -- thus, the information is stored in the SA.
 
-    The ZPR Parameter Index selects, among other things, the ZHSA to use in processing the packet.
+    The ZHSA field in the ZDP header selects the header security association to use when processing the packet.
 
     ZHSAs are created and managed either A) by trusted admin services manually configuring the ZHSAs in the Nodes or B) by a ZDP keying protocol (TBD).
 
@@ -2599,9 +2150,9 @@ ZDP Header Security Association (ZHSA)
 Between Ingress and Egress Adapter (A2A SA)[^7]
 :   This SA exists between the Ingress and Egress Adapters of a given flow of Endpoint Packets. It provides cryptographic protection of the Endpoint Packet as it traverses the network. It allows the Egress Adapter to verify that the Endpoint Packet arrived at the Egress via the Visa by which the packet was admitted at the Ingress Adapter. The A2A SAs do not provide neither replay protection. They MAY provide confidentiality.
 
-The A2A SA is managed by the Visa Service. When a Visa is granted, the VS explicitly generates the necessary cryptographic material and directly sends this material to the Ingress and Egress Docks. The Docks, in turn, send the keying material to their respective Adapters via the Bind Endpoint Response message ([@sec:bind-unbind]) It is not propagated from Ingress Dock to Egress Dock via the Visa Heralding procedure; thus, the material is known only by the Visa Service and two Adapters.
+    The A2A SA is managed by the Visa Service. When a Visa is granted, the VS explicitly generates the necessary cryptographic material and directly sends this material to the Ingress and Egress Docks. The Docks, in turn, send the keying material to their respective Adapters via the Bind Endpoint Response message ([@sec:bind-unbind]) It is not propagated from Ingress Dock to Egress Dock via the Visa Heralding procedure; thus, the material is known only by the Visa Service and two Adapters.
 
-The keying material MUST be encrypted by the Visa Service so that only the Adapters can access it.
+    The keying material MUST be encrypted by the Visa Service so that only the Adapters can access it.
 
 This combination of SAs
 
@@ -2617,45 +2168,25 @@ There also is a NULL Security Association that is available for limited use when
 
 2)  For the ZDP keying protocol. This is not an issue because the key exchange must operate before any SAs are established and the protocol is inherently secure.
 
-The NULL SA is selected by ZPI 0 (this also selects the ZPR Baseline Configuration (see [@sec:zpr-baseline-configuration]).
+The NULL SA is selected by ZPI 0.
 
 See also [@sec:zpi-0].
 
 The NULL SA may also be used when the substrate is a VPN and the VPN provides adequate security.
 
-### ZPR Configurations
+### ZPR Versions
 
-ZPR Configurations allow various parts of the ZPR packet structure to be defined by the network administration at run time. The sizes of some fields may be increased or decreased, or the field may be eliminated altogether. Given that, it is conceptually difficult to define packet formats in the traditional manner. Instead, we define a Baseline Configuration (BC) with field sizes that are believed to be adequate for most uses. So, instead of a traditional packet specification, the packet and header descriptions list and describe the fields of the packet/header in a size-less manner. Then the suggested minimum, maximum, and BC lengths are given. If the minimum length is 0 then the field is optional; if it is not 0 then the field is mandatory. A traditional packet diagram, using the BC lengths, is then given for reference.
+The Version Number field of the ZDP header indicates the ZDP protocol version. This document describes version 1 of ZDP.
 
-The rationale for the lengths is given as well.
+Version 0 is reserved for experimental use.
 
-The only exception is the first byte of the packet. This is the ZPI (ZPR Parameter Index) byte. It identifies the SA and ZPR Configuration by which the packet was built and cryptographically protected (and should be evaluated by the receiver). Except for ZPI 0, the NULL SA ([@sec:the-null-security-association]) there is no fixed mapping of ZPI value to specific configuration; conceptually, the ZPI value is an index into a table and the selected table entry contains the configuration to be used.
+Version 7 is reserved for future use.
 
-#### ZPR Baseline Configuration
+The ZDP Version indicates the structure of the ZDP packets, including the lengths of many of the fields.
 
-A baseline configuration is defined. This configuration MUST BE "hard coded" into all ZPR implementations. It is always available for use. It is used when there are no other ZPR configurations available and active.
+ZDP versions are defined by ZDP protocol specifications (such as this document).
 
-The ZPR Baseline Configuration specifies the sizes of most ZPR header fields. Each section in the ZPR protocol definitions, below, specifies the Baseline Configuration size of each of its fields.
-
-### ZPI Mapping
-
-As described in [@sec:zdp-security-associations] and [@sec:zpr-configurations] the ZPI byte selects both the SA and ZPR Configuration used in building the packet. These selections MUST be independent in order to allow the same SA to be used with multiple ZPR Configurations (such as when deploying a new ZPR Configuration).
-
-In pseudocode:
-```
-    struct parameters{
-        struct zpr_config *config;
-        struct zpr_sa *sa;
-    };
-    struct parameters parameter_array[];
-    ...
-        struct parameters *pp = &parameter_array[packet.zpi];
-        struct zpr_config *config_ptr = pp->config;
-        struct zpr_sa = pp->sa;
-    ...
-```
-
-ZPI Values are distributed to the nodes as a part of key management (either via the node-to-node keying protocols or static key distribution by ZPR Network services).
+NOTE WELL: the concept of the Configuration no longer applies to ZDP packet structure.
 
 ### Base ZDP Packet Structure
 
@@ -2663,63 +2194,50 @@ ZPI Values are distributed to the nodes as a part of key management (either via 
 
 All ZPR packets have the following header. It provides the information necessary to receive and disambiguate the packet. The header contains the following fields, in the given order:
 
-ZPI
-:   The ZPR Parameter Index
+Version
+:   A three-bit field that indicates the ZDP Version of the packet. This document describes version 1.
 
-    The value of this field selects the ZPR Configuration and ZPR Header Security Association to use in interpreting the packet.
+ZHSAID
+:   ZDP Header Security Association ID - identifies the security association used to process the ZDP header.
 
-    This field is not controlled by the ZPR Configuration. It is always 1 byte long, is always present, and is the first byte of the ZPR packet.  This field is a simple ID number with no internal structure. It could be used as an index into an array of SAs and Configurations.
 
-    Type The type of message carried in the ZDP packet.
-
-    In the Baseline Configuration this field is 1 byte long. This is believed to be an adequate size since this note defines only a limited number of messages, leaving ample space for additions or changes to the protocol as well as local experimentation. The minimum length is 1 byte. Since all message type values are less than 255, the suggested maximum length is 1 byte.
+Type
+:   The type of message carried in the ZDP packet.
 
 Excess Length
-:   Is the difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet. The field is an unsigned integer. The motivation is that some Substrate Networks will have minimum packet payload sizes that may be larger than a ZDP message. For example, an Ethernet frame's data must be at least 46 bytes long) which might be longer than the encapsulated ZDP packet.  This field represents the difference between the two. If a management packet (such as an echo message) is small, say 30 bytes, and is carried on an Ethernet, this field would contain 16.
+:   A 1-byte field that is the difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
 
-    In the Baseline Configuration this field is 1 byte long. This is believed to be an adequate size since most minimum packet sizes are on the order of 64 bytes, or less. The minimum size of this field is 1 byte. The suggested maximum is 2 bytes.
+   The field is an unsigned integer.
+
+   The motivation is that some Substrate Networks will have minimum packet payload sizes that may be larger than a ZDP message. For example, an Ethernet frame's data must be at least 46 bytes long) which might be longer than the encapsulated ZDP packet.  This field represents the difference between the two. If a management packet (such as an echo message) is small, say 30 bytes, and is carried on an Ethernet, this field would contain 16.
 
     ZDP packets MUST be transmitted in the smallest substrate packet possible, consistent with the Substrates minimum packet size (if any).
 
 Sequence Number
 :   This is a sequence number, used in doing replay protection.
 
+    TODO: Change this for new reliability scheme.
+
     Sequence numbers are local to a ZDP Header SA.
 
-    In the Baseline Configuration this field is 2 bytes long. The factor that controls the size of the field is how large a window is provided to accommodate legitimate packet misorderings. The available window for an *n*-bit field is 2^*n*-1^ packets, though 2^*n*-2^ is better.  This means that the maximum size of the window is 32,768 (or 16,384) packets. This is the *maximum* size that the window may be; policies can set it smaller.
-
-    The minimum size of the field is 1 byte.
-
-    The recommended maximum size of the field is 8 bytes since a sequence number of this size would require over 500 years to wrap at 10^9^ packets/second.
+    This field is 2 bytes long. The factor that controls the size of the field is how large a window is provided to accommodate legitimate packet misorderings. The available window for an *n*-bit field is 2^*n*-1^ packets, though 2^*n*-2^ is better.  This means that the maximum size of the window is 32,768 (or 16,384) packets. This is the *maximum* size that the window may be; policies can set it smaller.
 
 Stream ID
 :   This field is present for ZDP Transit Packets and stream-oriented management packets. Its exact use depends on the packet type (*e.g.*, for Transit Packets, the packet is switched based on the Stream ID).
 
-    In the Baseline Configuration this field is 4 bytes long. This represents a reasonable compromise between supporting a large number of flows yet keeping the range of values small enough to permit efficient lookup algorithms (such as direct array indexing).
-
-    The minimum size of this field is 1 byte.
-
-    No maximum size is suggested.
+   The size of the Stream ID is declared in the Hello Response.
 
 Management Data
-:   The presence of this field depends on whether the ZDP packet contains an Endpoint Packet message or is a Management Message, as indicated by the type field. If the packet is a Management Message, then this field contains data pertinent to the management operation being performed.  The size and format of this data depends on the management operation.  The ZPR Configuration DOES NOT directly control the size of this field. The Configuration indirectly controls this field by controlling specific fields of specific management packets.
+:   The presence of this field depends on whether the ZDP packet contains an Endpoint Packet message or is a Management Message, as indicated by the type field. If the packet is a Management Message, then this field contains data pertinent to the management operation being performed.  The size and format of this data depends on the management operation.
 
     If the packet contains an Endpoint Packet, then this field is absent.
 
     Pad Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
-    The size of the Pad field is not controlled by the ZPR Configuration.
-
     When generating a packet, the pad MUST be set to all 0's to avoid leaking internal data. On reception the pad MUST be checked and, if not all 0, the packet silently discarded and the Docking Session or Link brought down. Furthermore, the upstream should be "ignored".[^8]
 
 Header MICV
-:   Message Integrity Check Value calculated over the entire ZPR Packet header. The size of the MICV is determined by a combination of the MICV algorithm selected by the security association and the ZPR Configuration. The size of the field in the packet is:
-
-    MIN(config-specified-size, MAC-algorithm-specified-size)
-
-    If the field is smaller than the generated MICV value then the high-order bits are used from the generated value. The low order ones are discarded.
-
-    By default, the MICV field is the same size as the output value generated by the MICV algorithm (*e.g.*, for SHA-256, it would be 256 bits, or 8 bytes).
+:   Message Integrity Check Value calculated over the entire ZPR Packet header. The size of the MICV is determined by the MICV algorithm selected by the security association.
 
 #### Encryption and MICV Calculation
 
@@ -2727,34 +2245,26 @@ When transmitting a ZPR packet, the packet is encrypted and then the MICV is cal
 
 The MICV is calculated over all fields except the Header MICV field.
 
-All fields except the ZPI and Header MICV fields are encrypted.
+All fields except the Version, ZHSAID, and Header MICV fields are encrypted.
 
 #### Packet Structure
 
-The format of the packet, using the Baseline Configuration, is:
+The format of the packet is:
 
-\begin{figure}
-\begin{verbatim}
-  0                   1                   2                   3
-  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |      ZPI      |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |      Type     | Excess-Length |        Sequence Number        |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                           Stream ID[1]                        |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                        Management Data[2]                     |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                              Pad                              |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                              MAC                              |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |                        Endpoint Packet[3]                     |
- +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{ZPR Packet Structure}
-\end{figure}
+``` mermaid
+%%| fig-cap: ZPR Packet Structure
+packet
++3: "Vers."
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++16: "Sequence Number"
++32: "Stream ID[1]"
++24: "Management Data[2] (variable length)"
++32: "Pad (variable length)"
++32: "MAC"
++32: "Endpoint Packet[3] (variable length)"
+```
 
 Notes:
 
@@ -2902,16 +2412,16 @@ This section specifies the encapsulation of Compressed Endpoint Packets as they 
 
 The Transit Packets are comprised of the following fields:
 
-ZPI
-:   ZPR Parameter Index, see [@sec:base-zdp-fields].
+Version
+:   A three-bit field that indicates the ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID - identifies the security association used to process the ZDP header.
 
 Type
 :   Packet type. Is 0 for a Transit Packet. See [@sec:base-zdp-fields] and [@sec:type-values-and-encodings].
 
 Excess Length
-:   See [@sec:base-zdp-fields].
-
-Sequence Number
 :   See [@sec:base-zdp-fields].
 
 Stream ID
@@ -2926,85 +2436,60 @@ Header MAC
 A2A Security Association ID
 :   The Adapter-to-Adapter Security Association ID. This field selects the A2A SA. Since each Visa (and therefore each stream) has its own A2A SAs, the A2A SAID selects an SA within the context of the Visa by which the packet travelled.
 
-    The size of the A2A SAID field is controlled by the ZPR Configuration.
+    The size of the A2A SAID field is determined by the MICV algorithm used.
 
-    Since A) We expect that there will be a relatively small number of A2A Security Associations in effect at any one time, and B) A2A SAID values can be reused, this field can be 1 byte in the Baseline Configuration.
+    This field is 1 byte long. This is adequate since A) We expect that there will be a relatively small number of A2A Security Associations in effect at any one time, and B) A2A SAID values can be reused.
 
     See [@sec:zdp-security-associations]
 
-Compressed Endpoint Packet
+Compressed Endpoint Packet\
 :   This field contains the Endpoint Packet in its entirety.
-
-    The size of the field is NOT controlled by the ZPR Configuration.
 
 A2A MAC
 :   Message authentication code calculated over the entire Uncompressed Endpoint Packet. This MAC is calculated prior to compression (see [@sec:endpoint-packet-compression-and-expansion]) by the Ingress Adapter and after decompression (see [@sec:endpoint-packet-compression-and-expansion]) by the Egress Adapter.
 
-    The size of the A2A MAC field is determined by a combination of the MAC algorithm selected by the security association and the ZPR Configuration. The size of the field in the packet is:
-
-    MIN(config-specified-size, MAC-algorithm-specified-size)
-
-    If the field is smaller than the generated value, then the high-order bits are used from the generated value. The low order ones are discarded.
+    The size of the A2A MAC field is determined by the MAC algorithm selected by the security association.
 
 #### Packet Structure
 
-The structure of the Transit Packet, with the Baseline Configuration, is:
+The structure of the Transit Packet, is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ - - - -
-|      ZPI      |                                                       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ - -   |
-|     Type      | Excess Length |        Sequence Number        |   |   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |   |
-|                         Stream ID                             | En-  MAC
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ crypt |
-|                              Pad                              |   |   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ - - - -
-|                              MAC                              |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|    A2A SAID   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ - - - -
-|                  Compressed Endpoint Packet                   |    /|\
-                               ...                                 A2A MAC
-|                                                               |.   \|/
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ - - - -
-| A2A MAC |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{ZPR Transit Packet Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: ZPR Transit Packet Format
+packet
++3: "Vers."
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++32: "Stream ID"
++8: "Pad (variable length)"
++32: "MAC"
++8: "A2A SAID"
++24: "Compressed Endpoint Packet (variable length)"
++8: "A2A MAC"
+```
 
 ### Per-Flow Management Packet
 
 Per Flow management packets contain a management message that pertains to a specific traffic flow.
 
-The fields and their sizes in the Baseline Config are described in [@sec:zpi-mapping].
+The fields are described in [@sec:base-zdp-fields].
 
 The format of the ZDP packet is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+--------
-|     ZPI       |                                                       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+----   |
-|     Type      | Excess-Length |         Sequence Number       |  |    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  |    |
-|                            Stream ID                          |  |   MAC
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Encr. |
-|                Per-Flow Management Message Data               |  |    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  |    |
-|                              Pad                              |  |    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+--------
-|                              MAC                              |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Per-Flow Management Packet Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Per-Flow Management Packet Format
+packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++16: "Sequence Number"
++32: "Stream ID"
++24: "Per-Flow Management Message Data (variable length)"
++32: "Pad (variable length)"
++32: "MAC"
+```
 
 Note that
 
@@ -3016,28 +2501,22 @@ Note that
 
 Non-Per-Flow management packets contain a management message that pertains to the entire Link or Docking Session or the associated Forwarders, Adapters, and Docks.
 
-The fields and their sizes in the Baseline Config are described in [@sec:zpi-mapping].
+The fields are described in [@sec:base-zdp-fields].
 
 The format of the Non-Per-Flow Management Packet is:
 
-\begin{figure}
-\begin{verbatim}
-0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+--------
-|     ZPI       |                                                       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+----   |
-|     Type      | Excess-Length |         Sequence Number       |  |    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Encr. |
-|              Non-Per-Flow Management Message Data             |  |   MAC
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  |    |
-|                              Pad                              |  |    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+--------
-|                              MAC                              |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Non-Per-Flow Management Packet Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Non-Per-Flow Management Packet Format
+packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++16: "Sequence Number"
++24: "Non-Per-Flow Management Message Data (variable length)"
++32: "Pad (variable length)"
++32: "MAC"
+```
 
 Note that:
 
@@ -3071,73 +2550,51 @@ When a Management Echo Request is received, its type should be changed to Echo R
 
 Echo Request and Response messages are Non-Per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-per-flow-mgmt-pkt]).
 
-**Echo Request**
+#### Echo Request
 
 The Echo Request is transmitted in the Management Message Data field of the Non-Per-Flow Management packet. The Management Message Data has the following format:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|       Transaction ID          |   Additional Data Length      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  Additional Data (may be 0-length)            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Echo Request Management Message Data Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Echo Request Management Message Data Format
+packet
++16: "Transaction ID"
++16: "Additional Data Length"
++32: "Additional Data (may be 0-length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID number that uniquely identifies the Echo Request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 Additional Data Length
 :   Is the number of Additional Data bytes in the message. It may be 0.
-
-    The length of this field is controlled by the ZPR Configuration. Its length MAY BE 0, in which case no Additional Data may be added to the message. In the Baseline Configuration this field is 2 bytes long.
 
 Additional Data
 :   Is additional data that may be sent. The content is unspecified. If a request has additional data, then it must be returned in the response.
 
-    The maximum length of this field is controlled by the ZPR Configuration. In the Baseline Configuration the maximum length of the field is 1024 bytes.
-
-**Echo Response**
+#### Echo Response
 
 The Echo Response is transmitted in the Management Message Data field of the Non-per-Flow Management packet. The Management Message Data has the following format:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Transaction ID       |   Additional Data Length      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  Additional Data (may be 0-length)            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Echo Response Management Message Data Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Echo Response Management Message Data Format
+packet
++16: "Transaction ID"
++16: "Additional Data Length"
++32: "Additional Data (may be 0-length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the Echo Request that this message is a response to.
 
-    The length of this field is controlled by the ZPR Configuration. Its length MUST BE the same as the length of the Request Sequence Number in the ECHO Request management message. In the Baseline Configuration this field is 2 bytes long.
-
 Additional Data Length
 :   Is the number of Additional Data bytes in the message. It may be 0.
 
-    The length of this field is controlled by the ZPR Configuration. Its length MAY BE 0, in which case no Additional Data may be added to the message. In the Baseline Configuration this field is 2 bytes long.
-
 Additional Data
 :   Is additional data that was sent in the request.
-
-    The maximum length of this field is controlled by the ZPR Configuration. In the Baseline Configuration the maximum length of the field is 1024 bytes.
 
 Echo Request/Response messages may be used as keepalives or liveness detection ([@sec:liveness-detection-and-failure-processing]).
 
@@ -3157,113 +2614,69 @@ The Indication and Request both inform the peer that the sender wishes to termin
 
 The Indication and Request have the same format:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|        Transaction ID         |  Reason Code  |   Data Len    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|    (optional) Additional Data                                 |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Terminate Indication and Request Management Message Data formats}
-\end{figure}
+``` mermaid
+%%| fig-cap: Terminate Indication and Request Management Message Data formats
+packet
++16: "Transaction ID"
++8: "Reason Code"
++8: "Data Length"
++32: "(optional) Additional Data"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the indication or request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 Reason Code
 :   A numeric reason code; one of the following:
 
-    +--------+-------------------------------------------------------------+
-    | Value  | Description                                                 |
-    +========+=============================================================+
-    |        | OTHER. This value is used when any of the following is      |
-    |        | inappropriate.                                              |
-    +--------+-------------------------------------------------------------+
-    |        | BAD_SEQUENCE_NUMBER                                         |
-    |        |                                                             |
-    |        | A sequence number in a response to an earlier request is    |
-    |        | not a sequence number to a valid request.                   |
-    +--------+-------------------------------------------------------------+
-    |        | REQUEST_TIME_OUT                                            |
-    |        |                                                             |
-    |        | Some operation has timed out, resulting in termination of   |
-    |        | the connection.                                             |
-    +--------+-------------------------------------------------------------+
-    |        | RESET                                                       |
-    |        |                                                             |
-    |        | A RESET event was issued against the Docking Session or     |
-    |        | Link (only occurs in indications).                          |
-    +--------+-------------------------------------------------------------+
+| Code | Name                | Meaning |
+| ---- | ------------------- | ------- |
+| TBD  | OTHER               | This value is used when any of the following is inappropriate. |
+| TBD  | BAD_SEQUENCE_NUMBER | A sequence number in a response to an earlier request is not a sequence number to a valid request. |
+| TBD  | REQUEST_TIME_OUT    | Some operation has timed out, resulting in termination of the connection. |
+| TBD  | RESET               | A RESET event was issued against the Docking Session or Link (only occurs in indications). |
 
-    : Stream ID Withdrawal Reason Codes
-
-    The size of the reason code is controlled by the ZPR Configuration. It MAY be 0. Currently there are not many reasons for terminating, so we believe that a single byte is adequate. Thus, in the Baseline Configuration, the size of this field is 1 byte.
+: ZDP Termination Reason Codes
 
 Data Length
 :   Is the number of Additional Data bytes in the message. It may be 0.
 
-    The length of this field is controlled by the ZPR Configuration. Its length MAY BE 0, in which case no Additional Data may be added to the message.
-
 Additional Data
 :   Optional additional data (such as a human-readable message more fully explaining the termination).
 
-    The maximum length of this field is controlled by the ZPR Configuration.
-
 The format of the Terminate Response Management Message Data is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID.       | Response Code |  Data Length  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                    Additional Data                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{ZDP Terminate Response Management Message Data}
-\end{figure}
+``` mermaid
+%%| fig-cap: ZDP Terminate Response Management Message Data
+packet
++16: "Transaction ID"
++8: "Response Code"
++8: "Data Length"
++32: "(optional) Additional Data"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number identifying the indication or request for which this is a response.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 Response Code
 :   Indicates whether the termination will be done or not and, if not, why. The following response codes are defined:
 
-    -----------------------------------------------------------------------
-    Value     Description
-    --------- -------------------------------------------------------------
-    0         Success -- Link or Dock Session will be terminated.
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Success -- Link or Dock Session will be terminated. |
+| 1    | OTHER. This value is used when any of the following is inappropriate or to avoid passing too much information to a peer. |
 
-    1         OTHER. This value is used when any of the following is
-              inappropriate or to avoid passing too much information to a
-              peer.
-    -----------------------------------------------------------------------
-
-    : Stream ID Withdrawal Response Codes
-
-    The size of the reason code is controlled by the ZPR Configuration. It MAY be 0, in which case no response code is sent to the requester and the requester MUST act as if it had received a Success code (code point 0). Currently there are not many reasons for terminating, so we believe that a single byte is adequate. Thus, in the Baseline Configuration, the size of this field is 1 byte.
+: Terminate Response Codes
 
 Data Length
 :   Is the number of Additional Data bytes in the message. It may be 0.
 
-    The length of this field is controlled by the ZPR Configuration. Its length MAY BE 0, in which case no Additional Data may be added to the message.
-
 Additional Data
 :   Optional additional data (such as a human-readable message more fully explaining the termination response).
-
-    The maximum length of this field is controlled by the ZPR Configuration.
 
 Terminate Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
@@ -3277,159 +2690,147 @@ The Hello Request and Response messages are Non-Per-Flow Management messages.
 
 Link Hello Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
-**Hello Request Message**
+#### Hello Request Message
 
 The Hello Request Message Data is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID.       |
-+-------------------------------+
-\end{verbatim}
-\caption{Hello Request Message Data}
-\end{figure}
+``` mermaid
+%%| fig-cap: Hello Request Message Data
+packet
++16: "Transaction ID"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
 
-Hello Response Message
+#### Hello Response Message
 
 The format of the response Management Message Data is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|        Transaction ID.        |              Status           |
-+-------------------------------+-------------------------------+
-|                                                               |
-                       Hello Response TLVs
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Hello Response Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Hello Response Format
+packet
++16: "Transaction ID"
++16: "Status"
++64: "Hello Response TLVs (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number identifying the request for which this is a response.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
+Status Code
+:   Indicates the status of the request.
 
-Status
-:   Indicates the status of the request. In the Baseline Configuration this field is 2 bytes long.
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Success, the hello was accepted by the peer.
+| 1    | OTHER. This value is used when there is an error other than listed below or to avoid passing too much information to the peer. |
+| TBD  | TBD |
 
-    -----------------------------------------------------------------------
-    Value          Description
-    -------------- --------------------------------------------------------
-    0              Success, the hello was accepted by the peer.
+: Hello Response Status Codes
 
-    1              OTHER. This value is used when there is an error other
-                   than listed below or to avoid passing too much
-                   information to the peer.
-
-    TBD            TBD
-    -----------------------------------------------------------------------
-
-    : Endpoint Addresses Binding Response Status Codes
-
-    If the status code is not success (0) then the Hello Response TLV field must contain the Policy ID and Version Information fields to indicate the policy ID[^9] and/or version by which the hello is being rejected.
+If the status code is not success (0) then the Hello Response TLV field must contain the Policy ID and Version Information fields to indicate the policy ID[^9] and/or version by which the hello is being rejected.
 
 Hello Response TLVs
 :   A series of TLV (type/length/value) structures containing the hello data. The format of a TLV is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|      Type     |    Length     |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                        ... Value ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{TLV Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: TLV Format
+packet
++8: "Type"
++8: "Length"
++16: "Value (variable length)"
+```
 
-    The following TLVs are defined:
+The following TLVs are defined:
 
-    +------+---------------------------------------------------------------+
-    | Type | Description                                                   |
-    +======+===============================================================+
-    | 0    | A NULL TLV. If the TYPE is 0 then the length and value fields |
-    |      | are not present (this allows TYPE=0 TLVs to be used as        |
-    |      | padding).                                                     |
-    +------+---------------------------------------------------------------+
-    | 1    | Policy ID                                                     |
-    |      |                                                               |
-    |      | Is the ID of the Policy under which the Link or Docking       |
-    |      | Session was initiated, accepted, or rejected. If a Link or    |
-    |      | Docking Session was rejected because there was no policy that |
-    |      | explicitly accepted it (as opposed to one explicitly          |
-    |      | rejecting it) then the Policy TLV is not present.             |
-    |      |                                                               |
-    |      | **Ed. Note**: The Policy is included in the messages to       |
-    |      | assist auditing. An implementation SHOULD log that the Link   |
-    |      | or Docking Session was allowed per the Policy ID in the Hello |
-    |      | Response.                                                     |
-    +------+---------------------------------------------------------------+
-    | 2    | Version                                                       |
-    |      |                                                               |
-    |      | Is the version information of the peer. **The exact content   |
-    |      | of this field is TBD.** It should indicate A) the             |
-    |      | implementation version of the peer and B) which ZPR RFC       |
-    |      | version the peer implements.                                  |
-    |      |                                                               |
-    |      | > **Ed. Note**: general field added per request from Mathias. |
-    +------+---------------------------------------------------------------+
-    | 2    | Endpoint Authentication ZPR Address (EAZA).\                  |
-    |      | This is the ZPR Address that the Adapter MUST use as the      |
-    |      | "source address" when communicating with the Auth Service to  |
-    |      | perform ZPR Authentication.                                   |
-    +------+---------------------------------------------------------------+
-    | 3    | Auth Service ZPR Address (ASZA)\                              |
-    |      | The ZPR Address of the Authentication Service. The Adapter    |
-    |      | MUST send all ZPR Authentication messages to this ZPR         |
-    |      | Address.                                                      |
-    +------+---------------------------------------------------------------+
-    | 4    | Reserved for future use. These values MUST NOT be used. If a  |
-    | -252 | Hello Response contains any of these values it MUST be        |
-    |      | dropped, the event reported, and the Docking Session or Link  |
-    |      | terminated.                                                   |
-    +------+---------------------------------------------------------------+
-    | 253  | Experimental                                                  |
-    |      |                                                               |
-    |      | This is used to experiment with new TLVs. The first byte of   |
-    |      | the Value contains the Type code point proposed for the TLV.  |
-    |      | The type is in the range 3-252, inclusive.                    |
-    +------+---------------------------------------------------------------+
-    | 254  | Vendor Specific.                                              |
-    |      |                                                               |
-    |      | This TLV contains vendor specific (that is, non-standard)     |
-    |      | TLVs. The first three bytes of the Value contain an IEEE802   |
-    |      | OUI identifying the vendor.                                   |
-    +------+---------------------------------------------------------------+
-    | 255  | Locally defined.                                              |
-    +------+---------------------------------------------------------------+
++------+---------------------------------------------------------------+
+| Type | Description                                                   |
++======+===============================================================+
+| 0    | A NULL TLV. If the TYPE is 0 then the length and value fields |
+|      | are not present (this allows TYPE=0 TLVs to be used as        |
+|      | padding).                                                     |
++------+---------------------------------------------------------------+
+| 1    | Policy ID                                                     |
+|      |                                                               |
+|      | Is the ID of the Policy under which the Link or Docking       |
+|      | Session was initiated, accepted, or rejected. If a Link or    |
+|      | Docking Session was rejected because there was no policy that |
+|      | explicitly accepted it (as opposed to one explicitly          |
+|      | rejecting it) then the Policy TLV is not present.             |
+|      |                                                               |
+|      | **Ed. Note**: The Policy is included in the messages to       |
+|      | assist auditing. An implementation SHOULD log that the Link   |
+|      | or Docking Session was allowed per the Policy ID in the Hello |
+|      | Response.                                                     |
++------+---------------------------------------------------------------+
+| 2    | Version                                                       |
+|      |                                                               |
+|      | Is the version information of the peer. **The exact content   |
+|      | of this field is TBD.** It should indicate A) the             |
+|      | implementation version of the peer and B) which ZPR RFC       |
+|      | version the peer implements.                                  |
+|      |                                                               |
+|      | > **Ed. Note**: general field added per request from Mathias. |
++------+---------------------------------------------------------------+
+| 2    | Endpoint Authentication ZPR Address (EAZA).\                  |
+|      | This is the ZPR Address that the Adapter MUST use as the      |
+|      | "source address" when communicating with the Auth Service to  |
+|      | perform ZPR Authentication.                                   |
++------+---------------------------------------------------------------+
+| 3    | Auth Service ZPR Address (ASZA)\                              |
+|      | The ZPR Address of the Authentication Service. The Adapter    |
+|      | MUST send all ZPR Authentication messages to this ZPR         |
+|      | Address.                                                      |
++------+---------------------------------------------------------------+
+| 4    | Stream ID Length (SIL)\                                       |
+|      | The length of Stream IDs that the sender of the Hello         |
+|      | Response wishes the receiver to use when sending ZDP packets  |
+|      | with Stream IDs (such as transit packets) to the response     |
+|      | sender.                                                       |
+|      |                                                               |
+|      | Valid Stream ID Lengths are 1, 2, 4, 8, and 16 bytes. All     |
+|      | ZDP nodes MUST be able to support all valid lengths.          |
+|      |                                                               |
+|      | This TLA is optional. The default is 2 bytes for stream IDs   |
+|      | going between a Dock and an Adapter and 8 bytes for stream    |
+|      | IDs going between a Dock and a Forwarder or between           |
+|      | Forwarders.                                                   |
++------+---------------------------------------------------------------+
+| 5    | Reserved for future use. These values MUST NOT be used. If a  |
+| -252 | Hello Response contains any of these values it MUST be        |
+|      | dropped, the event reported, and the Docking Session or Link  |
+|      | terminated.                                                   |
++------+---------------------------------------------------------------+
+| 253  | Experimental                                                  |
+|      |                                                               |
+|      | This is used to experiment with new TLVs. The first byte of   |
+|      | the Value contains the Type code point proposed for the TLV.  |
+|      | The type is in the range 3-252, inclusive.                    |
++------+---------------------------------------------------------------+
+| 254  | Vendor Specific.                                              |
+|      |                                                               |
+|      | This TLV contains vendor specific (that is, non-standard)     |
+|      | TLVs. The first three bytes of the Value contain an IEEE802   |
+|      | OUI identifying the vendor.                                   |
++------+---------------------------------------------------------------+
+| 255  | Locally defined.                                              |
++------+---------------------------------------------------------------+
 
-    : Hello Response TLV types
+: Hello Response TLV types
 
-    The Hello Response MUST contain the POLICY ID TLV and VERSION TLV.
+The Hello Response MUST contain the POLICY ID TLV and VERSION TLV.
 
-    If any required TLV is missing then it is considered a handshake failure and the Docking Session or Link is not brought up.
+If any required TLV is missing then it is considered a handshake failure and the Docking Session or Link is not brought up.
 
-    TLVs may be in any order.
+TLVs may be in any order.
 
-    A TLV MUST NOT appear more than once in a Hello Response.
+A TLV MUST NOT appear more than once in a Hello Response.
 
 ### Stream ID Request
 
@@ -3441,31 +2842,20 @@ The Request message is a Per-Flow management message. The Stream ID Field of the
 
 The format of the Stream ID Request Message is:
 
-\begin{figure}
-\begin{verbatim}
-0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|        Transaction ID         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|      Visa&Stream Name Length  |     First Packet Length       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-                      ... Visa/Stream Name ...
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                       First Packet (Optional)
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Stream ID Request Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Stream ID Request Message Format
+packet
++16: "Transaction ID"
++16: "Visa & Stream Name Length"
++16: "First Packet Length"
++16: "Visa & Stream Name (variable length)"
++32: "First Packet (Optional)"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
-
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
 
 First Packet Length
 :   If this field is non-0 then the first packet of the stream is being carried in the request. If the first packet of the stream can fit in the request (which is likely if the request a TCP SYN or similar packet) then the upstream MAY include the packet in the request in order to reduce latency. The downstream would then send the packet on in the same manner if the herald operation succeeds. See Figure 12 for the packet structure.
@@ -3473,14 +2863,11 @@ First Packet Length
     If this field is 0 then the first packet is not present.
 
 Visa&Stream Name Length
-:   This is the size of the (following) Visa&Stream Name field.
-
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
+:   This is the size of the (following) Visa/Stream Name field.
 
 Visa&Stream Name
 :   Is the name of the Visa and Stream for which a Stream ID is being requested.
 
-    The maximum length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is limited by the size of the Visa & Stream Name Length field.
 
 ### Stream ID Response
 
@@ -3494,53 +2881,36 @@ The ZDP Stream ID contains the Offered ID from the Stream ID Request.  The Manag
 
 The format of the Stream ID Response is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID        |    Info Len   |  Status Code  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                           Stream ID                           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|      Visa Name Length         | Visa Name ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Status Info (optional, variable length)            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Stream ID Response Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Stream ID Response Message Format
+packet
++16: "Transaction ID"
++8: "Info Len"
++8: "Status Code"
++32: "Stream ID"
++16: "Visa Name Length"
++16: "Visa Name (variable length)"
++32: "Status Info (Optional, variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the Stream ID Request that this message is in response to.
 
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the length of the request's Transaction ID field. In the Baseline Configuration this field is 2 bytes long.
-
 Status Code
 :   Indicates the status of installing the Visa:
 
-    -----------------------------------------------------------------------
-    Code Point     Meaning
-    -------------- --------------------------------------------------------
-    0              Stream provisioned successfully.
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Stream provisioned successfully. |
+| 1    | Other -- none of the following or to avoid passing too much information to the peer. |
+| TBD  | No Such Name - No Visa/Stream with the given name exists. |
 
-    1              Other -- none of the following or to avoid passing too
-                   much information to the peer.
-
-                   No Such Name - No Visa/Stream with the given name
-                   exists.
-    -----------------------------------------------------------------------
-
-    : Authentication Response Status Codes
-
-    The length of this field is controlled by the ZPR Configuration. It MAY be 0. If so, the receiver MUST assume that the Stream has been successfully installed. In the Baseline Configuration this field is 1 byte long. This seems adequate given the limited number of code points.
+: Stream ID Response Status Codes
 
 Info Len
 :   Is the length of the Status Information field. It may be 0.
-
-    The length of this field is controlled by the ZPR Configuration. Its length MAY BE 0, in which case no additional Status Information may be added to the message.
 
 Visa Name Length
 :   The length of the Visa Name.
@@ -3554,7 +2924,7 @@ Status Information
 Stream ID
 :   If the status is success, then this is the Stream ID that the upstream should use when sending packets under the auspices of the Visa. This is the Final Stream ID. If the status indicates a failure, then this is the Offered Stream ID from the Stream ID Request; the requester uses this to determine which Request has failed and take appropriate action. (Note that the ZDP header always contains the offered ID).
 
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the Stream ID field in the ZPR header. In the baseline configuration it is 4 bytes long.
+    The length of this field is determined by the Hello Response TLV.
 
 If an Upstream Forwarder receives a Stream ID Response from a Downstream Forwarder and the Offered Stream ID in the response contains a Stream ID for a Stream that does not exist (perhaps it was deleted due to some deferred error) then the Upstream MUST silently discard the Response.  Further, the Upstream MUST NOT send a ZDP message specifying the non-existent Stream to any other ZPR entity (This avoids packet storms).
 
@@ -3572,49 +2942,34 @@ The ZDP Stream ID contains the Final Stream ID that was used when the Stream was
 
 The format of the Request is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Transaction ID       |      Code     | Add’l Data Len|
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            Add’l Data                         |
-|                                                               |
-\end{verbatim}
-\caption{Stream ID Withdrawal Request Management Message Data Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Stream ID Withdrawal Request Management Message Data Format
+packet
++16: "Transaction ID"
++16: "Additional Data Length"
++8: "Code"
++24: "Additional Data (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 Code
 :   Is a code indicating the reason that the Stream ID is being withdrawn.  Typically, this value would be entered in local logs or displayed on a console. Codes include:
 
-    -----------------------------------------------------------------------
-    Code Value   Reason
-    ------------ ----------------------------------------------------------
-    0            No reason given.
+| Code | Meaning |
+| ---- | ------- |
+| 0    | No reason given. |
+| TBD  | Egress Dock Session Terminated. Forwarders receiving this code MUST NOT attempt to find alternate routes to the egress. |
 
-                 Egress Dock Session Terminated. Forwarders receiving this
-                 code MUST NOT attempt to find alternate routes to the
-                 egress.
-    -----------------------------------------------------------------------
+: Stream ID Withdrawal Reason Codes
 
-    : Set Path MTU Request Response Codes
+Additional Data Length
+:   Is the size of the Additional Data field, in bytes. Since Additional data is optional, this field may be 0.
 
-    The length of this field is controlled by the ZPR Configuration. It MAY be 0. In the Baseline Configuration this field is 1 byte long.  This seems adequate given the limited number of code points.
-
-Add'l Data Len
-:   Is the size of the Add'l Data field, in bytes. Since Add'l data is optional, this field may be 0.
-
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 1 byte long. If this field length is 0 then no additional data may be added to the message.
-
-Add'l Data
+Additional Data
 :   Is additional data explaining the reason for withdrawing the Stream ID. Typically, this information would be entered in local logs or displayed on a console. The Node MUST NOT have any expectations as to the content of this field nor may it make any decisions based on the content of the field.
 
 The Stream ID Withdrawal Response is used to indicate that the node received the request and has taken appropriate action.
@@ -3623,55 +2978,41 @@ The ZDP Type field indicates that the message is a Stream ID Withdrawal Response
 
 The format of the Stream ID Withdrawal Response:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Transaction ID       |      Code     | Add’l Data Len|
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            Add’l Data                         |
-|                                                               |
-\end{verbatim}
-\caption{Stream ID Withdrawal Response Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Stream ID Withdrawal Response Message Format
+packet
++16: "Transaction ID"
++16: "Additional Data Length"
++8: "Code"
++24: "Additional Data (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
 
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the length of the Transaction ID field in the request message. In the Baseline Configuration this field is 2 bytes long.
-
 Code
 :   Indicates the status of the Stream ID Withdrawal:
 
-    -----------------------------------------------------------------------
-    Code Point     Meaning
-    -------------- --------------------------------------------------------
-    0              Stream ID withdrawn successfully
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Stream ID withdrawn successfully |
+| 1    | OTHER -- error other than those listed below occurred OR to avoid passing too much information to the peer. |
 
-    1              OTHER -- error other than those listed below occurred OR
-                   to avoid passing too much information to the peer.
-    -----------------------------------------------------------------------
+: Stream ID Withdrawal Response Codes
 
-    : ZIP Destination Unreachable Reason Codes
+Additional Data Length
+:   Is the size of the Additional Data field, in bytes. Since Additional data is optional, this field may be 0.
 
-    The length of this field is controlled by the ZPR Configuration. It MAY be 0, in which case the receiver of this message MUST act as if code 0 (success) had been received. In the Baseline Configuration this field is 1 byte long. This seems adequate given the limited number of code points.
-
-Add'l Data Len
-:   Is the size of the Add'l Data field, in bytes. Since Add'l data is optional, this field may be 0.
-
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 1 byte long. If this field length is 0 then no additional data may be added to the message.
-
-Add'l Data
+Additional Data
 :   Is additional data explaining the reason for retracting the Visa.  Typically, this information would be entered in local logs or displayed on a console. The Node MUST NOT have any expectations as to the content of this field nor may it make any decisions based on the content of the field.
 
 If the request specifies a Stream which is no longer in service, a response indicating success will still be issued.
 
 Stream ID Withdrawal Request and Response follow the common Request/Response semantics ([@sec:requestresponse-semantics]).
 
-### Register and Deregister Endpoint Addresses Request and Response {#register-deregister}
+### Register and Deregister Endpoint Addresses Request and Response {#sec:register-deregister}
 
 The Register Endpoint Addresses Request allows the Adapter to inform the Endpoint of the IP Address(es) of the Endpoint. This is used to inform the ZPR Network's routing so that it can direct Endpoint Packets addressed to the Endpoint to the correct Egress Dock.
 
@@ -3679,39 +3020,32 @@ The Register Endpoint Addresses Request allows the Adapter to inform the Endpoin
 
 These messages are not Per-Flow Management messages.
 
-**Request**
+#### Request
 
 The Register and Deregister Requests have the same format.
 
 The formats of the Register and Deregister Request messages is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID        |   IP Version  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|        ...  Endpoint IP address (4 or 16 bytes) ...           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Register and Deregister Endpoint Address Management Message Data}
-\end{figure}
+``` mermaid
+%%| fig-cap: Register and Deregister Endpoint Address Management Message Data
+packet
++16: "Transaction ID"
++8: "IP Version"
++32: "Endpoint IP address (4 or 16 bytes)"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 IP Version
-:   Is the IP version of the Endpoint Addresses. The value of this field MUST be either 4 or 6. The size of this field is fixed; it is not controlled by the ZPR Configuration.
+:   Is the IP version of the Endpoint Addresses. The value of this field MUST be either 4 or 6.
 
 Endpoint IP Address
 :   Is IP address of the Endpoint.
 
-**Response**
+#### Response
 
 The response indicates the status of the request.
 
@@ -3719,25 +3053,19 @@ The Register and Deregister Responses have the same format.
 
 The format of the Register and Deregister Responses is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID        |  Status Code  |   Info Len.   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              Optional Additional Status Information           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{ENDPOINT Address Registration and Deregistration Response Packet Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: ENDPOINT Address Registration and Deregistration Response Packet Format
+packet
++16: "Transaction ID"
++16: "Additional Info Length"
++8: "Status Code"
++24: "Additional Status Information (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
-
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the length of the Transaction ID field in the request message. In the Baseline Configuration this field is 2 bytes long.
 
 Status Code
 :   Is a code indicating the status of the Register or Deregister operation. Defined status codes are:
@@ -3771,21 +3099,19 @@ Status Code
     ...         ...
     -----------------------------------------------------------------------
 
-    :  Init Authentication Response Codes
+    : Endpoint Addresses Binding Response Status Codes
 
     Note that there is not a failure code indicating that the registration failed because the network's policies do not allow the address specified in the request. This is because a compromised peer could exhaustively try various addresses to see which are and are not allowed by policy. Such a peer would then gain some knowledge of the policies in the network.
 
     The defined errors all indicate various non-policy error conditions (*e.g*., lack of network resources or incorrect message formatting) and thus are not vectors for revealing Policies to a potentially compromised Endpoint or Adapter.
 
-    The size of the status code is controlled by the ZPR Configuration. It MAY be 0, in which case the receiver of this message MUST act as if status code 0 (success) was received. The number of code-points is limited, so a single byte is adequate. Thus, in the Baseline Configuration, the size of this field is 1 byte.
+Additional Info Len
+:   Is the length of the Additional Information field. It may be 0.
 
-Info Len
-:   Is the length of the Status Information field. It may be 0. The size of the Info Len field is controlled by the ZPR Configuration. It MAY be 0, in which case no additional information is sent in the message.  In the Baseline Configuration the size of this field is 1 byte.
-
-Status Information
+Additional Information
 :   Is any additional status information. Typically, this might be a human-readable message designed to assist diagnosis of the issue.
 
-**Processing**
+#### Processing
 
 The Register and Deregister Endpoint Address Request and Response messages follow the request/response semantics described in [@sec:requestresponse-semantics].
 
@@ -3825,11 +3151,19 @@ This section specifies the Bind and Unbind Endpoint Address request and response
 
 The semantics of the Request are that the requesting node is requesting a Stream ID to use when sending Endpoint Packets with the specified addresses, protocol, and ports to the peer. The response informs the requester of the Stream ID:
 
-```
-    Node 1.                                                Node 2.
-1  ---- Request(SA=A1 DA=A2 Proto=TCP SP=P1 DP=P2 ID=0 ) ----->
-2  <-- Response (SA=A1 DA=A2 Proto=TCP SP=P1 DP=P2 ID=SID1 ) --
-3  --------------- Transit Packet(SID=ID1) ----------------->
+``` mermaid
+---
+config:
+  sequence:
+    mirrorActors: false
+---
+sequenceDiagram
+    autonumber
+    participant N1 as Node1
+    participant N2 as Node2
+    N1->>N2: Request (SA=A1 DA=A2 Proto=TCP SP=P1 DP=P2 ID=0)
+    N2->>N1: Response (SA=A1 DA=A2 Proto=TCP SP=P1 DP=P2 ID=SID1)
+    N2->>N1: Transit Packet (SID=ID1)
 ```
 
 Where:
@@ -3851,7 +3185,7 @@ The format of the Bind Request message (diagram includes ZDP header and MICV) is
  0                   1                   2                   3
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+----
-|     ZPI       |
+|Vers.| ZHSAID  |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Common
 |     Type      | Excess-Length |         Sequence Number       | ZDP
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Header
@@ -3888,8 +3222,6 @@ Packet Count
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 Endpoint Packet Length
 :   The length of the Endpoint Packet field.
 
@@ -3904,37 +3236,23 @@ Multiple responses may be carried in a single packet.
 
 The format of the Bind and Unbind Responses is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID        |  Status Code  |   Info Len.   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              Optional Additional Status Information           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|    TCST       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-|                Traffic Classification Specification           |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   A2A MICV Key Length         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-|                  A2A MICV Keying Material                     |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Bind and Unbind Endpoint Address Response Management Message Data}
-\end{figure}
+``` mermaid
+%%| fig-cap: Bind and Unbind Endpoint Address Response Management Message Data
+packet
++16: "Transaction ID"
++8: "Status Code"
++8: "Length"
++32: "Optional Additional Status Information (variable length)"
++8: "TCST"
++24: "Traffic Classification Specification (variable length)"
++16: "A2A MICV Key Length"
++16: "A2A MICV Keying Material (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
-
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the length of the Transaction ID field in the request message. In the Baseline Configuration this field is 2 bytes long.
 
 Status Code
 :   Is a code indicating the status of the Bind or Unbind operation.  Defined status codes are:
@@ -3970,11 +3288,9 @@ Status Code
                 address).
     -----------------------------------------------------------------------
 
-    : Acquire ZPR Address Response Codes
+    : Endpoint Addresses Binding Response Status Codes
 
      that there is not a failure code indicating that the registration failed because the network's policies do not allow the binding specified in the request. This is because a compromised peer could exhaustively try various bindings to see which are and are not allowed by policy. Such a peer would then gain some knowledge of the policies in the network.
-
-    The size of the status code is controlled by the ZPR Configuration. It MAY be 0, in which case the receiver of this message MUST act as if status code 0 (success) was received. The number of code-points is limited so a single byte is adequate. Thus, in the Baseline Configuration, the size of this field is 1 byte.
 
 Info Len
 :   Is the length of the Status Information field. It may be 0.
@@ -4000,14 +3316,22 @@ The Bind Endpoint Address Request and Response messages follow the request/respo
 
 The binding operates as follows. Assume a TCP traffic flow between two Endpoints. *Endpoint 1* is on *Node 1*, along with *Adapter 1*.  *Endpoint 1* is connected to a Dock on *Node 2*. *Endpoint 1* has Endpoint Address A1 and TCP port P1. Similarly, *Endpoint 2*'s Endpoint Address is A2 and its TCP port is P2. The Bind Endpoint Address requests and responses are:
 
-```
-   Node 1.                                                Node 2.
-1  -- Request(SA=A2 DA=A1 Proto=TCP SP=P2 DP=P1 ID=SID1 ) -->
-2  <------------- Response (ID=SID1 Status = “OK”) ----------
-3  <-- Request(SA=A1 DA=A2 Proto=TCP SP=P1 DP=P2 ID=SID2 ) --
-4  -------------- Response (ID=SID2 Status = “OK”) --------->
-5  <-------------- Transit Packet(SID=ID2) ------------------
-6  --------------- Transit Packet(SID=ID1) ----------------->
+``` mermaid
+---
+config:
+  sequence:
+    mirrorActors: false
+---
+sequenceDiagram
+    autonumber
+    participant N1 as Node1
+    participant N2 as Node2
+    N1->>N2: Request (SA=A2 DA=A1 Proto=TCP SP=P2 DP=P1 ID=SID1)
+    N2->>N1: Response (ID=SID1 Status="OK")
+    N2->>N1: Request (SA=A1 DA=A2 Proto=TCP SP=P1 DP=P2 ID=SID2)
+    N1->>N2: Response (ID=SID2 Status="OK")
+    N2->>N1: Transit Packet (SID=ID2)
+    N1->>N2: Transit Packet (SID=ID1)
 ```
 
 Where:
@@ -4026,24 +3350,20 @@ The Dock in Node 2 is informed of the Endpoint Addresses, IP protocol, and port 
 
 #### IP 5-Tuple Traffic Classifier
 
-The format of the type-0 Traffic Classifier, the "IP 5-Tuple Traffic
-Classifier" is:
+The format of the type-0 Traffic Classifier, the "IP 5-Tuple Traffic Classifier" is:
 
-\begin{figure}
-\begin{verbatim}
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|0 0 0 0 0|4|S|D|  IP Protocol  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-          ... Source and Destination Endpoint Addresses ...
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|    Source TCP/UDP Port*       |  Destination TCP/UDP Port*    |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{IP 5-Tuple Traffic Classification Spec}
-\end{figure}
+``` mermaid
+%%| fig-cap: IP 5-Tuple Traffic Classification Spec
+packet
++5: "Reserved"
++1: "4"
++1: "S"
++1: "D"
++8: "IP Protocol"
++48: "Source and Destination Endpoint Addresses (8 or 32 bytes)"
++16: "Source TCP/UDP Port"
++16: "Destination TCP/UDP Port"
+```
 
 Where:
 
@@ -4075,72 +3395,51 @@ The Authentication messages carry opaque authentication data between a Dock and 
 
 The format of the Authentication Request message is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID.       |          Data Length          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                 Opaque Authentication Data                    |
-\end{verbatim}
-\caption{Authentication Request Management Message}
-\end{figure}
+``` mermaid
+%%| fig-cap: Authentication Request Management Message
+packet
++16: "Transaction ID"
++16: "Data Length"
++32: "Opaque Authentication Data (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 Data Length
 :   The length of the Opaque Authentication Data, in bytes.
-
-    The size of the field is controlled by the ZPR Configuration. It MUST NOT be 0. A single byte length field would limit the Opaque Authentication Data to 255 bytes, a 2 byte length field allows up to 65,535 byte -- which is more than adequate. Thus, in the Baseline Configuration, the size of this field is 2 bytes.
 
 Opaque Authentication Data
 :   Is the authentication data. The length of the data is in the length field of the overall packet, see Figure 31.
 
 The format of the Authentication Response message is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID.       |  Status Code  |   Info Len.   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              Optional Additional Status Information           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Authentication Response Management Message Data}
-\end{figure}
+``` mermaid
+%%| fig-cap: Authentication Response Management Message Data
+packet
++16: "Transaction ID"
++8: "Status Code"
++8: "Info Length"
++32: "Optional Additional Status Information (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
 
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the length of the Transaction ID field in the request message. In the Baseline Configuration this field is 2 bytes long.
-
 Status Code
 :   Is a code indicating the status of the Request message. Defined status codes are:
 
-    -----------------------------------------------------------------------
-    Value       Meaning
-    ----------- -----------------------------------------------------------
-    0           Success
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Success |
+| 1    | OTHER -- some error other than those listed below occurred OR to avoid passing too much information to the peer. |
+| ...  | Failure |
 
-    1           OTHER -- some error other than those listed below occurred
-                OR to avoid passing too much information to the peer.
-
-    ...         Failure
-    -----------------------------------------------------------------------
-
-    :  Grant ZPR Address Response Codes
-
-    The size of the status code is controlled by the ZPR Configuration. It MAY be 0. In which case the receiver of this message MUST act as if status code 0 had been received. The number of code-points is limited so a single byte is adequate. Thus, in the Baseline Configuration, the size of this field is 1 byte.
+: Authentication Response Status Codes
 
 Info Len
 :   Is the length of the Status Information field. It may be 0.
@@ -4158,25 +3457,17 @@ This is a Non-Per-Stream message.
 
 The format of the packet is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|      Report Data Length       |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              Report Data                                      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{ZIP Report Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: ZIP Report Message Format
+packet
++16: "Report Data Length"
++48: "Report Data (variable length)"
+```
 
 Where:
 
 Report Data Length
 :   Is the length of the Report Data, in bytes.
-
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
 
 Report data
 :   Is the data to be reported.
@@ -4195,72 +3486,53 @@ Set Path MTU is a Per-Flow management operation, the MTU is applicable to the fl
 
 The format of the Path MTU Request message is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|     Transaction ID            |          New PMTU             |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Path MTU Request Management Message Data}
-\end{figure}
+``` mermaid
+%%| fig-cap: Path MTU Request Management Message Data
+packet
++16: "Transaction ID"
++16: "New PMTU"
+```
 
 Where:
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
-
 New PMTU
 :   Is the new Path MTU to use for all packets sent via the Tether.
-
-  The length of this field is controlled by the ZPR Configuration. The field MUST be at least 1 byte long. In the Baseline Configuration this field is 2 bytes long because A) it is the same as the IP header packet length field and B) The vast majority of network MTUs fall on the 256-65,535 byte range, so 2 bytes is adequate for reporting the suggested MTU.
 
 The message is propagated back to the Ingress Adapter.
 
 The Path MTU Response message is sent in response to a Path MTU Request.  It indicates the status of the request. The format of the response is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID.       |          New PMTU             |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|          Status Code.         | Additional Information Length |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              ... Additional Information ...                   |
-\end{verbatim}
-\caption{Path MTU Response Management Message}
-\end{figure}
+``` mermaid
+%%| fig-cap: Path MTU Response Management Message
+packet
++16: "Transaction ID"
++16: "New PMTU"
++16: "Status Code"
++16: "Additional Information Length"
++32: "Additional Information (variable length)"
+```
 
 Where:
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
 
-    The length of this field is controlled by the ZPR Configuration. Its length is the same as the length of the Transaction ID field in the request message. In the Baseline Configuration this field is 2 bytes long.
-
 New MTU
 :   The MTU that the upstream is using. The PMTU MAY be smaller than the PMTU in the request.
 
 Status Code
-:   Indicates the status of the Request. The Baseline Configuration sets the size of this field to 1 byte. Code values are:
+:   Indicates the status of the Request. Code values are:
 
-    -----------------------------------------------------------------------
-    Value       Meaning
-    ----------- -----------------------------------------------------------
-    0           Success;
+| Code | Meaning |
+| ---- | ------- |
+| 0    | Success |
+| 1    | OTHER -- some error other than those listed below occurred OR to avoid passing too much information to the peer. |
+| ...  | Other codes, TBD, they all indicate Failure |
 
-    1           OTHER -- some error other than those listed below occurred
-                OR to avoid passing too much information to the peer.
-
-    \...        Other codes, TBD, they all indicate Failure
-    -----------------------------------------------------------------------
-
-    : ZDP Packet Overhead
+: Set Path MTU Request Response Codes
 
 Additional Information Length
 :   Is the length of the additional information field. If no additional information is present then this field contains 0.
@@ -4280,26 +3552,15 @@ ZDP Destination Unreachables MUST NOT be sent by a Node as a result of receiving
 
 The format of the Management Message Data is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                              Code                             |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   Code Info. Length           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  ...  Code-specific Additional Information ...                |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   Original Packet Length      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  Portion of original Endpoint                 |
-                              ...
-|                                 Packet                        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Destination Unreachable Management Message Data Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Destination Unreachable Management Message Data Format
+packet
++32: "Code"
++16: "Code Info Length"
++16: "Code-specific Additional Information (variable length)"
++16: "Original Packet Length"
++16: "Portion of original Endpoint Packet (variable length)"
+```
 
 Where:
 
@@ -4312,13 +3573,13 @@ Code
     | 0        | Unspecified. There is no additional Code Specific         |
     |          | Information.                                              |
     +----------+-----------------------------------------------------------+
-    |          | Terminated or Unknown Tether\                             |
+    | TBD      | Terminated or Unknown Tether\                             |
     |          | A Dock or Adapter received a packet from the peer with a  |
     |          | Tether ID that is unknown or known to be closed. In this  |
     |          | case the Code Specific Additional Information field       |
     |          | contains the Tether ID.                                   |
     +----------+-----------------------------------------------------------+
-    |          | Unknown Stream ID.                                        |
+    | TBD      | Unknown Stream ID.                                        |
     |          |                                                           |
     |          | The Code Specific Additional Information Field contains   |
     |          | the unknown Stream ID.                                    |
@@ -4342,7 +3603,7 @@ Code
     |          | this model the upstream might decide to reherald the visa |
     |          | rather than do the delete.                                |
     +----------+-----------------------------------------------------------+
-    |          | Path MTU Exceeded                                         |
+    | TBD      | Path MTU Exceeded                                         |
     |          |                                                           |
     |          | This message is generated by a Forwarder Egress Adapter,  |
     |          | or Egress Dock in the event that a ZDP Transit packet is  |
@@ -4353,20 +3614,8 @@ Code
     |          |                                                           |
     |          | The Code Specific Additional Information Field contains   |
     |          | the suggested Path MTU.                                   |
-    |          |                                                           |
-    |          | The length of this field is controlled by the ZPR         |
-    |          | Configuration. The field MUST be at least 1 byte long. In |
-    |          | the Baseline Configuration this field is 2 bytes long     |
-    |          | because A) it is the same as the IP header packet length  |
-    |          | field and B) The vast majority of network MTUs fall on    |
-    |          | the 256-65535 byte range, so 2 bytes is adequate for      |
-    |          | reporting the suggested MTU. Behavior is undefined if the |
-    |          | size of this field is not sufficient to hold the actual   |
-    |          | MTU value.                                                |
     +----------+-----------------------------------------------------------+
-    |          |                                                           |
-    +----------+-----------------------------------------------------------+
-    |          | Destination Endpoint Unreachable\                         |
+    | TBD      | Destination Endpoint Unreachable\                         |
     |          | The egress adapter can not reach the destination Endpoint |
     |          | for some reason.                                          |
     +----------+-----------------------------------------------------------+
@@ -4378,15 +3627,11 @@ Code Info Length
 
     This field may contain 0, in which case no Code Specific Information has been added to the packet.
 
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long. If this field length is 0 then no code-specific information may be added to the message.
-
 Code Specific Additional Information
 :   Information that is specific (that is amplifies) the code. If the Code Info Length field's length is 0 then this field is always 0 bytes long. If the Code Info Length field's length is non-0 then the maximum length of this field is the size of the data item being conveyed in this field (*e.g*., if it is a Stream ID then the Configuration-specified Stream ID size).
 
 Original Packet Length
 :   The size of the "Original Endpoint Packet" field, in bytes.
-
-    The length of this field is controlled by the ZPR Configuration. In the Baseline Configuration this field is 2 bytes long.
 
 Portion of Original Endpoint Packet
 :   Is a portion of the packet. This should be as much of the original packet as is available to the Node generating the message. Typically, this is what is returned in the ICMP message reporting the condition).
@@ -4425,20 +3670,16 @@ The Initiate Authentication message is used by the Dock to direct an Adapter to 
 
 The format of the request message is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Request ID         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|0 0 0 0 0 0 0|F|  Blob Type    |         Blob Length           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           ... Blob ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Initiate Authentication Request}
-\end{figure}
+``` mermaid
+%%| fig-cap: Initiate Authentication Request
+packet
++16: "Request ID"
++7: "Reserved"
++1: "F"
++8: "Blob Type"
++16: "Blob Length"
++16: "Blob (variable length)"
+```
 
 Where:
 
@@ -4465,33 +3706,13 @@ Blob Type 0
 Blob Type 1
 :   This is a nonce/timestamp/HMAC blob. Its format is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                             Nonce                             |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                            Timestamp                          |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                              HMAC                             |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Type 1 Blob Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Type 1 Blob Format
+packet
++64: "Nonce"
++64: "Timestamp"
++64: "HMAC"
+```
 
 Where:
 
@@ -4506,16 +3727,12 @@ HMAC
 
 The format of the response is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Request ID         |           Status Code         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Initiate Authentication Response}
-\end{figure}
+``` mermaid
+%%| fig-cap: Initiate Authentication Response
+packet
+0-15: "Request ID"
+16-31: "Status Code"
+```
 
 Where:
 
@@ -4525,16 +3742,12 @@ Request ID
 Status Code
 :   Indicates the status of the request:
 
-    ------------------------------------------------------------------------
-    0       No Error: The Initiate Authentication Request has been received,
-            and the authentication procedure will begin. **NOTE WELL**: this
-            does not mean that authentication has completed successfully.
-    ------- ----------------------------------------------------------------
-    Not-0   Errors ... **tbd**
+| Code | Meaning |
+| ---- | ------- |
+| 0    | No Error: The Initiate Authentication Request has been received, and the authentication procedure will begin. **NOTE WELL**: this does not mean that authentication has completed successfully. |
+| TBD  | Errors ... **TBD** |
 
-    ------------------------------------------------------------------------
-
-    : Init Authentication Response Codes
+: Init Authentication Response Codes
 
 ### Acquire ZPR Address Request and Response
 
@@ -4542,22 +3755,16 @@ The Acquire ZPR Address Request is used by the Adapter to request a ZPR Address 
 
 The format of the Request is
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Request ID         |          Blob Length          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   IP Version  | Address Count |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                        ... Addresses ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           ... Blob ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Acquire ZPR Address Request Management Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Acquire ZPR Address Request Management Message Format
+packet
++16: "Request ID"
++16: "Blob Length"
++8: "IP Version"
++8: "Address Count"
++16: "Addresses (variable length)"
++32: "Blob (variable length)"
+```
 
 Where:
 
@@ -4583,16 +3790,12 @@ Blob
 
 The format of the response is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Request ID         |           Status Code         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Acquire ZPR Address Response}
-\end{figure}
+``` mermaid
+%%| fig-cap: Acquire ZPR Address Response
+packet
+0-15: "Request ID"
+16-31: "Status Code"
+```
 
 Where:
 
@@ -4602,43 +3805,31 @@ Request ID
 Status Code
 :   Indicates the status of the request:
 
-    ------------------------------------------------------------------------
-    0       No Error: The Request has been properly received and will be
-            acted upon in due time. **NOTE WELL**: this message simply acks
-            (or rejects) the request; it does not contain the granted
-            address.
-    ------- ----------------------------------------------------------------
-    Not-0   Errors ... **tbd**
-    ------------------------------------------------------------------------
+| Code | Meaning |
+| ---- | ------- |
+| 0    | No Error: The Request has been properly received and will be acted upon in due time. **NOTE WELL**: this message simply acks (or rejects) the request; it does not contain the granted address. |
+| TBD  | Errors ... **TBD** |
 
-    : Acquire ZPR Address Response Codes
+: Acquire ZPR Address Response Codes
 
 ### Grant ZPR Address Request and Response
 
-The Grant ZPR Address Request and Response messages are used by the Dock to give ZPR Addresses to the Adapter/ Endpoint. The Dock sends the address to the Adapter via the Grant ZPR Address Request. The Adapter uses the Grant ZPR Address Response acknowledge receipt of the request or indicate that the request failed for some reason.
+The Grant ZPR Address Request and Response messages are used by the Dock to give ZPR Addresses to the Adapter/Endpoint. The Dock sends the address to the Adapter via the Grant ZPR Address Request. The Adapter uses the Grant ZPR Address Response acknowledge receipt of the request or indicate that the request failed for some reason.
 
 The format of the Request is
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Request ID         |          Blob Length          |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   IP Version  | Address Count |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                        ... Addresses ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                           ... Blob ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|     DHCP Option Length        |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-                      ...  DHCP Options   ...
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Grant ZPR Request Management Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Grant ZPR Request Management Message Format
+packet
++16: "Request ID"
++16: "Blob Length"
++8: "IP Version"
++8: "Address Count"
++16: "Addresses (variable length)"
++32: "Blob (variable length)"
++16: "DHCP Option Length"
++16: "DHCP Options (variable length)"
+```
 
 Where:
 
@@ -4670,16 +3861,12 @@ DHCP Options
 
 The format of the response is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7.8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|            Request ID         |           Status Code         |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Grant ZPR Address Response}
-\end{figure}
+``` mermaid
+%%| fig-cap: Grant ZPR Address Response
+packet
+0-15: "Request ID"
+16-31: "Status Code"
+```
 
 Where:
 
@@ -4689,14 +3876,12 @@ Request ID
 Status Code
 :   Indicates the status of the request:
 
-    ------------------------------------------------------------------------
-    0       No Error: The Grant Request has been properly received and
-            accepted.
-    ------- ----------------------------------------------------------------
-    Not-0   Errors ... **tbd**
-    ------------------------------------------------------------------------
+| Code | Meaning |
+| ---- | ------- |
+| 0    | No Error: The Grant Request has been properly received and accepted. |
+| TBD  | Errors ... **TBD** |
 
-    : Grant ZPR Address Response Codes
+: Grant ZPR Address Response Codes
 
 ### Withdraw ZPR Addresses
 
@@ -4715,8 +3900,6 @@ The two parties to the Request/Response are termed the requester and responder. 
 Transaction ID numbers are used to match responses to requests, verifying that a request was received and associating any information in the response with the request (*e.g.* a "status code" in a response to a requested operation).
 
 The Transaction ID number space is finely divided. The numbers are per-link/docking session, per message type, and per stream ID (for per-stream messages).
-
-The length of the Transaction ID is specified in the configuration. The baseline configuration specifies that they are 16 bits long.
 
 Transaction IDs may wrap.
 
@@ -4779,7 +3962,7 @@ The requester handles the following events:
 
   3.  The response is acted upon as described for the specific request/response.
 
-**Responder**
+### Responder
 
 The responder acts only in response to receiving a request. The responder
 
@@ -4795,7 +3978,7 @@ The request/response semantics implicitly guarantee ordering because only a sing
 
 When a response to a request is received, the software initiating the request SHOULD be informed of the number of re-transmissions required and the latency between the request and response.
 
-**Performance Considerations**
+### Performance Considerations
 
 ARQ is a simple algorithm and can be performance limited. We chose it because A) the operations which use it are low-frequency operations which are not very performance critical and B) its simplicity minimizes the possibility of implementation errors, pathological anomalies, or security vulnerabilities cropping up. If the performance becomes an issue, then this algorithm could be changed to something else, such as TCP's sliding window.
 
@@ -4819,7 +4002,7 @@ Nominally, ZPR does not do fragmentation. In theory, the Admin Service knows the
 
 3)  What happens when a Substrate Network is IP and the MTU of the substrate changes?
 
-**Informing the Endpoint**
+### Informing the Endpoint
 
 The PMTU information must get to the Endpoint via an appropriate ICMP message. This is dictated by the fact that the Endpoint/Adapter interface usually is an IP network. The ICMP message would be created by the Endpoint's Adapter. Alternatively, if the Endpoint and Adapter are resident on the same machine, the Adapter could reach in and update the machine's IP tables (probably the routing table, but this is implementation specific) so that the Endpoint will send out packets of an acceptable size (this approach is implementation-specific and will be considered no further).
 
@@ -4837,7 +4020,7 @@ This begs the question of how the Adapter gets the information needed to create 
 
      The right answer seems to be C since, theoretically, packets sent via different Tethers to the same Destination Endpoint could follow different paths through the network. This in turn implies that the right place to set the MTU is not via policy but rather when the Visa is sent to the Dock. At that point, the Dock can send a message to the Adapter, who can then inform the Endpoint as needed.
 
-**Endpoint Sends Packets That Are Too Big**
+### Endpoint Sends Packets That Are Too Big
 
 If the Endpoint sends IPv6 packets or IPv4 packets with the DF (Don't Fragment) bit set then the Endpoint's Adapter will intercept the packets, evaluate them against the PMTU for the Tether that the packets would traverse, and, if the packets are too big, drop the packets and send an appropriate ICMP message back the Endpoint. This is the normal and expected IP behavior.
 
@@ -4850,36 +4033,36 @@ Options for addressing this are
 
 2)  Have the Ingress Adapter (or any other point in the network) fragment Endpoint IPv4 packets with DF=0 if needed. In this option, whenever a ZDP packet is too big to traverse the next hop Link or Docking Session, the IPv4 packet carried in the ZDP Transit Packet is extracted from the ZDP packet, fragmented per the normal IPv4 fragmentation rules, and then sent to the next hop in two or more ZDP packets:
 
-\begin{figure}
-\begin{verbatim}
-+--------------+                      +--------------+
-| ZDP Hdr      |                      | ZDP Hdr      |
-+--------------+                      +--------------+
-| EP  IPv4 Hdr |                      | EP IPv4 Hdr  |
-+--------------+                      +--------------+
-| Endpoint     |- - - - - - - - - - ->| Endpoint     |
-|  Packet      |- - - - - - - - - - ->|  Packet      |
-|   IPv4 Data  |- - - - - - - - - - ->|   IPv4 Data  |
-|              |- - - - - - - - - - ->|    (some)    |
-|              |- - - - - -           +--------------+
-|              |- - - - -   \
-|              |- - - -  \   \        +--------------+
-|              |- - -  \  \   \       | ZDP Hdr      |
-+--------------+     \  \  \   \      +--------------+
-                      \  \  \   \     | EP IPv4 Hdr  |
-                       \  \  \   \    +--------------+
-                        \  \  \    - >| Endpoint     |
-                         \  \  - - - >|  Packet      |
-                          \   - - - ->|   IPv4 Data  |
-                            - - - - ->|    (rest)    |
-                                      +--------------+
-\end{verbatim}
-\caption{Fragmentation of IPv4 Endpoint Packet (EP)}
-\end{figure}
+    \begin{figure}
+    \begin{verbatim}
+    +--------------+                      +--------------+
+    | ZDP Hdr      |                      | ZDP Hdr      |
+    +--------------+                      +--------------+
+    | EP  IPv4 Hdr |                      | EP IPv4 Hdr  |
+    +--------------+                      +--------------+
+    | Endpoint     |- - - - - - - - - - ->| Endpoint     |
+    |  Packet      |- - - - - - - - - - ->|  Packet      |
+    |   IPv4 Data  |- - - - - - - - - - ->|   IPv4 Data  |
+    |              |- - - - - - - - - - ->|    (some)    |
+    |              |- - - - - -           +--------------+
+    |              |- - - - -   \
+    |              |- - - -  \   \        +--------------+
+    |              |- - -  \  \   \       | ZDP Hdr      |
+    +--------------+     \  \  \   \      +--------------+
+                          \  \  \   \     | EP IPv4 Hdr  |
+                           \  \  \   \    +--------------+
+                            \  \  \    - >| Endpoint     |
+                             \  \  - - - >|  Packet      |
+                              \   - - - ->|   IPv4 Data  |
+                                - - - - ->|    (rest)    |
+                                          +--------------+
+    \end{verbatim}
+    \caption{Fragmentation of IPv4 Endpoint Packet (EP)}
+    \end{figure}
 
-> Since the inner Endpoint IP packet is fragmented, it is reassembled by the destination Endpoint.
+    Since the inner Endpoint IP packet is fragmented, it is reassembled by the destination Endpoint.
 
-> This scheme has the large advantage that it most closely mimics IPv4's behavior. The big downside is that an Endpoint, seeing that it is connected to a network with a particular MTU (say 1500 bytes on an Ethernet) is likely to use that MTU. Every one of these packets would end up fragmented by the Adapter since 1500 is also the likely broader network physical MTU, so every Endpoint packet would need to be fragmented (and reassembled). This
+    This scheme has the large advantage that it most closely mimics IPv4's behavior. The big downside is that an Endpoint, seeing that it is connected to a network with a particular MTU (say 1500 bytes on an Ethernet) is likely to use that MTU. Every one of these packets would end up fragmented by the Adapter since 1500 is also the likely broader network physical MTU, so every Endpoint packet would need to be fragmented (and reassembled). This
 
     a)  Could take significant resources at the adaptors,
 
@@ -4889,7 +4072,7 @@ Options for addressing this are
 
 Alternatives are equally unattractive (for example, developing some form of reliable fragmentation protocol would still place large burdens on network components, would not decrease the number of small packets on the network, and would likely increase latency through the network, with concomitant goodput changes).
 
-**IP Substrate PMTU Change**
+### IP Substrate PMTU Change
 
 Changes to the PMTU in non-IP substrates all can be handled by the Admin Service using existing ZPR mechanisms.
 
@@ -4915,7 +4098,7 @@ The first option is necessary since any new Visa whose traffic will use the path
 
 NOTE WELL: If the Substrate is IPv4 then the Substrate will fragment packets, if needed, to get past a reduced MTU. This fragmentation and reassembly would be transparent to the ZPR Nodes/etc. using the Substrate. ZPR Nodes will ALWAYS send packets over an IPv4 substrate with the DF bit set (preventing fragmentation/etc.).
 
-**SUMMARY**
+### SUMMARY
 
 -   Admin Service is presumed to know the PMTUs. It includes this with the Visa when the Visa is sent to the Dock.
 
@@ -5025,7 +4208,7 @@ The general goals for performance are
 
 ### Forwarding Considerations
 
-1)  The main forwarding decisions taken by a Forwarder are based on looking up the Stream ID field in the ZDP Transit Packet header ([@sec:transit-packets]). This field is local to each Link, is unidirectional. (that is, it applies only to traffic from Forwarder *A* to Forwarder *B* and not traffic from *B* to *A*), is 32-bits in the baseline configuration, and is assigned by the Forwarder that will *receive* the traffic. This allows the receiving forwarder to assign IDs in a manner that is optimal for that forwarder's lookup implementation.  For example, the ID could be the actual address in memory of the data structure describing how to handle the packet or it could be an index into an array of similar information.
+1)  The main forwarding decisions taken by a Forwarder are based on looking up the Stream ID field in the ZDP Transit Packet header ([@sec:transit-packets]). This field is local to each Link, is unidirectional (that is, it applies only to traffic from Forwarder *A* to Forwarder *B* and not traffic from *B* to *A*) and is assigned by the Forwarder that will *receive* the traffic. This allows the receiving forwarder to assign IDs in a manner that is optimal for that forwarder's lookup implementation.  For example, the ID could be the actual address in memory of the data structure describing how to handle the packet or it could be an index into an array of similar information.
 
     We note that the Stream ID is the same size as an IPv4 address and that there are many algorithms and data structures that support high-speed lookups of IPv4 addresses. Thus, existing IPv4 lookup techniques should also be adequate for looking up Visa IDs.
 
@@ -5047,37 +4230,24 @@ Since only the ZDP header is subject to per-hop encryption/decryption, etc., the
 
 The size of the ZDP header is controlled by the ZPR Configuration. The Configuration specifies the sizes of many fields in the ZDP header.
 
-In this note we define a Baseline Configuration which can be loosely thought of as a default, or recommended, configuration that is reasonably suitable for all applications. In this section we discuss packet size considerations in the context of using the Baseline Configuration.
-
-A goal in defining the Baseline Configuration is that, for ZDP running over a raw substrate (that is, not an IP/UDP substrate), and for IPv6 Endpoint Packets, the resulting packet header should not reduce goodput at all, nor should the addition of the ZDP header enlarge the packet so as to cause a potential MTU issue. This is accomplished by removing the IPv6 Addresses from the Endpoint Packet at the Ingress Adapter and reclaiming that space for the ZDP header. The Egress Adapter reconstitutes the original IPv6 header (reinserting the addresses).  Thus, under the Baseline Configuration, the ZDP header cannot be more than 32 bytes long.
+A goal is that, for ZDP running over a raw substrate (that is, not an IP/UDP substrate), and for IPv6 Endpoint Packets, the resulting packet header should not reduce goodput at all, nor should the addition of the ZDP header enlarge the packet so as to cause a potential MTU issue. This is accomplished by removing the IPv6 Addresses from the Endpoint Packet at the Ingress Adapter and reclaiming that space for the ZDP header. The Egress Adapter reconstitutes the original IPv6 header (reinserting the addresses).  Thus the ZDP header cannot be more than 32 bytes long.
 
 This goal does not apply to IPv4 for three reasons: 1) IPv4 is a legacy protocol and presumably its use is declining, so tuning ZDP to IPv4 does not make a lot of sense, 2) IPv4 supports fragmentation and can more easily handle potential MTU issues, and 3) there are not enough bytes in the IPv4 header that can be reclaimed for use (only 8 address bytes, with perhaps another 4 that could be used).
 
-For the Baseline Configuration, the ZDP header fields, and their lengths, are:
+The ZDP header fields, and their lengths, are:
 
-  -----------------------------------------------------------------------
-  Field                                        Size, in bytes
-  -------------------------------------------- --------------------------
-  ZPI                                          1
-
-  Type                                         1
-
-  Excess Length                                1
-
-  Sequence Number                              2
-
-  Stream ID                                    4
-
-  Padding                                      0 to 8
-
-  ZDP MAC                                      4
-
-  A2A SAID                                     1
-
-  A2A MAC                                      4
-
-  Total                                        18 to 26
-  -----------------------------------------------------------------------
+| Field           | Size, in bytes |
+| --------------- | -------------- |
+| ZPI             | 1              |
+| Type            | 1              |
+| Excess Length   | 1              |
+| Sequence Number | 2              |
+| Stream ID       | 4              |
+| Padding         | 0 to 8         |
+| ZDP MAC         | 4              |
+| A2A SAID        | 1              |
+| A2A MAC         | 4              |
+| Total           | 18 to 26       |
 
 The padding is given as either 0 or 8 bytes (with a total overhead of either 19 or 27 bytes) on the assumption that the encryption block size is either 8 or 16 bytes.
 
@@ -5085,7 +4255,7 @@ This meets the target for packet size for IPv6. In fact, the packet will shrink 
 
 For IPv4, there are 11 or 19 bytes in excess of the reclaimable space.  Thus, the MTU for IPv4 packets would need to be reduced by that amount.  Assuming a 1500 byte MTU (for Ethernets), the additional bytes of the ZDP header represent a 0.7% to 1.2% reduction.
 
-**IP/UDP Substrate**
+#### IP/UDP Substrate
 
 If ZDP is running over an IP/UDP substrate then, in addition to the ZDP header, an additional IP/UDP header must be prepended to the packet.  This requires either 28 bytes (for an IPv4 substrate) or 48 bytes (for IPv6). This can only be accommodated by an appropriate reduction in the MTU -- It cannot be compensated for by compressing the Endpoint Packet's headers.
 
@@ -5105,17 +4275,12 @@ Leaving 1446 bytes of payload.
 
 When adding ZDP over IP Substrate headers, the available payload is:
 
-  ------------------------------------------------------------------------
-  ZDP Encapsulation     Overhead         Payload         Percent of NonZPR
-  --------------------- ---------------- --------------- -----------------
-  IPv4 0 Pad            39               1407            97.3%
-
-  IPv4 8 Pad            47               1399            96.7%
-
-  Ipv6 0 Pad            35               1415            97.9%
-
-  Ipv6 8 Pad            43               1403            97.0%
-  ------------------------------------------------------------------------
+| ZDP Encapsulation | Overhead | Payload | Percent of NonZPR |
+| ----------------- | -------- | ------- | ----------------- |
+| IPv4 0 Pad        | 39       | 1407    | 97.3%             |
+| IPv4 8 Pad        | 47       | 1399    | 96.7%             |
+| Ipv6 0 Pad        | 35       | 1415    | 97.9%             |
+| Ipv6 8 Pad        | 43       | 1403    | 97.0%             |
 
 An IPv6/TCP Endpoint packet on a 1500 byte Ethernet has:
 
@@ -5129,19 +4294,16 @@ Leaving 1426 bytes of payload.
 
 When adding ZDP over IP Substrate headers, the available payload is:
 
-  ------------------------------------------------------------------------
-  ZDP Encapsulation     Overhead         Payload         Percent of NonZPR
-  --------------------- ---------------- --------------- -----------------
-  IPv4 0 Pad            39               1387            97.2%
-
-  IPv4 8 Pad            47               1379            96.7%
-
-  Ipv6 0 Pad            35               1395            97.8%
-
-  Ipv6 8 Pad            43               1383            97.0%
-  ------------------------------------------------------------------------
+| ZDP Encapsulation | Overhead | Payload | Percent of NonZPR |
+| ----------------- | -------- | ------- | ----------------- |
+| IPv4 0 Pad        | 39       | 1387    | 97.2%             |
+| IPv4 8 Pad        | 47       | 1379    | 96.7%             |
+| Ipv6 0 Pad        | 35       | 1395    | 97.8%             |
+| Ipv6 8 Pad        | 43       | 1383    | 97.0%             |
 
 Thus, we should see a reduction of about 3% when running ZPR over IP/UDP over Ethernet.
+
+> [**TODO:** What is the difference between these tables?]{.mark}
 
 ### Traffic Latency, Visa Acquisition, and Heralding
 
@@ -5205,37 +4367,25 @@ ZPR may use IKEv2 for key management between adjacent Forwarders and between an 
 
 The Link Management ZDP Packet's Management Message field carries the complete IKEv2 message:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|              Type             |   Management message length   |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|  Key Management Header and ...                                |
-|       Remaining
-              Packet                                            |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{Key Management Message Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: Key Management Message Format
+packet
++16: "Type"
++16: "Management Message Length"
++64: "Key Management Header and Remaining Packet (variable length)"
+```
 
 Where:
 
 Type
 :   Indicates the key management protocol in use. The following values are defined:
 
-    -----------------------------------------------------------------------
-    Value        Protocol
-    ------------ ----------------------------------------------------------
-    0            None
-
-    1            IKEv2
-
-    2            Noise^[Noise Key Management Protocol, <http://www.noiseprotocol.org>] (added per discussion with Mathias)
-
-    255          Experimental
-    -----------------------------------------------------------------------
+| Type | Protocol |
+| ---- | -------- |
+| 0    | None     |
+| 1    | IKEv2    |
+| 2    | Noise^[Noise Key Management Protocol, <http://www.noiseprotocol.org>] |
+| 255  | Experimental |
 
 Management Message Length
 :   The length of the management message, including the type and length fields (that is, this value must be at least 4).
@@ -5263,70 +4413,42 @@ ZPR ARP is a non-flow oriented management message.
 
 The ZPR ARP Management Message Data has the following format:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|   Operation   |      NAF      |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-                       Sender’s Node Address
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-                      Receiver’s Node Address
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                   Sender’s Ethernet Address                   |
-|                                                               |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                  Receiver’s Ethernet Address                  |
-|                                                               |
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\caption{ZPR Arp Management Data Format}
-\end{figure}
+``` mermaid
+%%| fig-cap: ZPR Arp Management Data Format
+packet
++8: "Operation"
++8: "NAF"
++32: "Sender's Node Address (variable length)"
++32: "Receiver's Node Address (variable length)"
++6: "Sender's Ethernet Address"
++6: "Receiver's Ethernet Address"
+```
 
 Where:
 
 OP
 :   Is an operation code. It indicates the operation being performed:
 
-    -----------------------------------------------------------------------
-    Value\                           Operation
-    In Decimal
-    -------------------------------- --------------------------------------
-    0                                Noop
+| Value | Operation  |
+| ----- | ---------- |
+| 0     | Noop       |
+| 1     | Request    |
+| 2     | Response   |
+| 3-255 | Unassigned |
 
-    1                                Request
-
-    2                                Response
-
-    3 ... 255                        Unassigned
-    -----------------------------------------------------------------------
-
-    : ZPR Arp Operation Codes
+: ZPR Arp Operation Codes
 
 NAF
 :   Is the address family of the Node Addresses. This field indicates the address family from which the Node Addresses are derived as well as their length. Address Families are:
 
-    -----------------------------------------------------------------------
-    Value\              Address Family              Address\
-    In Decimal                                      Length
-    ------------------- --------------------------- -----------------------
-    0                   Unassigned                  NA
+| Value | Address Family | Address Length |
+| ------|--------------- | -------------- |
+| 0     | Unassigned     | NA             |
+| 1     | IPv4           | 4 bytes        |
+| 2     | IPv6           | 16 bytes       |
+| 3-255 | Unassigned     | NA             |
 
-    1                   IPv4                        4 bytes
-
-    2                   IPv6                        16 bytes
-
-    3 ... 255           Unassigned                  NA
-    -----------------------------------------------------------------------
-
-    : ZPR Arp Address Familiies
+: ZPR Arp Address Familiies
 
 Senders Node Address
 :   Is the ZPR Node Address of the sender. The length of this field depends on the address family.
