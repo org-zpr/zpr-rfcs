@@ -22,6 +22,11 @@ concurrency:
 jobs:
   build-and-publish-image:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      attestations: write
+      id-token: write
     env:
       package-name: "ghcr.io/org-zpr/rfc-build"
     steps:
