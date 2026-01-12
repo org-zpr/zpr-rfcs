@@ -15,6 +15,10 @@ on:
       - 'tools/puppeteer-config.json'
       - '.github/workflows/build-docker.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-publish-image:
     runs-on: ubuntu-latest

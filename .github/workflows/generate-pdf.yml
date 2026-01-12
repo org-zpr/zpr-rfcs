@@ -9,15 +9,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   generate-pdf:
     name: Generate PDF
     runs-on: ubuntu-latest
     container:
-      image: docker://ghcr.io/org-zpr/docs:latest
+      image: docker://ghcr.io/org-zpr/rfc-build:latest
     permissions:
       actions: read
       contents: read
