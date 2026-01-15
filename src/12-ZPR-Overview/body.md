@@ -467,7 +467,7 @@ provides the space necessary for the ZPR fields without increasing the
 packet size, preventing fragmentation of packets at or near the path MTU
 of the underlying substrate network.
 
-![IP packet carried by a transit packet through a ZPRnet.](packet-path.png){width="6.5in" height="5.022916666666666in"}
+![IP packet carried by a transit packet through a ZPRnet.](packet-path.png)
 
 Figure 1 shows an ingress dock converting an IP packet received from an
 adapter into a transit packet for transmission through a ZPR network and
