@@ -1,12 +1,3 @@
----
-title: "Overview of the ZPL Policy Language"
-author: [Michael Dubno, Mathias Kolehmainen, Danny Hillis]
-publisher: "Applied Invention, LLC"
-firstdraft: "October 2024"
-updated: "September 8, 2025"
-rfcnum: 15
-...
-
 # Introduction
 
 ZPL (pronounced "zipple") is an acronym for Zero-trust Policy Language.

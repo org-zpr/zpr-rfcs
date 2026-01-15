@@ -1,13 +1,3 @@
----
-title: "Overview of Zero-trust Packet Routing"
-author: "Danny Hillis"
-publisher: "Applied Invention, LLC"
-firstdraft: "September 2022"
-updated: "May 21, 2025"
-rfcnum: 12
-...
-
-
 # The Problem that Needs Solving
 
 The Internet was designed to allow everything to communicate with
