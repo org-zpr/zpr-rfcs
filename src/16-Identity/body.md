@@ -1,12 +1,3 @@
----
-title: "ZPR's Concept of Identity"
-author: "Danny Hillis"
-publisher: "Applied Invention, LLC"
-firstdraft: "May 2025"
-updated: "May 19, 2025"
-rfcnum: 16
-...
-
 # Identity
 
 In Zero-trust Packet Routing (ZPR), an ***identity*** is a key that can
