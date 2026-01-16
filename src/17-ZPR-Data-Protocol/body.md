@@ -235,7 +235,7 @@ Forwarding Table (FT)
 
     -   Silently discarding the packet.
 
-    -   Discarding the packet and sending a specified Destination Unreachable ([@sec:destination-unreachable]) Management Message.
+    -   Discarding the packet and sending a specified Destination Unreachable ([@sec:dst-unr]) Management Message.
 
 It might seem reasonable to specify that if a lookup in the FT fails there is a default PEP that specifies that a Destination Unreachable message of some form always be sent upstream. We do not do this since sending a Destination Unreachable might reveal sensitive information to an attacker. Thus, we allow ZPR Policy to determine the action taken when a lookup fails (of course, the policy may direct that a Destination Unreachable be sent).
 
@@ -271,7 +271,7 @@ This section provides the high-level sequence of events for bringing Nodes and E
 
 4)  A source Endpoint sends the first Endpoint Packet to a destination Endpoint. The destination address in this packet is the Endpoint Address of the destination Endpoint (the source address is the Endpoint Address of the source Endpoint). This packet is received by the ingress Adapter.
 
-5)  The Ingress Adapter requests a Stream ID for the Endpoint IP Addresses, IP protocol and UDP or TCP ports (if the packet is UDP or TCP) tuple from the Dock. The Bind Endpoint Address message is used for this ([@sec:bind-unbind]).
+5)  The Ingress Adapter requests a Stream ID for the Endpoint IP Addresses, IP protocol and UDP or TCP ports (if the packet is UDP or TCP) tuple from the Dock. The Bind Endpoint Address message is used for this ([@sec:bind-msg]).
 
 6)  The Dock:
 
@@ -625,7 +625,7 @@ Error
 
     In all cases, this results in an immediate transition to the ERROR state.
 
-    Given that ERROR events may indicate internal problems that may preclude generating packets, a node MAY send a Terminate Indication ([@sec:terminate-indication]) but MUST NOT rely on the peer receiving the indication.
+    Given that ERROR events may indicate internal problems that may preclude generating packets, a node MAY send a Terminate Indication ([@sec:term-msg]) but MUST NOT rely on the peer receiving the indication.
 
     In all states, if an ERROR event occurs then the error MUST be reported to the error reporting system. The error reporting system is responsible for error flow control and rate limiting, etc.
 
@@ -642,7 +642,7 @@ Helloing Done, Error
 
     In short, as opposed to the "unacceptable" case, below, the occurrence and reporting of these conditions do not reveal any sensitive policy or configuration information.
 
-    A Terminate Indication indicating the error ([@sec:terminate-indication]) SHOULD be sent.
+    A Terminate Indication indicating the error ([@sec:term-msg]) SHOULD be sent.
 
 Helloing Done, OK
 :   This indicates that the hello protocol has successfully exchanged the relevant hello information.
@@ -716,7 +716,7 @@ Reset
 Register EA Done, Error
 :   Some error has occurred while registering an Endpoint Address. These errors are such that disclosure of them to a potentially compromised peer would not leak sensitive information. Such errors include running out of storage, network transmit or receive issues, or too many retransmissions.
 
-    A Terminate Indication indicating the error ([@sec:terminate-indication]) SHOULD be sent and the Docking Session closed.
+    A Terminate Indication indicating the error ([@sec:term-msg]) SHOULD be sent and the Docking Session closed.
 
 Register EA Done, OK
 :   This event occurs only on Docks and Adapters, with respect to a Docking Session.
@@ -935,11 +935,11 @@ The procedure is:
 
     If the keying protocol allows either side to start the operation, then either may do so. The peer evaluates conditions and accepts or rejects the keying accordingly.
 
-2.  After the key protocol finishes and security associations have been set up, the Nodes exchange Hello Request and Response Management Messages ([@sec:hello-request-and-response]) with each other. Each Node sends a Hello Request and, in turn, expects to receive a Hello Response. Similarly, when a Node receives a Hello Request from the peer, it formulates and sends an appropriate Hello Response. If a Response does not indicate success, the Link is torn down.
+2.  After the key protocol finishes and security associations have been set up, the Nodes exchange Hello Request and Response Management Messages ([@sec:hello-msg]) with each other. Each Node sends a Hello Request and, in turn, expects to receive a Hello Response. Similarly, when a Node receives a Hello Request from the peer, it formulates and sends an appropriate Hello Response. If a Response does not indicate success, the Link is torn down.
 
 3.  Each Node generates a Link Address and assigns it to the Link.
 
-4.  Each Node starts Link monitoring via ZDP Echo Request and Response Management Messages ([@sec:echo-request-and-response]). Each peer periodically sends an Echo Request. If, per the request/response semantics described in [@sec:requestresponse-semantics], the Echo Request fails[^3], then the Link or peer Node is deemed to have failed and the Link transitions to the closing state. While the request/response semantics make accommodation for temporary failures by retransmitting several times, an implementation MAY extend this by automatically attempting to restart the Link by issuing a START event after the CLOSE COMPLETE event and transition to the INACTIVE state. Automatic restart MAY be controlled by the Connection Policy.
+4.  Each Node starts Link monitoring via ZDP Echo Request and Response Management Messages ([@sec:echo-msg]). Each peer periodically sends an Echo Request. If, per the request/response semantics described in [@sec:requestresponse-semantics], the Echo Request fails[^3], then the Link or peer Node is deemed to have failed and the Link transitions to the closing state. While the request/response semantics make accommodation for temporary failures by retransmitting several times, an implementation MAY extend this by automatically attempting to restart the Link by issuing a START event after the CLOSE COMPLETE event and transition to the INACTIVE state. Automatic restart MAY be controlled by the Connection Policy.
 
 5.  The topology management functions of the Admin Service on the Node are informed that the Link is available to transport Traffic Flows.
 
@@ -1013,7 +1013,7 @@ The following steps are taken to establish a Dock Session:
 
     > **Ed. note**: It seems clear that there should be some controls on creating Docking Sessions. A rate limiting function is needed to minimize flooding attacks. I think that there should be additional filters (*e.g.,* Dock *foo* accepts sessions only from Adapters/Endpoint Endpoint *bar*, *baz*, and *bozo*). These filters may even have further qualifications (*e.g.* Endpoint 86 might be allowed to connect from 8am to 5pm) and have per-Endpoint rate limits. This should be worked out in more detail.
 
-3)  After the key exchange completes and a security association has been set up, the Adapter and Dock exchange Hello Request and Response Management Messages ([@sec:hello-request-and-response]) with each other.  The Hello Response may terminate the Dock Session, accept the Dock Session, or redirect the Dock Session to another Dock. The Adapter tells the Dock the name of the policy by which the Adapter initiated the Dock Session. In return the Dock tells the Adapter the name of the policy under which it accepted the Session.
+3)  After the key exchange completes and a security association has been set up, the Adapter and Dock exchange Hello Request and Response Management Messages ([@sec:hello-msg]) with each other.  The Hello Response may terminate the Dock Session, accept the Dock Session, or redirect the Dock Session to another Dock. The Adapter tells the Dock the name of the policy by which the Adapter initiated the Dock Session. In return the Dock tells the Adapter the name of the policy under which it accepted the Session.
 
 4)  The Adapter MAY inform the Dock of the Endpoint Application's
     Endpoint-Address(es) via Register Endpoint Address Management
@@ -1029,7 +1029,7 @@ The following steps are taken to establish a Dock Session:
 
 At any point in the process of bringing up the Dock Session, either the Dock or the Adapter may terminate the process if any acceptability criteria are not met. Acceptability criteria are distributed via Docking Connection Policy.
 
-After the Dock Session is established, each side starts sending Echo Request and Response Management Messages ([@sec:echo-request-and-response]) to the other to monitor the health of the Session. The parameters of the keep alive are defined in the Docking Connection Policy.
+After the Dock Session is established, each side starts sending Echo Request and Response Management Messages ([@sec:echo-msg]) to the other to monitor the health of the Session. The parameters of the keep alive are defined in the Docking Connection Policy.
 
 Note Well: After a Dock Session has been successfully brought up, the Endpoint Address and Dock Session Address by which the Endpoint Address may be reached has been distributed throughout the ZPR Network.
 
@@ -1047,7 +1047,7 @@ The Adapter maintains an Endpoint Lookup Table (ELT) of all active Flows being t
 
 When the Adapter receives an IP packet from the Endpoint, it looks the packet up in the ELT.
 
-1)  If the ELT lookup produces a PEP then the directives of the PEP are followed. Typically, the Endpoint Packet's IP header is compressed (per the PEP, [@sec:endpoint-packet-compression-and-expansion]), the Endpoint Packet is encapsulated in a ZDP Transit Packet ([@sec:transit-packets]) and the packet is sent to the Dock and with the Stream ID specified in the PEP.
+1)  If the ELT lookup produces a PEP then the directives of the PEP are followed. Typically, the Endpoint Packet's IP header is compressed (per the PEP, [@sec:endpoint-packet-compression-and-expansion]), the Endpoint Packet is encapsulated in a ZDP Transit Packet ([@sec:tx-pkt]) and the packet is sent to the Dock and with the Stream ID specified in the PEP.
 
 2)  If the ELT lookup does not produce a PEP then it indicates that a new Stream is to be created:
 
@@ -1055,7 +1055,7 @@ When the Adapter receives an IP packet from the Endpoint, it looks the packet up
 
         While the registration is in progress, the PEP in the Endpoint Lookup Table entry indicates that fact, preventing additional lookups, etc. If any further Endpoint Packets arrive at the Adapter for the entry being constructed, only the most recently received packet should be buffered.
 
-    b.  A Bind Endpoint Addresses request ([@sec:bind-unbind]) is sent to the Dock requesting a Stream ID to use when sending Endpoint Packets with the given addresses, protocol, and ports, to the Dock.
+    b.  A Bind Endpoint Addresses request ([@sec:bind-msg]) is sent to the Dock requesting a Stream ID to use when sending Endpoint Packets with the given addresses, protocol, and ports, to the Dock.
 
     c.  The Dock evaluates the request and may take one of three actions:
 
@@ -1097,7 +1097,7 @@ When the Adapter receives an IP packet from the Endpoint, it looks the packet up
 
     f.  If the Dock accepts the Binding request it generates a successful Bind Response. The Adapter receives the response and finalizes the DLT entry -- primarily updating the DLT entry and PEP with the response's Stream ID.
 
-    g.  Any buffered Endpoint Packets are then encapsulated in Transit Packets ([@sec:transit-packets]) and transmitted to the dock in the normal manner.
+    g.  Any buffered Endpoint Packets are then encapsulated in Transit Packets ([@sec:tx-pkt]) and transmitted to the dock in the normal manner.
 
 This procedure only sets up the Adapter-to-Dock Stream on the Tether. It does not set up the reverse flow; it is set up by the Dock when it has packets to send to the Adapter. There are two reasons for this: 1) For some applications, there might not be a reverse flow so setting one up would waste resources, and 2) having the Dock set up the reverse flow of the Tether when the Dock has packets to send to the Adapter allows for the possibility that there are different Docks for each flow.
 
@@ -1123,7 +1123,7 @@ A Dock establishes a Tether with an Adapter when it receives a Visa. It provisio
 
 The procedure to set up the flow is basically the same as given in [@sec:adapter-dock-tether] except that the roles are reversed: the Dock makes the request and the Adapter evaluates the Request, allocates a Stream ID, and generates the response:
 
-1)  When the Dock receives the Visa, it generates a Bind Endpoint Addresses Request ([@sec:bind-unbind]) for each stream specified in the Visa. It sends the request to the Adapter.
+1)  When the Dock receives the Visa, it generates a Bind Endpoint Addresses Request ([@sec:bind-msg]) for each stream specified in the Visa. It sends the request to the Adapter.
 
 2)  The Adapter evaluates each request. If it is not acceptable, the Adapter sends a response indicating the error and the procedure terminates. If the request is acceptable, the Adapter allocates a Stream ID and sends it to the Dock in the response.
 
@@ -1135,7 +1135,7 @@ If at any point in the process, the Tether cannot be successfully established th
 
 ## Tether Termination
 
-Tethers may be terminated for a number of reasons, such as imminent shutdown of the Dock or Adapter, an unrecoverable error, authentication failure, receipt of a Terminate Request or Indication ([@sec:terminate-indication]) and so on. Regardless of the root cause of terminating the Tether, the Dock and Adapter, independently shall:
+Tethers may be terminated for a number of reasons, such as imminent shutdown of the Dock or Adapter, an unrecoverable error, authentication failure, receipt of a Terminate Request or Indication ([@sec:term-msg]) and so on. Regardless of the root cause of terminating the Tether, the Dock and Adapter, independently shall:
 
 1)  Replace the PEP used to handle Transit Packets received on the Tether with a "quiescent" PEP: one that will silently discard any Transit Packets received on the Tether. Receipt of these packets is not considered an error or other pathological condition and MUST NOT cause an error or security report to be generated. NOTE WELL: the Stream ID value that was assigned to the Tether is still in use and MUST NOT be reused at this time.
 
@@ -1153,7 +1153,7 @@ The cryptographic material (keys, algorithms, parameters, SAIDs, and so on) used
 
 When an Ingress Adapter receives a packet from the source Endpoint, the A2A MICV is calculated over the entire IP packet before compressing the packet. That is, the SA, DA, etc. as received from the Endpoint are covered by the MICV.
 
-The SAID and resulting MICV are inserted in the ZDP Transit Packet ([@sec:transit-packets]).
+The SAID and resulting MICV are inserted in the ZDP Transit Packet ([@sec:tx-pkt]).
 
 When an egress Adapter receives a ZDP Transit Packet from the ZPR Net it first looks up the packet's Stream ID, producing (among other things) 1) a table of A2A Security Associations and 2) The values of the fields compressed out of the packet by the Ingress Adapter. The A2A SAID in the packet is looked up in this table. The SA includes the cryptographic material necessary to validate the integrity of the Endpoint Packet.
 
@@ -1165,7 +1165,7 @@ Note Well: the Docks and intermediate Forwarders do not have the A2A SA cryptogr
 
 ## Visa Installation and Stream ID Request
 
-Visas and their associated Streams are installed in Nodes by the Visa service. The service installs just the information that is required by the Node to perform its function. The Dock passes required information to the Adapter via the Bind Response ([@sec:bind-unbind]). Installed information is:
+Visas and their associated Streams are installed in Nodes by the Visa service. The service installs just the information that is required by the Node to perform its function. The Dock passes required information to the Adapter via the Bind Response ([@sec:bind-msg]). Installed information is:
 
 -   The Ingress Adapter gets
 
@@ -1221,7 +1221,7 @@ Visas and their associated Streams are installed in Nodes by the Visa service. T
 
 The Stream ID Request process is used to obtain a Stream ID to use when sending a flow via a specific Stream and Visa. In effect, each node in the path asks the next hop "what stream ID shall I use to transmit packets via Visa named *X* and stream named *Y*?"
 
-Generally, this process is initiated when a Visa is installed on the Node and the Stream(s) provisioned. The Node sends a Stream ID Request ([@sec:stream-id-request]) to the next hop identified in the Stream. If the Visa and Stream have been installed in the next hop, the next hop allocates a Stream ID and returns it in a Stream ID Response ([@sec:stream-id-response]), with the "success" status code. If the Visa or Stream has not been installed, the response indicates failure with the "no such name" status code.
+Generally, this process is initiated when a Visa is installed on the Node and the Stream(s) provisioned. The Node sends a Stream ID Request ([@sec:sid-req]) to the next hop identified in the Stream. If the Visa and Stream have been installed in the next hop, the next hop allocates a Stream ID and returns it in a Stream ID Response ([@sec:sid-rsp]), with the "success" status code. If the Visa or Stream has not been installed, the response indicates failure with the "no such name" status code.
 
 If a "no such name" status is received by the upstream, it waits a short amount of time (3 seconds is the suggested value) and then retries the request. It SHOULD retry the request at least 3 times before giving up.  The theory is that the downstream might not have received the Visa yet, so this allows the Visa to be received and installed. A node MUST NOT remove a Visa or Stream if all retries of the Stream ID Request fail.  The Visa MUST remain installed in the Node until it is removed by normal processes (such as timing out or being explicitly retracted by the Visa Service). Whenever the node receives a packet for the flow it MUST reattempt the heralding process.
 
@@ -1241,7 +1241,7 @@ These detailed steps are repeated between each Upstream and Downstream:
 
 3)  The Stream ID Request/Response follows the common request/response semantics ([@sec:requestresponse-semantics]). If the request fails, then the upstream waits a short amount of time and then retries the operation. Only the Visa Service may remove a Visa from a Node, halting the process to get Stream IDs.
 
-4)  The Downstream receives the Request. If the Request is deemed to be invalid then the Downstream rejects the Request, sending a Visa Herald Response ([@sec:stream-id-response]) specifying the error to the Upstream and the Flow is not established. If the Downstream deems the Request to be valid then, 1) it evaluates the offered Stream ID and either accepts it or allocates a Stream ID; either way, the Stream ID is sent to the upstream in the Response message, 2) it installs any state, allocates resources, and so on, needed by the Stream, and 3) sends a Stream ID Response ([@sec:stream-id-response]) specifying success to the upstream. The Response includes the Stream ID.
+4)  The Downstream receives the Request. If the Request is deemed to be invalid then the Downstream rejects the Request, sending a Visa Herald Response ([@sec:sid-rsp]) specifying the error to the Upstream and the Flow is not established. If the Downstream deems the Request to be valid then, 1) it evaluates the offered Stream ID and either accepts it or allocates a Stream ID; either way, the Stream ID is sent to the upstream in the Response message, 2) it installs any state, allocates resources, and so on, needed by the Stream, and 3) sends a Stream ID Response ([@sec:sid-rsp]) specifying success to the upstream. The Response includes the Stream ID.
 
 ### First Endpoint Packet Carriage
 
@@ -1251,7 +1251,7 @@ At each hop the upstream has the option of including the first Endpoint Packet i
 
 When a Node receives a Visa it MAY elect to proactively install a Visa/Stream ID mapping in the upstream. This saves a rtt when the first Endpoint Packet arrives at the upstream.
 
-It does this by sending a Stream ID Response ([@sec:stream-id-response]) with the name of the Visa and the Stream ID the upstream MUST use.
+It does this by sending a Stream ID Response ([@sec:sid-rsp]) with the name of the Visa and the Stream ID the upstream MUST use.
 
 If the Visa has not been installed in the upstream, the upstream MAY silently discard the message or it MAY proactively install a "temporary" binding on the expectation that it will get the visa shortly.
 
@@ -1281,7 +1281,7 @@ ZDP Transit Packets are forwarded from a source Dock to a destination Dock via 0
 
 ZDP forwarding is solely based on the Stream ID in the ZDP Transit Packet. Packets are forwarded along the path to their ultimate Egress Dock. If the Egress Dock is local to the Node, the packets are passed to that Dock.
 
-Packets with unknown Stream IDs are discarded and a Destination Unreachable Management Message ([@sec:destination-unreachable]) is sent upstream.
+Packets with unknown Stream IDs are discarded and a Destination Unreachable Management Message ([@sec:dst-unr]) is sent upstream.
 
 > **Ed. Note:** Should we do this? If the upstream is compromised, it gives the upstream a way to determine what IDs are in use. This could be benign, or it could be some kind of attack -- probably want to allow a forwarder to send "a few" destination unreachables, but if "too many", it assumes an attack and goes into "silent mode".
 
@@ -1311,7 +1311,7 @@ The forwarding algorithm is as follows.
 
     a.  If the ID is 0, the packet is passed to the control plane for further processing
 
-    b.  If the lookup fails (that is, the ID is not in the lookup table) then the packet is discarded. A Destination Unreachable message is sent upstream ([@sec:destination-unreachable]).
+    b.  If the lookup fails (that is, the ID is not in the lookup table) then the packet is discarded. A Destination Unreachable message is sent upstream ([@sec:dst-unr]).
 
         > **Ed. Note:** Should we send the Destination Unreachable? If the upstream is compromised, it gives the upstream a way to determine what IDs are in use.
 
@@ -1323,7 +1323,7 @@ The forwarding algorithm is as follows.
 
         Regardless of whether the packet is sent out a Docking Session/Tether with a Tether ID to the Egress Adapter or via a Link with a Visa ID to the next hop Forwarder, the process is the same.
 
-8.  The packet's size is checked against the MTU to the next hop. If the packet is too large to send, then a ZDP Destination Unreachable ([@sec:destination-unreachable]) is sent upstream. See [@sec:mtu-exceeded] for more information.
+8.  The packet's size is checked against the MTU to the next hop. If the packet is too large to send, then a ZDP Destination Unreachable ([@sec:dst-unr]) is sent upstream. See [@sec:mtu-exceeded] for more information.
 
 9.  The Stream ID found in the lookup is placed in the ZDP Header's Stream ID field.
 
@@ -1349,7 +1349,7 @@ Removal of Visas and Streams happens locally, independent of other Nodes. It is 
 
 ### Stream ID Withdrawal
 
-When a Node de-provisions a Stream for any reason it should inform the upstream Node that it is doing so. The goal is to cut off the flow of undeliverable traffic as close to the source as possible. It does this by sending a Stream Withdrawal Request ([@sec:stream-id-withdrawal-request-and-response]) to the upstream. The upstream marks the Stream as unusable. It silently discards any traffic that it would have sent via the unusable Stream. The upstream may then repeat the process, sending a withdrawal to its upstream, and so on.  Eventually this will reach the Ingress Adapter, which will formulate the proper ICMP message to send to the source Endpoint (see [@sec:requestresponse-semantics]).
+When a Node de-provisions a Stream for any reason it should inform the upstream Node that it is doing so. The goal is to cut off the flow of undeliverable traffic as close to the source as possible. It does this by sending a Stream Withdrawal Request ([@sec:sid-wdraw]) to the upstream. The upstream marks the Stream as unusable. It silently discards any traffic that it would have sent via the unusable Stream. The upstream may then repeat the process, sending a withdrawal to its upstream, and so on.  Eventually this will reach the Ingress Adapter, which will formulate the proper ICMP message to send to the source Endpoint (see [@sec:requestresponse-semantics]).
 
 ### Refusal
 
@@ -1369,7 +1369,7 @@ Visas and Streams are distributed with an expiration time. When that time passes
 
 -   A log entry MAY be made.
 
--   A Destination Unreachable message ([@sec:destination-unreachable]) MAY be sent to the upstream Forwarder.
+-   A Destination Unreachable message ([@sec:dst-unr]) MAY be sent to the upstream Forwarder.
 
 The node with the expired Stream or Visa does not send a Stream ID Withdrawal message because all Nodes MUST implement Visa expiration times, so they will all delete the Visa at (approximately) the same time.
 
@@ -1377,11 +1377,11 @@ The node with the expired Stream or Visa does not send a Stream ID Withdrawal me
 
 A Dock Session may be terminated either by the Adapter (*e.g.*, if the Endpoint or Adapter's host is shutting down or the Adapter has lost reachability with the endpoint), or the Dock (*e.g.*, if the Admin Service administratively terminates the session, the Dock's host computer is shutting down, and so on).
 
-In all cases, the Dock or Adapter that initiates the termination sends a Terminate Request message ([@sec:terminate-indication]) to the peer Adapter or Dock, respectively. The peer SHOULD respond with a Terminate Response message.
+In all cases, the Dock or Adapter that initiates the termination sends a Terminate Request message ([@sec:term-msg]) to the peer Adapter or Dock, respectively. The peer SHOULD respond with a Terminate Response message.
 
 The Adapter performs any termination/shut-down operations that may be appropriate for the Adapter/Endpoint interface. The nature of this interface is beyond the scope of this note.
 
-The Dock retracts all Visas that have been issued for Endpoints using the terminated Dock Session. For Streams for which the Dock is the Ingress Dock, a Stream ID Withdrawal ([@sec:stream-id-withdrawal-request-and-response]), with the "Ingress Dock Session Terminated" reason code, is issued for each one.
+The Dock retracts all Visas that have been issued for Endpoints using the terminated Dock Session. For Streams for which the Dock is the Ingress Dock, a Stream ID Withdrawal ([@sec:sid-wdraw]), with the "Ingress Dock Session Terminated" reason code, is issued for each one.
 
 The Dock reports final traffic and accounting statistics on the Dock Session to the admin service prior to deleting the Dock Session's state.
 
@@ -1391,7 +1391,7 @@ The Tether Addresses of all Tethers using the Dock Session are withdrawn from se
 
 Docks and Adapters use Liveness Detection to verify that the Docking Session and peer are operational. Similarly, Forwarders use it to verify that the Link and peer are operational.
 
-The ZDP Echo request and response ([@sec:echo-request-and-response]) messages are used to perform Liveness Detection for Links and Docking Sessions. Independently, each peer on a Link or Docking Session periodically sends appropriate Echo Requests to the other peer and waits for an appropriate Echo Response.  The ZDP Echo protocol follows the common Request/Response semantics ([@sec:requestresponse-semantics]); if they declare that the Echo Request has failed then the Link or Docking Session is declared to be down.
+The ZDP Echo request and response ([@sec:echo-msg]) messages are used to perform Liveness Detection for Links and Docking Sessions. Independently, each peer on a Link or Docking Session periodically sends appropriate Echo Requests to the other peer and waits for an appropriate Echo Response.  The ZDP Echo protocol follows the common Request/Response semantics ([@sec:requestresponse-semantics]); if they declare that the Echo Request has failed then the Link or Docking Session is declared to be down.
 
 The timeouts and number of retransmissions should be large enough to allow for minor faults in the substrate to recover (*e.g.*, for intra-domain IP routing to reconverge, ARPs to be retransmitted, and the like).
 
@@ -1423,19 +1423,19 @@ When ZDP Transit Packets are forwarded through the network it is possible that t
 
 1)  The Egress Adapter detects the condition (the packet exceeds the MTU of the path between the Adapter and Endpoint).
 
-    The Egress Adapter sends a Destination Unreachable, MTU Exceeded message ([@sec:destination-unreachable]) to the Egress Dock.
+    The Egress Adapter sends a Destination Unreachable, MTU Exceeded message ([@sec:dst-unr]) to the Egress Dock.
 
 2)  The Egress Dock detects the condition: either the packet is larger than the Egress Docking Session MTU or the Egress Dock receives a Destination Unreachable, MTU Exceeded message from the Egress Adapter.
 
-    The Egress Dock sends a Destination Unreachable, MTU Exceeded message ([@sec:destination-unreachable]) to the upstream Forwarder.
+    The Egress Dock sends a Destination Unreachable, MTU Exceeded message ([@sec:dst-unr]) to the upstream Forwarder.
 
 3)  A Forwarder Detects the Condition (the packet is larger than the Link MTU or the Forwarder received a Destination Unreachable, MTU Exceeded message from the Egress Dock or an upstream Forwarder.
 
-    The Forwarder sends a Destination Unreachable, MTU Exceeded message ([@sec:destination-unreachable]) to the upstream Forwarder or Ingress Dock.
+    The Forwarder sends a Destination Unreachable, MTU Exceeded message ([@sec:dst-unr]) to the upstream Forwarder or Ingress Dock.
 
 4)  The Ingress Dock detects the condition.
 
-    The Ingress Dock sends a Destination Unreachable, MTU Exceeded message ([@sec:destination-unreachable]) to the Ingress Adapter.
+    The Ingress Dock sends a Destination Unreachable, MTU Exceeded message ([@sec:dst-unr]) to the Ingress Adapter.
 
 5)  The Ingress Adapter detects the condition (on the Ingress Adapter to the Ingress Dock Docking Session).
 
@@ -1453,7 +1453,7 @@ Messages that exceed the limits MUST be reported and silently discarded.  The re
 
 ## Endpoint Address/Tether Address Binding Distribution
 
-When an Adapter learns the Endpoint Address of its Endpoint, it sends a Bind Endpoint Address Request ([@sec:bind-unbind]) to its Dock. The Dock assigns a Tether Address to the Endpoint Address and then adds this binding to the Admin Service by informing the local Admin Service Endpoint of the binding.
+When an Adapter learns the Endpoint Address of its Endpoint, it sends a Bind Endpoint Address Request ([@sec:bind-msg]) to its Dock. The Dock assigns a Tether Address to the Endpoint Address and then adds this binding to the Admin Service by informing the local Admin Service Endpoint of the binding.
 
 Bindings are removed from the Admin Service for a number of reasons:
 
@@ -1559,7 +1559,7 @@ Currently only TCP/IP or UDP/IP packets are compressed.
 
 Compression is done in two parts:
 
-First, the Ingress Adapter ALWAYS removes the IP Addresses from packets it receives from the Endpoint. These addresses are bound with the Ingress Dock via the Bind Endpoint Addresses message ([@sec:bind-unbind]). This informs the Dock that packets for Stream ID *S* have source and destination IP addresses *SA* and *DA*. These addresses are passed to the Egress Dock, which then notifies the Egress Adapter of the binding.  The Egress Adapter then reconstitutes the original Endpoint Packet by putting the addresses back in the packet.
+First, the Ingress Adapter ALWAYS removes the IP Addresses from packets it receives from the Endpoint. These addresses are bound with the Ingress Dock via the Bind Endpoint Addresses message ([@sec:bind-msg]). This informs the Dock that packets for Stream ID *S* have source and destination IP addresses *SA* and *DA*. These addresses are passed to the Egress Dock, which then notifies the Egress Adapter of the binding.  The Egress Adapter then reconstitutes the original Endpoint Packet by putting the addresses back in the packet.
 
 Compression lessens the impact of ZDP headers. For IPv4 packets, the 8 bytes of address represents a significant part of the ZDP header (8 out of 9 bytes), not counting the MICV. For IPV6, the entire ZDP header is provided for, as well as about 1/2 of a typical MICV value. This reduces the likelihood of the packet from growing too large and causing an MTU problem someplace in the network.
 
@@ -1860,7 +1860,7 @@ sequenceDiagram
 
 2.  **Hello Request**
 
-    The Adapter sends a Hello Request (see [@sec:hello-request-and-response]) to the Dock. The information included in the Hello Response is set by policy.  It may include things like a protocol version, hardware asset number, GPS location, and so on.
+    The Adapter sends a Hello Request (see [@sec:hello-msg]) to the Dock. The information included in the Hello Response is set by policy.  It may include things like a protocol version, hardware asset number, GPS location, and so on.
 
     a. **Evaluate Hello Request**
         The Dock evaluates the Hello Request to decide whether to accept the request or not. This evaluation MAY take into account current conditions on the Dock (*e.g.*, its current load) and MAY involve other entities in the network.
@@ -1903,7 +1903,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 6.  **Bind Request 1**
 
-    The adapter sends a Bind Endpoint Address (see [@sec:bind-unbind]) to the Dock with the FTS packet. The packet is not buffered, it is discarded.
+    The adapter sends a Bind Endpoint Address (see [@sec:bind-msg]) to the Dock with the FTS packet. The packet is not buffered, it is discarded.
 
 7.  **Bind Reject 1**
 
@@ -1911,7 +1911,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 8.  **Init Authentication Reqquest**
 
-    The Dock sends an Init Authentication ([@sec:initiate-authentication-request-and-response]) message to the Adapter. The Bind Reject causes the Dock to send this. The Dock may send this message for other reasons as well (in particular, it may do this so that a server can authenticate itself to the ZPR Network.
+    The Dock sends an Init Authentication ([@sec:init-auth]) message to the Adapter. The Bind Reject causes the Dock to send this. The Dock may send this message for other reasons as well (in particular, it may do this so that a server can authenticate itself to the ZPR Network.
 
     The purpose of this message is to get the Adaptor/Endpoint to authenticate itself with the ZPR Auth Service.
 
@@ -1921,7 +1921,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 10. **Authentication Bind Request**
 
-    The Adapter sends a second Bind Request to the Dock (see [@sec:bind-unbind]).  This request includes just the Endpoint Authentication ZPR Address as the source address and Authentication Service ZPR Address as the destination.
+    The Adapter sends a second Bind Request to the Dock (see [@sec:bind-msg]).  This request includes just the Endpoint Authentication ZPR Address as the source address and Authentication Service ZPR Address as the destination.
 
     The intent here is to get a Stream ID for the Adapter to use in communicating with the Auth. Service.
 
@@ -1947,7 +1947,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 14. **Acquire ZPR Address Request**
 
-    The Adapter requests the ZPR Address for the identity that was proven in the Authentication Steps 14 & 15, above. It includes the Blob it received in step 15 as proof that it is the indicated identity.  See [@sec:acquire-zpr-address-request-and-response].
+    The Adapter requests the ZPR Address for the identity that was proven in the Authentication Steps 14 & 15, above. It includes the Blob it received in step 15 as proof that it is the indicated identity.  See [@sec:req-addr].
 
     a.  **ZPR Address Allocation**
 
@@ -1955,7 +1955,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 15. **Grant ZPR Address**
 
-    The Dock sends the ZPR Address to the Endpoint/Adapter. See [@sec:grant-zpr-address-request-and-response] via a Grant ZPR Address message.
+    The Dock sends the ZPR Address to the Endpoint/Adapter. See [@sec:grnt-addr] via a Grant ZPR Address message.
 
 16. **FTS Retransmission**
 
@@ -1963,7 +1963,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 17. **Bind Request 3**
 
-    The Adapter does not find a Stream ID to use, so it sends a Bind Request (see [@sec:bind-unbind]) to the Dock.
+    The Adapter does not find a Stream ID to use, so it sends a Bind Request (see [@sec:bind-msg]) to the Dock.
 
 18. **Visa Install**
 
@@ -1971,7 +1971,7 @@ After the hello process, what happens next depends on what the Adapter, Endpoint
 
 19. **Bind Response 3**
 
-    When the dock has been notified that the Visa has been installed it sends a Bind Response ([@sec:bind-unbind]) to the Adapter, giving it the Stream ID to use.
+    When the dock has been notified that the Visa has been installed it sends a Bind Response ([@sec:bind-msg]) to the Adapter, giving it the Stream ID to use.
 
     Data may then flow through the network.
 
@@ -2003,7 +2003,7 @@ Errors MUST always be logged (as directed by Logging Policies).
 
 When an Ingress Adapter receives an Endpoint Packet from its Endpoint, it classifies to the packet to A) Determine whether a Tether exists for that packet or not and, if so, B) Which Tether to assign the packet to (that is, what Stream ID to assign to the packet).
 
-The classification rule to use is installed via the Bind Endpoint Address Response message ([@sec:bind-unbind]). The message allows for different types of classification specification. Currently, only type 0 is supported. This type is a simple "compare for equal" against a specified 3-, 4-, or 5- tuple.
+The classification rule to use is installed via the Bind Endpoint Address Response message ([@sec:bind-msg]). The message allows for different types of classification specification. Currently, only type 0 is supported. This type is a simple "compare for equal" against a specified 3-, 4-, or 5- tuple.
 
 The type-0 classification specification includes the following fields:
 
@@ -2121,7 +2121,7 @@ Transit Packet on a Link or Docking Session
 :   This packet carries an Endpoint Packet from an Ingress Adapter to an Egress Adapter via a sequence of Tethers, Docks, Forwarders and Links. The Endpoint Packet itself is compressed ([@sec:endpoint-packet-compression-and-expansion]) and cryptographically protected via the A2A Security Association ([@sec:zdp-security-associations]). The ZDP Header is cryptographically protected by the ZDP Header Security Association ([@sec:zdp-security-associations]).
 
 Per Flow Management Packets on a Link or Docking Session
-:   These are management packets that traverse Links or Docking Sessions and are used by the adjacent Forwarders or Dock and Adapter to manage a Flow identified in the packet. The packets involved in Visa Heralding ([@sec:visa-installation-and-stream-id-request] and [@sec:stream-id-request]) are examples. These packets are cryptographically protected via the ZDP Header SA ([@sec:zdp-security-associations]).
+:   These are management packets that traverse Links or Docking Sessions and are used by the adjacent Forwarders or Dock and Adapter to manage a Flow identified in the packet. The packets involved in Visa Heralding ([@sec:visa-installation-and-stream-id-request] and [@sec:sid-req]) are examples. These packets are cryptographically protected via the ZDP Header SA ([@sec:zdp-security-associations]).
 
 Non-Flow Management Packets on a Link or Docking Session
 :   Per-Link or per-Docking Session management packets that do not apply to a specific stream. These packets go between adjacent Forwarders or between a Dock and an Adapter. They are cryptographically protected via the ZDP Header SA ([@sec:zdp-security-associations]).
@@ -2150,7 +2150,7 @@ ZDP Header Security Association (ZHSA)
 Between Ingress and Egress Adapter (A2A SA)[^7]
 :   This SA exists between the Ingress and Egress Adapters of a given flow of Endpoint Packets. It provides cryptographic protection of the Endpoint Packet as it traverses the network. It allows the Egress Adapter to verify that the Endpoint Packet arrived at the Egress via the Visa by which the packet was admitted at the Ingress Adapter. The A2A SAs do not provide neither replay protection. They MAY provide confidentiality.
 
-    The A2A SA is managed by the Visa Service. When a Visa is granted, the VS explicitly generates the necessary cryptographic material and directly sends this material to the Ingress and Egress Docks. The Docks, in turn, send the keying material to their respective Adapters via the Bind Endpoint Response message ([@sec:bind-unbind]) It is not propagated from Ingress Dock to Egress Dock via the Visa Heralding procedure; thus, the material is known only by the Visa Service and two Adapters.
+    The A2A SA is managed by the Visa Service. When a Visa is granted, the VS explicitly generates the necessary cryptographic material and directly sends this material to the Ingress and Egress Docks. The Docks, in turn, send the keying material to their respective Adapters via the Bind Endpoint Response message ([@sec:bind-msg]) It is not propagated from Ingress Dock to Egress Dock via the Visa Heralding procedure; thus, the material is known only by the Visa Service and two Adapters.
 
     The keying material MUST be encrypted by the Visa Service so that only the Adapters can access it.
 
@@ -2280,135 +2280,89 @@ management message.
 
 The following Type values are assigned.
 
-------------------------------------------------------------------------
-Value dec./hex Type                           Flow-\      Ref.
-                                              Oriented?
--------------- ------------------------------ ----------- --------------
-0/0x00         Transit Packet                 Yes         [@sec:transit-packets]
++-----------------+---------------------------------------------+-----+------------------+
+| Value           | Type                                        |Flow-| Reference        |
++---------+-------+                                             |Based|                  |
+| Decimal | Hex   |                                             |     |                  |
++=========+=======+=============================================+=====+==================+
+| 0       | 00    | Transit Packet                              | Yes | [@sec:tx-pkt]    |
++---------+-------+---------------------------------------------+-----+------------------+
+| 1       | 01    | Destination Unreachable                     | Yes | [@sec:dst-unr]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 2       | 02    | Set Path MTU                                | Yes | [@sec:set-pmtu]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 3       | 03    | Stream ID Request                           | Yes | [@sec:sid-req]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 4       | 04    | Stream ID Response                          | Yes | [@sec:sid-rsp]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 5       | 05    | Stream ID Withdrawal                        | Yes | [@sec:sid-wdraw] |
++---------+-------+---------------------------------------------+-----+------------------+
+| 6       | 06    | Bind Stream Request                         | Yes | [@sec:bind-msg]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 7       | 07    | Bind Stream Response                        | Yes | [@sec:bind-msg]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 8       | 08    | Bind Egress Stream Request                  | Yes | TODO             |
++---------+-------+---------------------------------------------+-----+------------------+
+| 9       | 09    | Bind Egress Stream Response                 | Yes | TODO             |
++---------+-------+---------------------------------------------+-----+------------------+
+| 10-95   | 0a-5f | Unallocated                                 | Yes | --               |
++---------+-------+---------------------------------------------+-----+------------------+
+| 96-126  | 60-7e | Reserved: Experimental and Private Use      | Yes | --               |
++---------+-------+---------------------------------------------+-----+------------------+
+| 127     | 7f    | Reserved: Must not be used.[^E]             | Yes | --               |
++---------+-------+---------------------------------------------+-----+------------------+
+| 128     | 80    | ZPR ARP                                     | No  | [@sec:zpr-arp]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 129     | 81    | Key Management (*e.g.* IKEv2)               | No  | [@sec:key-mgmt]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 130     | 82    | Discard                                     | No  | [@sec:discard]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 131     | 83    | Echo                                        | No  | [@sec:echo-msg]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 132     | 84    | Report                                      | No  | [@sec:report]    |
++---------+-------+---------------------------------------------+-----+------------------+
+| 133     | 85    | Terminate Link or Docking Session           | No  | [@sec:term-msg]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 134     | 86    | Hello Request                               | No  | [@sec:hello-req] |
++---------+-------+---------------------------------------------+-----+------------------+
+| 135     | 87    | Hello Response                              | No  | [@sec:hello-rsp] |
++---------+-------+---------------------------------------------+-----+------------------+
+| 136     | 88    | Configuration Request                       | No  | [@sec:cfg-msg]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 137     | 89    | Configuration Response                      | No  | [@sec:cfg-msg]   |
++---------+-------+---------------------------------------------+-----+------------------+
+| 138     | 8a    | Request ZPR Address                         | No  | [@sec:req-addr]  |
++---------+-------+---------------------------------------------+-----+------------------+
+| 139     | 8b    | Grant ZPR Address                           | No  | [@sec:grnt-addr] |
++---------+-------+---------------------------------------------+-----+------------------+
+| 140     | 8c    | Revoke ZPR Address                          | No  | TODO             |
++---------+-------+---------------------------------------------+-----+------------------+
+| 141     | 8d    | Init Authentication Request                 | No  | [@sec:init-auth] |
++---------+-------+---------------------------------------------+-----+------------------+
+| 142-223 | 8e-df | Unallocated                                 | No  | --               |
++---------+-------+---------------------------------------------+-----+------------------+
+| 224-253 | e0-fd | Reserved: Experimental and Private Use      | No  | --               |
++---------+-------+---------------------------------------------+-----+------------------+
+| 254     | fe    | Acknowledgement                             | No  | TODO             |
++---------+-------+---------------------------------------------+-----+------------------+
+| 255     | ff    | Reserved: Must not be used.[^E]             | No  | --               |
++---------+-------+---------------------------------------------+-----+------------------+
 
-1/0x01         Unused                         Yes
+: ZDP Packet Types
 
-2/0x02         Destination Unreachable        Yes         [@sec:destination-unreachable]
-
-3/0x03         Visa Herald Request            Yes         [@sec:stream-id-request]
-
-4/0x04         Visa Herald Response           Yes         [@sec:stream-id-request]
-
-5/0x05         Unused
-
-6/0x06         Unused
-
-7/0x07         Visa Retract Request           Yes
-
-8/0x08         Visa Retract Response          Yes
-
-9/0x09         Stream ID Withdrawl Request    Yes         [@sec:stream-id-withdrawal-request-and-response]
-
-10/0x0a        Stream ID Withdrawl Response   Yes         [@sec:stream-id-withdrawal-request-and-response]
-
-11/0x0b        Bind Endpoint Address Request  Yes         [@sec:bind-unbind]
-
-12/0x0c        Bind Endpoint Address Response Yes         [@sec:bind-unbind]
-
-13/0x0d        Unbind Endpoint Address        Yes         [@sec:bind-unbind]
-               Request
-
-14/0x0e        Unbind Endpoint Address        Yes         [@sec:bind-unbind]
-               Response
-
-15/0x0f        Authentication Request         Yes
-
-16/0x10        Authentication Response        Yes
-
-17/0x11        Set Path MTU Request           Yes         [@sec:set-path-mtu-request-and-response]
-
-17/0x11        Set Path MTU Response          Yes         [@sec:set-path-mtu-request-and-response]
-
-18/0x12...     Unallocated                    Yes
-95/0x5f
-
-96-126/\       Reserved for private use and   Yes         [@sec:initiate-authentication-request-and-response]
-0x60-0x7e      experimentation
-
-127/0x7f       Reserved, must not be used\    Yes
-               Messages receive with this
-               value MUST be silently
-               discarded.
-
-128/0x80       ZPR ARP                        No          [@sec:zpr-arp-protocol]
-
-129/0x81       Key Management (*e.g.* IKEv2)  No          [@sec:zdp-key-management-packets]
-
-130/0x82       Discard                        No          [@sec:discard-message]
-
-131/0x83       Echo Request                   No          [@sec:echo-request-and-response]
-
-132/0x84       Echo Response                  No          [@sec:echo-request-and-response]
-
-133/0x85       Terminate Link or Docking      No          [@sec:terminate-indication]
-               Session Request
-
-134/0x86       Terminate Link or Docking      No          [@sec:terminate-indication]
-               Session Response
-
-135/0x87       Terminate Link or Docking      No          [@sec:terminate-indication]
-               Session Indication
-
-136/0x88       Hello Request                  No          [@sec:hello-request-and-response]
-
-137/0x89       Hello Response                 No          [@sec:hello-request-and-response]
-
-138/0x8a       Configuration Request          No          [@sec:configuration-request-response]
-
-139/0x8b       Configuration Response         No          [@sec:configuration-request-response]
-
-140/0x8c       Acquire ZPR Address Request    No          [@sec:acquire-zpr-address-request-and-response]
-
-141/0x8d       unused                         No
-
-142/0x8e       Acquire ZPR Address Response   No          [@sec:acquire-zpr-address-request-and-response]
-
-143/0x8f       Unused                         No
-
-144/0x90       Unused
-
-145/0x91       Report                         No          [@sec:report]
-
-146/0x92       Init Authentication Request    No          [@sec:initiate-authentication-request-and-response]
-
-147/0x93       Init Authentication Response   No          [@sec:initiate-authentication-request-and-response]
-
-148/0x94       Grant ZPR Address Request      No          [@sec:grant-zpr-address-request-and-response]
-
-149/0x95       Grant ZPR Address Response     No          [@sec:grant-zpr-address-request-and-response]
-
-150/0x96...    Unallocated                    No
-224/0xdf
-
-0xe0-0xfe\     Experimental and Private Use   No          [@sec:initiate-authentication-request-and-response]
-224-254
-
-255 (0xff)     Reserved. Must not be used.\   N/A         N/A
-               Messages received with this
-               value MUST be silently
-               discarded.
-------------------------------------------------------------------------
-
-: Stream ID Response Error Codes
+[^E]: Messages received with this value MUST be silently discarded.
 
 > [**ED NOTE**: THIS TABLE MAY NOT REFLECT THE USAGE OF CODE POINTS IN THE EXPERIMENTAL IMPLEMENTATION. CODE POINT ASSIGNMENTS WILL BE FINALIZED PRIOR TO PUBLIC RELEASE.]{.mark}
 
 By convention, type values with the high-order bit cleared (0x00-0x7f) all contain a stream ID immediately following the common header. Type values with the high order bit set (0x80-0xff) do not contain a stream ID.
 
-By convention, request messages all have the low-order bit (0x01) set, responses (or messages for which there is no request/response method) have the low order bit cleared.
-
 These values apply to all ZDP packets, whether being carried over a Link or a Docking Session.
 
-### Transit Packets
+### Transit Packets {#sec:tx-pkt}
 
 This section specifies the encapsulation of Compressed Endpoint Packets as they are transported across both Docking Sessions and Links in Transit Packets.
 
-#### Fields {#transit-pkt-fields}
+#### Fields {#sec:tx-pkt-fields}
 
 The Transit Packets are comprised of the following fields:
 
@@ -2497,7 +2451,7 @@ Note that
 
 2)  The length and structure of the Per-Flow Management Message Data field depend on the message. These messages, and their data, are specified in [@sec:management-packets].
 
-### Non-Per-Flow Management Packet {#sec:non-per-flow-mgmt-pkt}
+### Non-Per-Flow Management Packet {#sec:non-flow-mgmt-pkt}
 
 Non-Per-Flow management packets contain a management message that pertains to the entire Link or Docking Session or the associated Forwarders, Adapters, and Docks.
 
@@ -2528,11 +2482,11 @@ Note that:
 
 This section specifies the management messages.
 
-### Discard Message
+### Discard Message {#sec:discard}
 
 Discard messages are silently discarded. Typically, they are neither logged nor reported however an implementation MAY elect to log/report them, preferably at a "debug" level.
 
-Discard messages are Non-per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-per-flow-mgmt-pkt]).
+Discard messages are Non-per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-flow-mgmt-pkt]).
 
 There is no data to a management packet other than the ZDP header. In other words, the length of the Management Message field of the ZDP Packet is 0.
 
@@ -2542,13 +2496,13 @@ The sequence number is provided to assist in determining packet loss and in repo
 
 Discard messages are provided as an analogy to RFC863, "The Discard Protocol" for TCP and UDP.
 
-### Echo Request and Response
+### Echo Request and Response {#sec:echo-msg}
 
 The Echo Request and Response Management messages provide a mechanism to send a message to a peer and receive a response without any side effects.
 
 When a Management Echo Request is received, its type should be changed to Echo Response and then sent back to the sender of the request via the Link or Docking Session over which the Request was received.
 
-Echo Request and Response messages are Non-Per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-per-flow-mgmt-pkt]).
+Echo Request and Response messages are Non-Per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-flow-mgmt-pkt]).
 
 #### Echo Request
 
@@ -2600,7 +2554,7 @@ Echo Request/Response messages may be used as keepalives or liveness detection (
 
 Echo request and response use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
-### Terminate Indication, Request and Response {#terminate-indication}
+### Terminate Indication, Request and Response {#sec:term-msg}
 
 There are three Management messages involved in terminating a Link or Docking Session:
 
@@ -2680,7 +2634,7 @@ Additional Data
 
 Terminate Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
-### Hello Request and Response
+### Hello Request and Response {#sec:hello-msg}
 
 The Hello Message and response are sent once, when a Link or Docking Session comes up. Each Node sends a Hello Request to its peer and receives a Hello Response from its peer. These messages are used to verify the Link or Docking Session as a part of bringing it up.
 
@@ -2690,7 +2644,7 @@ The Hello Request and Response messages are Non-Per-Flow Management messages.
 
 Link Hello Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
-#### Hello Request Message
+#### Hello Request Message {#sec:hello-req}
 
 The Hello Request Message Data is:
 
@@ -2706,7 +2660,7 @@ Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
 
-#### Hello Response Message
+#### Hello Response Message {#sec:hello-rsp}
 
 The format of the response Management Message Data is:
 
@@ -2775,20 +2729,18 @@ The following TLVs are defined:
 |      | of this field is TBD.** It should indicate A) the             |
 |      | implementation version of the peer and B) which ZPR RFC       |
 |      | version the peer implements.                                  |
-|      |                                                               |
-|      | > **Ed. Note**: general field added per request from Mathias. |
 +------+---------------------------------------------------------------+
-| 2    | Endpoint Authentication ZPR Address (EAZA).\                  |
+| 3    | Endpoint Authentication ZPR Address (EAZA).\                  |
 |      | This is the ZPR Address that the Adapter MUST use as the      |
 |      | "source address" when communicating with the Auth Service to  |
 |      | perform ZPR Authentication.                                   |
 +------+---------------------------------------------------------------+
-| 3    | Auth Service ZPR Address (ASZA)\                              |
+| 4    | Auth Service ZPR Address (ASZA)\                              |
 |      | The ZPR Address of the Authentication Service. The Adapter    |
 |      | MUST send all ZPR Authentication messages to this ZPR         |
 |      | Address.                                                      |
 +------+---------------------------------------------------------------+
-| 4    | Stream ID Length (SIL)\                                       |
+| 5    | Stream ID Length (SIL)\                                       |
 |      | The length of Stream IDs that the sender of the Hello         |
 |      | Response wishes the receiver to use when sending ZDP packets  |
 |      | with Stream IDs (such as transit packets) to the response     |
@@ -2802,7 +2754,7 @@ The following TLVs are defined:
 |      | IDs going between a Dock and a Forwarder or between           |
 |      | Forwarders.                                                   |
 +------+---------------------------------------------------------------+
-| 5    | Reserved for future use. These values MUST NOT be used. If a  |
+| 6    | Reserved for future use. These values MUST NOT be used. If a  |
 | -252 | Hello Response contains any of these values it MUST be        |
 |      | dropped, the event reported, and the Docking Session or Link  |
 |      | terminated.                                                   |
@@ -2832,13 +2784,13 @@ TLVs may be in any order.
 
 A TLV MUST NOT appear more than once in a Hello Response.
 
-### Stream ID Request
+### Stream ID Request {#sec:sid-req}
 
 The Stream ID Request message requests a Stream ID to use in forwarding packets via a specified Visa/Stream be returned.
 
 The ZDP Type field indicates that the message is a Request or Response.
 
-The Request message is a Per-Flow management message. The Stream ID Field of the Request contains an Offered Stream ID. The Offered Stream ID is one that the sender of the Request suggests that the receiver use.  The receiver may accept or reject the offered ID. The receiver returns the ID to use, even if it is the offered ID, in the response. See the Stream ID Response in [@sec:stream-id-response].
+The Request message is a Per-Flow management message. The Stream ID Field of the Request contains an Offered Stream ID. The Offered Stream ID is one that the sender of the Request suggests that the receiver use.  The receiver may accept or reject the offered ID. The receiver returns the ID to use, even if it is the offered ID, in the response. See the Stream ID Response in [@sec:sid-rsp].
 
 The format of the Stream ID Request Message is:
 
@@ -2862,14 +2814,14 @@ First Packet Length
 
     If this field is 0 then the first packet is not present.
 
-Visa&Stream Name Length
+Visa & Stream Name Length
 :   This is the size of the (following) Visa/Stream Name field.
 
-Visa&Stream Name
+Visa & Stream Name
 :   Is the name of the Visa and Stream for which a Stream ID is being requested.
 
 
-### Stream ID Response
+### Stream ID Response {#sec:sid-rsp}
 
 The Stream ID Response is sent in response to receiving a Stream ID Request. It indicates whether the Stream has been provisioned or not. If not, it indicates why. If the Stream is in service, it returns the Stream ID to use by the upstream to send packets under the auspices of the Visa. This ID may be the offered ID or an ID that the sender of the Response selects.
 
@@ -2930,7 +2882,7 @@ If an Upstream Forwarder receives a Stream ID Response from a Downstream Forward
 
 As soon as an Upstream Forwarder receives a successful Response it may send ZDP Transit Packets using the Stream ID specified in the response.
 
-### Stream ID Withdrawal Request and Response
+### Stream ID Withdrawal Request and Response {#sec:sid-wdraw}
 
 The Stream ID Withdrawal request message is used when a Node must take a Stream out of service that it had formerly placed in service.
 
@@ -3073,7 +3025,7 @@ Status Code
     -----------------------------------------------------------------------
     Value       Meaning
     ----------- -----------------------------------------------------------
-    0           Success -the registration has been accepted and installed
+    0           Success -- the registration has been accepted and installed
                 in the network OR the registration is not explicitly
                 allowed by a ZPR policy. In the latter case, the peer MUST
                 A) Report the policy violation and B) install the necessary
@@ -3137,7 +3089,7 @@ Either side of a Docking Session may send Unregister Endpoint Address request or
 
 > **Ed. Note: Possible Extension:** We might want to include IP Protocol and port information in this message (easily added after the IP address) indicating which protocol/port the server is listening on. Notionally A) the ZPR network could ensure that only Endpoint Packets directed to that address, protocol, port combination are sent to the Endpoint (enhancing security to some degree) and B) providing a way to split services with the same IP address over different physical machines (this 'feels' like a potentially powerful concept/ability to me. We don't have to investigate it right now, but I don't want the thought to get lost either).
 
-### Bind and Unbind Endpoint Addresses Request and Response {#bind-unbind}
+### Bind and Unbind Endpoint Addresses Request and Response {#sec:bind-msg}
 
 This section specifies the Bind and Unbind Endpoint Address request and response messages. These messages are used
 
@@ -3472,7 +3424,7 @@ Report Data Length
 Report data
 :   Is the data to be reported.
 
-### Set Path MTU Request and Response
+### Set Path MTU Request and Response {#sec:set-pmtu}
 
 The Set Path MTU request and response messages are bidirectional. They are used
 
@@ -3542,7 +3494,7 @@ Additional Information
 
 The Set Path MTU Request and Response messages use the Request Response semantics described in [@sec:requestresponse-semantics].
 
-### Destination Unreachable
+### Destination Unreachable {#sec:dst-unr}
 
 A Node or Adapter uses the Destination Unreachable message to inform the source Endpoint that a ZDP Transit packet could not be delivered. This message is analogous to ICMP Destination Unreachable messages in IP networks. If the Ingress Adapter receives a Destination Unreachable it MAY fabricate a proper ICMP Destination Unreachable to send to the Source Endpoint.
 
@@ -3638,7 +3590,7 @@ Portion of Original Endpoint Packet
 
 A Node SHOULD implement mechanisms to limit the rate at which these messages are generated in order to mitigate the effect of attacks designed to flood nodes with these messages.
 
-### Configuration Request & Response
+### Configuration Request and Response {#sec:cfg-msg}
 
 **TBD:**
 
@@ -3664,7 +3616,7 @@ Grr.
 
 This can be big....
 
-### Initiate Authentication Request and Response
+### Initiate Authentication Request and Response {#sec:init-auth}
 
 The Initiate Authentication message is used by the Dock to direct an Adapter to start the ZPR Authentication process on behalf of the Endpoint.
 
@@ -3749,7 +3701,7 @@ Status Code
 
 : Init Authentication Response Codes
 
-### Acquire ZPR Address Request and Response
+### Acquire ZPR Address Request and Response {#sec:req-addr}
 
 The Acquire ZPR Address Request is used by the Adapter to request a ZPR Address for the Endpoint. The response is used to acknowledge receipt of the request or indicate that the request failed for some reason.
 
@@ -3812,7 +3764,7 @@ Status Code
 
 : Acquire ZPR Address Response Codes
 
-### Grant ZPR Address Request and Response
+### Grant ZPR Address Request and Response {#sec:grnt-addr}
 
 The Grant ZPR Address Request and Response messages are used by the Dock to give ZPR Addresses to the Adapter/Endpoint. The Dock sends the address to the Adapter via the Grant ZPR Address Request. The Adapter uses the Grant ZPR Address Response acknowledge receipt of the request or indicate that the request failed for some reason.
 
@@ -4010,7 +3962,7 @@ This begs the question of how the Adapter gets the information needed to create 
 
 1)  Have the Admin Service inform the Dock of a path's PMTU. This would be done when the Dock obtains a Visa for a flow.
 
-2)  The Dock, via the Set Path MTU message ([@sec:set-path-mtu-request-and-response]), informs the Adapter of the PMTU. The Adapter then can evaluate packets sent by the Endpoint and generate ICMP messages back to the Endpoint. There is then the question of to what the PMTU applies:
+2)  The Dock, via the Set Path MTU message ([@sec:set-pmtu]), informs the Adapter of the PMTU. The Adapter then can evaluate packets sent by the Endpoint and generate ICMP messages back to the Endpoint. There is then the question of to what the PMTU applies:
 
     a)  Everything sent by the Endpoint,
 
@@ -4102,7 +4054,7 @@ NOTE WELL: If the Substrate is IPv4 then the Substrate will fragment packets, if
 
 -   Admin Service is presumed to know the PMTUs. It includes this with the Visa when the Visa is sent to the Dock.
 
--   The Dock informs the Adapter of the PMTU via a Set Path MTU message.  This message is sent when the Dock receives the PMTU with the Visa OR when the Dock receives an updated PMTU via a Set Path MTU ([@sec:set-path-mtu-request-and-response]) message from a Forwarder or Egress Dock.
+-   The Dock informs the Adapter of the PMTU via a Set Path MTU message.  This message is sent when the Dock receives the PMTU with the Visa OR when the Dock receives an updated PMTU via a Set Path MTU ([@sec:set-pmtu]) message from a Forwarder or Egress Dock.
 
 -   If a Forwarder or Egress Dock receives an IP ICMP Too Big message from an IP substrate, it sends a Set Path MTU message upstream, towards the Ingress Dock.
 
@@ -4208,7 +4160,7 @@ The general goals for performance are
 
 ### Forwarding Considerations
 
-1)  The main forwarding decisions taken by a Forwarder are based on looking up the Stream ID field in the ZDP Transit Packet header ([@sec:transit-packets]). This field is local to each Link, is unidirectional (that is, it applies only to traffic from Forwarder *A* to Forwarder *B* and not traffic from *B* to *A*) and is assigned by the Forwarder that will *receive* the traffic. This allows the receiving forwarder to assign IDs in a manner that is optimal for that forwarder's lookup implementation.  For example, the ID could be the actual address in memory of the data structure describing how to handle the packet or it could be an index into an array of similar information.
+1)  The main forwarding decisions taken by a Forwarder are based on looking up the Stream ID field in the ZDP Transit Packet header ([@sec:tx-pkt]). This field is local to each Link, is unidirectional (that is, it applies only to traffic from Forwarder *A* to Forwarder *B* and not traffic from *B* to *A*) and is assigned by the Forwarder that will *receive* the traffic. This allows the receiving forwarder to assign IDs in a manner that is optimal for that forwarder's lookup implementation.  For example, the ID could be the actual address in memory of the data structure describing how to handle the packet or it could be an index into an array of similar information.
 
     We note that the Stream ID is the same size as an IPv4 address and that there are many algorithms and data structures that support high-speed lookups of IPv4 addresses. Thus, existing IPv4 lookup techniques should also be adequate for looking up Visa IDs.
 
@@ -4357,7 +4309,7 @@ Other protocols may also be useful.
 
 In earlier work, a place-holder for a notional ZDP Keying Protocol was allocated. This included a basic ZDP packet format.
 
-## ZDP Key Management Packets
+## ZDP Key Management Packets {#sec:key-mgmt}
 
 ZPR may use IKEv2 for key management between adjacent Forwarders and between an Adapter and its Dock. When ZPR runs over an IP or IP/UDP Substrate, IKEv2 can run in its native mode (*i.e.*, it runs over the Substrate's IP or IP/UDP service as described in the IKEv2 RFC) or as payloads in ZDP Link Management and Docking Session Packets. When ZPR's substrate is not IP (Ethernet, PPP link, raw fiber, etc.) IKEv2 packets are carried in the appropriate ZDP packet directly over the substrate.
 
@@ -4403,7 +4355,7 @@ This work was deferred. Instead, the key management is done by the trusted manag
 
 > **Ed. Note**: If we can redefine ESP and IKEv2 as described this may represent an interesting opportunity to make a contribution to the IETF (establishing AI in the community, etc., etc.). If/when we bring ZPR to the IETF then, we would have some street cred.
 
-# ZPR ARP Protocol
+# ZPR ARP Protocol {#sec:zpr-arp}
 
 Earlier versions of ZDP included an ARP-like protocol to be used to perform address resolution when ZDP runs directly over Ethernet.
 
@@ -4476,7 +4428,7 @@ ZPR ARP is used when
 
 ZPR ARP is used to determine the binding between a ZPR Node Address and that Node's Ethernet MAC Address.
 
-ZPR ARP messages are carried as Management Message Data in ZDP packets (see [@sec:non-per-flow-mgmt-pkt]).
+ZPR ARP messages are carried as Management Message Data in ZDP packets (see [@sec:non-flow-mgmt-pkt]).
 
 ZPR ARP messages may be exchanged before security associations are established between the peers. If so, the ZPI identifies just the ZPR Configuration in use. The NULL security association is used (see [@sec:zpi-0]). The ZPR ARP messages are transmitted in the clear and are presumed to not be modified in transit. This does not represent a significant security hole since immediately following the ZPR ARP exchange, the peers will bring up the Link or Docking Session and perform the necessary cryptographic authentication with each other.
 
