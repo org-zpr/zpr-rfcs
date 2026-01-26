@@ -15,3 +15,21 @@ If you are interested in learning more about ZPR beyond what's in the overview, 
 
 ## I Have Questions/Comments/Concerns
 Join us in [discussions](https://github.com/org-zpr/zpr-rfcs/discussions) to provide feedback or ask questions!
+
+## How to Build
+
+If you want to build the PDFs from the sources locally, you can use the docker image.
+
+```bash
+$ cd tools 
+$ docker build . --tag rfcgen:latest
+$ cd ..
+```
+
+then,
+
+```bash
+$ docker run --rm -v /path/to/zpr-rfcs:/work -w /work rfcgen:latest sh -lc "git config --global --add safe.directory /work && make"
+```
+
+
