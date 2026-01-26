@@ -22,7 +22,7 @@ environment involves three separately managed domains.
 
 ```
                            REFERENCE DATA
-                                ●
+                                O
                                / \
                               /   \
                              /     \
@@ -32,7 +32,7 @@ environment involves three separately managed domains.
                          /             \
                         /               \
                        /                 \
-                      ●-------------------●
+                      O-------------------O
                  ASSERTIONS              ZPL
 
 
