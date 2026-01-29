@@ -20,8 +20,7 @@ auditable.
 The "Triangle of Auditability" diagram below illustrates that a complete ZPR
 environment involves three separately managed domains.
 
-![The Triangle of Auditability](triangle.png)
-
+![The Triangle of Auditability](triangle.png){height="3in"}
 
 The remainder of this paper focuses specifically on delegation support for the
 authoring of ZPL policies. It describes how delegated policy is constrained,
