@@ -1521,7 +1521,7 @@ SAs have two conceptual states:
 
 -   Inactive -- the SA may not be used to transmit a packet. The receiver, however, MUST be prepared to receive and process a packet that specifies an inactive SA. This allows packets using a to-be-deleted SA to drain from the network and be successfully processed prior to removing the SA.
 
-The SA controlling the cryptography applied to a particular ZDP packet is indicated by the ZPI (ZDP Parameters Index) field of the ZDP header ([@sec:base-zdp-fields]). Multiple ZPIs may specify the same SA.
+The SA controlling the cryptography applied to a particular ZDP packet is indicated by the ZPI (ZDP Parameters Index) field of the ZDP header. Multiple ZPIs may specify the same SA.
 
 The ZPI's scope is the individual Link or Docking Session.
 
@@ -2126,7 +2126,7 @@ Per Flow Management Packets on a Link or Docking Session
 Non-Flow Management Packets on a Link or Docking Session
 :   Per-Link or per-Docking Session management packets that do not apply to a specific stream. These packets go between adjacent Forwarders or between a Dock and an Adapter. They are cryptographically protected via the ZDP Header SA ([@sec:zdp-security-associations]).
 
-Per-flow and non-per-flow management packets are disambiguated by the type field's value in the header.
+Management packets are disambiguated by the type field's value in the header.
 
 ### ZDP Security Associations
 
@@ -2176,7 +2176,9 @@ The NULL SA may also be used when the substrate is a VPN and the VPN provides ad
 
 ### ZPR Versions
 
-The Version Number field of the ZDP header indicates the ZDP protocol version. This document describes version 1 of ZDP.
+The Version Number field of the ZDP header
+is 3 bits long.
+It indicates the ZDP protocol version. This document describes version 1 of ZDP.
 
 Version 0 is reserved for experimental use.
 
@@ -2188,96 +2190,10 @@ ZDP versions are defined by ZDP protocol specifications (such as this document).
 
 NOTE WELL: the concept of the Configuration no longer applies to ZDP packet structure.
 
-### Base ZDP Packet Structure
+### ZDP Packet Type  {#sec:zdp-types}
 
-#### Fields {#sec:base-zdp-fields}
-
-All ZPR packets have the following header. It provides the information necessary to receive and disambiguate the packet. The header contains the following fields, in the given order:
-
-Version
-:   A three-bit field that indicates the ZDP Version of the packet. This document describes version 1.
-
-ZHSAID
-:   ZDP Header Security Association ID - identifies the security association used to process the ZDP header.
-
-
-Type
-:   The type of message carried in the ZDP packet.
-
-Excess Length
-:   A 1-byte field that is the difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
-
-   The field is an unsigned integer.
-
-   The motivation is that some Substrate Networks will have minimum packet payload sizes that may be larger than a ZDP message. For example, an Ethernet frame's data must be at least 46 bytes long) which might be longer than the encapsulated ZDP packet.  This field represents the difference between the two. If a management packet (such as an echo message) is small, say 30 bytes, and is carried on an Ethernet, this field would contain 16.
-
-    ZDP packets MUST be transmitted in the smallest substrate packet possible, consistent with the Substrates minimum packet size (if any).
-
-Sequence Number
-:   This is a sequence number, used in doing replay protection.
-
-    TODO: Change this for new reliability scheme.
-
-    Sequence numbers are local to a ZDP Header SA.
-
-    This field is 2 bytes long. The factor that controls the size of the field is how large a window is provided to accommodate legitimate packet misorderings. The available window for an *n*-bit field is 2^*n*-1^ packets, though 2^*n*-2^ is better.  This means that the maximum size of the window is 32,768 (or 16,384) packets. This is the *maximum* size that the window may be; policies can set it smaller.
-
-Stream ID
-:   This field is present for ZDP Transit Packets and stream-oriented management packets. Its exact use depends on the packet type (*e.g.*, for Transit Packets, the packet is switched based on the Stream ID).
-
-   The size of the Stream ID is declared in the Hello Response.
-
-Management Data
-:   The presence of this field depends on whether the ZDP packet contains an Endpoint Packet message or is a Management Message, as indicated by the type field. If the packet is a Management Message, then this field contains data pertinent to the management operation being performed.  The size and format of this data depends on the management operation.
-
-    If the packet contains an Endpoint Packet, then this field is absent.
-
-    Pad Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
-
-    When generating a packet, the pad MUST be set to all 0's to avoid leaking internal data. On reception the pad MUST be checked and, if not all 0, the packet silently discarded and the Docking Session or Link brought down. Furthermore, the upstream should be "ignored".[^8]
-
-Header MICV
-:   Message Integrity Check Value calculated over the entire ZPR Packet header. The size of the MICV is determined by the MICV algorithm selected by the security association.
-
-#### Encryption and MICV Calculation
-
-When transmitting a ZPR packet, the packet is encrypted and then the MICV is calculated. On reception the MICV is checked and, if the check fails, the packet is discarded. After checking the MICV, the packet is decrypted.
-
-The MICV is calculated over all fields except the Header MICV field.
-
-All fields except the Version, ZHSAID, and Header MICV fields are encrypted.
-
-#### Packet Structure
-
-The format of the packet is:
-
-``` mermaid
-%%| fig-cap: ZPR Packet Structure
-packet
-+3: "Vers."
-+5: "ZHSAID"
-+8: "Type"
-+8: "Excess-Length"
-+16: "Sequence Number"
-+32: "Stream ID[1]"
-+24: "Management Data[2] (variable length)"
-+32: "Pad (variable length)"
-+32: "MAC"
-+32: "Endpoint Packet[3] (variable length)"
-```
-
-Notes:
-
-\[1\] Stream ID is present only if the packet contains an Endpoint
-Packet or contains a stream-oriented management message.
-
-\[2\] Management data is present only if the packet contains a
-management message.
-
-\[3\] Endpoint Packet is present only if the packet is a Transit Packet.
-
-#### Type Values and encodings
-
+All ZDP packets contain a 1-byte type field.
+This field indicates what the packet is.
 The following Type values are assigned.
 
 ------------------------------------------------------------------------
@@ -2327,7 +2243,7 @@ Value dec./hex Type                           Flow-\      Ref.
 18/0x12...     Unallocated                    Yes
 95/0x5f
 
-96-126/\       Reserved for private use and   Yes         [@sec:initiate-authentication-request-and-response]
+96-126/\       Reserved for private use and   Yes
 0x60-0x7e      experimentation
 
 127/0x7f       Reserved, must not be used\    Yes
@@ -2382,7 +2298,9 @@ Value dec./hex Type                           Flow-\      Ref.
 
 149/0x95       Grant ZPR Address Response     No          [@sec:grant-zpr-address-request-and-response]
 
-150/0x96...    Unallocated                    No
+150/0x96       Acknowledge                    No          [@sec:acknowledge]
+
+151/0x97...    Unallocated                    No
 224/0xdf
 
 0xe0-0xfe\     Experimental and Private Use   No          [@sec:initiate-authentication-request-and-response]
@@ -2394,61 +2312,15 @@ Value dec./hex Type                           Flow-\      Ref.
                discarded.
 ------------------------------------------------------------------------
 
-: Stream ID Response Error Codes
+Packets with unknown type field values MUST be silently discarded.
 
-> [**ED NOTE**: THIS TABLE MAY NOT REFLECT THE USAGE OF CODE POINTS IN THE EXPERIMENTAL IMPLEMENTATION. CODE POINT ASSIGNMENTS WILL BE FINALIZED PRIOR TO PUBLIC RELEASE.]{.mark}
+The following sections describe the various ZDP messages.
 
-By convention, type values with the high-order bit cleared (0x00-0x7f) all contain a stream ID immediately following the common header. Type values with the high order bit set (0x80-0xff) do not contain a stream ID.
+### Transit Packet {#sec:transit-packets}
 
-By convention, request messages all have the low-order bit (0x01) set, responses (or messages for which there is no request/response method) have the low order bit cleared.
-
-These values apply to all ZDP packets, whether being carried over a Link or a Docking Session.
-
-### Transit Packets
-
-This section specifies the encapsulation of Compressed Endpoint Packets as they are transported across both Docking Sessions and Links in Transit Packets.
-
-#### Fields {#transit-pkt-fields}
-
-The Transit Packets are comprised of the following fields:
-
-Version
-:   A three-bit field that indicates the ZDP Version of the packet. This document describes version 1.
-
-ZHSAID
-:   ZDP Header Security Association ID - identifies the security association used to process the ZDP header.
-
-Type
-:   Packet type. Is 0 for a Transit Packet. See [@sec:base-zdp-fields] and [@sec:type-values-and-encodings].
-
-Excess Length
-:   See [@sec:base-zdp-fields].
-
-Stream ID
-:   See [@sec:base-zdp-fields].
-
-Pad
-:   See [@sec:base-zdp-fields].
-
-Header MAC
-:   See [@sec:base-zdp-fields].
-
-A2A Security Association ID
-:   The Adapter-to-Adapter Security Association ID. This field selects the A2A SA. Since each Visa (and therefore each stream) has its own A2A SAs, the A2A SAID selects an SA within the context of the Visa by which the packet travelled.
-
-    The size of the A2A SAID field is determined by the MICV algorithm used.
-
-    This field is 1 byte long. This is adequate since A) We expect that there will be a relatively small number of A2A Security Associations in effect at any one time, and B) A2A SAID values can be reused.
-
-    See [@sec:zdp-security-associations]
-
-Compressed Endpoint Packet\
-:   This field contains the Endpoint Packet in its entirety.
-
-A2A MAC
-:   Message authentication code calculated over the entire Uncompressed Endpoint Packet. This MAC is calculated prior to compression (see [@sec:endpoint-packet-compression-and-expansion]) by the Ingress Adapter and after decompression (see [@sec:endpoint-packet-compression-and-expansion]) by the Egress Adapter.
-
-    The size of the A2A MAC field is determined by the MAC algorithm selected by the security association.
+This section specifies the encapsulation of Compressed Endpoint
+Packets as they are transported across both Docking Sessions and Links
+in Transit Packets.
 
 #### Packet Structure
 
@@ -2461,148 +2333,220 @@ packet
 +5: "ZHSAID"
 +8: "Type"
 +8: "Excess-Length"
++8: "Unused"
 +32: "Stream ID"
 +8: "Pad (variable length)"
-+32: "MAC"
++32: "MICV (variable length)"
 +8: "A2A SAID"
 +24: "Compressed Endpoint Packet (variable length)"
-+8: "A2A MAC"
++32: "A2A MICV (variable length)"
 ```
 
-### Per-Flow Management Packet
+Where:
 
-Per Flow management packets contain a management message that pertains to a specific traffic flow.
+Version
+:   A three-bit field that indicates the ZDP Version of the packet.
+   This document describes version 1.
 
-The fields are described in [@sec:base-zdp-fields].
+ZHSAID
+:   ZDP Header Security Association ID - identifies the security
+   association used to process the ZDP header.
 
-The format of the ZDP packet is:
+Type
+:   Packet type. Is 0 for a Transit Packet.
 
-``` mermaid
-%%| fig-cap: Per-Flow Management Packet Format
-packet
-+3: "Version"
-+5: "ZHSAID"
-+8: "Type"
-+8: "Excess-Length"
-+16: "Sequence Number"
-+32: "Stream ID"
-+24: "Per-Flow Management Message Data (variable length)"
-+32: "Pad (variable length)"
-+32: "MAC"
-```
+Excess Length
+:   A 1-byte field that is the difference between the size of the ZDP packet and
+   the size of the Substrate Packet that contains the ZDP packet.
 
-Note that
+   The field is an unsigned integer.
 
-1)  All messages with a stream ID in the header have a type field value on the range (0x00-0x7f, inclusive).
+   The motivation is that some Substrate Networks will have minimum
+   packet payload sizes that may be larger than a ZDP message. For
+   example, an Ethernet frame's data must be at least 46 bytes long)
+   which might be longer than the encapsulated ZDP packet.  This field
+   represents the difference between the two. If a management packet
+   (such as an echo message) is small, say 30 bytes, and is carried on
+   an Ethernet, this field would contain 16.
 
-2)  The length and structure of the Per-Flow Management Message Data field depend on the message. These messages, and their data, are specified in [@sec:management-packets].
+    ZDP packets MUST be transmitted in the smallest substrate packet
+    possible, consistent with the Substrates minimum packet size (if
+    any).
 
-### Non-Per-Flow Management Packet {#sec:non-per-flow-mgmt-pkt}
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
 
-Non-Per-Flow management packets contain a management message that pertains to the entire Link or Docking Session or the associated Forwarders, Adapters, and Docks.
+Stream ID
+:   Identifies the stream carrying the compressed endpoint packet.
+   It selects a PEP, which directs the handling of the packet.
 
-The fields are described in [@sec:base-zdp-fields].
+   The size of the Stream ID is declared in the Hello Response.
 
-The format of the Non-Per-Flow Management Packet is:
+Pad
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
 
-``` mermaid
-%%| fig-cap: Non-Per-Flow Management Packet Format
-packet
-+3: "Version"
-+5: "ZHSAID"
-+8: "Type"
-+8: "Excess-Length"
-+16: "Sequence Number"
-+24: "Non-Per-Flow Management Message Data (variable length)"
-+32: "Pad (variable length)"
-+32: "MAC"
-```
+    When generating a packet, the pad MUST be set to all 0's to avoid
+    leaking internal data. On reception the pad MUST be checked and,
+    if not all 0, the packet silently discarded and the Docking
+    Session or Link brought down. Furthermore, the upstream should be
+    "ignored".[^8]
 
-Note that:
+Header MICV
+:   Message Integrity Check Value calculated over the entire ZPR
+    Packet header. The size of the MICV is determined by the MICV
+    algorithm selected by the security association.
 
-1)  The value of the type field in all Non-Per-Flow management messages is in the range 0x80-0xff, inclusive.
+A2A Security Association ID
+:   The Adapter-to-Adapter Security Association ID. This field
+   selects the A2A SA. Since each Visa (and therefore each stream)
+   has its own A2A SAs, the A2A SAID selects an SA within the
+   context of the Visa by which the packet travelled.
 
-2)  The length and structure of the Non-Per-Flow Management Message Data field depends on the message. These messages, and their data, are specified in [@sec:management-packets].
+    The size of the A2A SAID field is determined by the MICV
+    algorithm used.
 
-## Management Packets
+    This field is 1 byte long. This is adequate since A) We
+    expect that there will be a relatively small number of
+    A2A Security Associations in effect at any one time, and
+    B) A2A SAID values can be reused.
 
-This section specifies the management messages.
+    See [@sec:zdp-security-associations]
+
+Compressed Endpoint Packet
+:   This field contains the Endpoint Packet in its entirety.
+
+A2A MICV
+:   Message integrity check value calculated over the entire
+   Uncompressed Endpoint Packet. This MAC is calculated prior to
+   compression (see [@sec:endpoint-packet-compression-and-expansion])
+   by the Ingress Adapter and after decompression (see
+   [@sec:endpoint-packet-compression-and-expansion]) by the Egress
+   Adapter.
+
+   The size of the A2A MAC field is determined by the MAC algorithm
+   selected by the security association.
+
 
 ### Discard Message
 
-Discard messages are silently discarded. Typically, they are neither logged nor reported however an implementation MAY elect to log/report them, preferably at a "debug" level.
+Discard messages are silently discarded. Typically, they are neither
+logged nor reported however an implementation MAY elect to log/report
+them, preferably at a "debug" level.
 
-Discard messages are Non-per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-per-flow-mgmt-pkt]).
+The format of the Discard Message is:
 
-There is no data to a management packet other than the ZDP header. In other words, the length of the Management Message field of the ZDP Packet is 0.
+``` mermaid
+%%| fig-cap: Discard Message Format
+packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++32: "ID"
++32: "Pad (variable length)"
++32: "MICV (variable length)"
+```
 
-This message does not follow the request/response semantics outlined below.
+Where
 
-The sequence number is provided to assist in determining packet loss and in reporting.
+Version
+:   ZDP Version of the packet
+
+    This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+ID
+:   Used to uniquely identify each discard message.
+
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV (variable length)
+:   Message Integrity Check Value calculated over the entire ZDP management message.
+
+    The size of the MICV is determined by the MICV algorithm selected by the security association.
+
+
+The ID is provided only to assist in determining packet loss and in reporting. There are no other semantics to it.
 
 Discard messages are provided as an analogy to RFC863, "The Discard Protocol" for TCP and UDP.
 
-### Echo Request and Response
+The Discard message *does not use* the reliable transmission mechanism described in {#sec:requestresponse-semantics}.
 
-The Echo Request and Response Management messages provide a mechanism to send a message to a peer and receive a response without any side effects.
+The Discard Message *does not* use the transaction semantics.
 
-When a Management Echo Request is received, its type should be changed to Echo Response and then sent back to the sender of the request via the Link or Docking Session over which the Request was received.
+### Echo {#sec:echo-request-and-response}
 
-Echo Request and Response messages are Non-Per-Flow Management Messages and are carried in Non-Per-Flow Management Packets ([@sec:non-per-flow-mgmt-pkt]).
+The Echo message provides a mechanism to send a message to a peer and receive a response without any side effects.
 
-#### Echo Request
-
-The Echo Request is transmitted in the Management Message Data field of the Non-Per-Flow Management packet. The Management Message Data has the following format:
+The format of the Echo Message is:
 
 ``` mermaid
-%%| fig-cap: Echo Request Management Message Data Format
+%%| fig-cap: Discard Message Format
 packet
-+16: "Transaction ID"
-+16: "Additional Data Length"
-+32: "Additional Data (may be 0-length)"
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++32: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
-Where:
+Where
 
-Transaction ID
-:   Is the Transaction ID number that uniquely identifies the Echo Request.
+Version
+:   ZDP Version of the packet
+   This document describes version 1.
 
-Additional Data Length
-:   Is the number of Additional Data bytes in the message. It may be 0.
+ZHSAID
+:   ZDP Header Security Association ID
 
-Additional Data
-:   Is additional data that may be sent. The content is unspecified. If a request has additional data, then it must be returned in the response.
+Type
+:   Packet type. See [@sec:zdp-types].
 
-#### Echo Response
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
 
-The Echo Response is transmitted in the Management Message Data field of the Non-per-Flow Management packet. The Management Message Data has the following format:
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
 
-``` mermaid
-%%| fig-cap: Echo Response Management Message Data Format
-packet
-+16: "Transaction ID"
-+16: "Additional Data Length"
-+32: "Additional Data (may be 0-length)"
-```
+ID
+:   Used to uniquely identify each discard message.
 
-Where:
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
-Transaction ID
-:   Is the Transaction ID of the Echo Request that this message is a response to.
+MICV
+:   Message Integrity Check Value calculated over the entire ZDP management message.
 
-Additional Data Length
-:   Is the number of Additional Data bytes in the message. It may be 0.
+There is no explicit Echo Response. The Acknowledge (see [@sec:acknowledge]) serves as the "response".
 
-Additional Data
-:   Is additional data that was sent in the request.
+> [**ED NOTE**: Note that this message has changed significantly. Note
+also that there is no "additional data". It was removed because
+there is no way to return it in the Ack message.]
 
-Echo Request/Response messages may be used as keepalives or liveness detection ([@sec:liveness-detection-and-failure-processing]).
+Echo messages may be used as keepalives or liveness detection
+([@sec:liveness-detection-and-failure-processing]).
 
-Echo request and response use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
 ### Terminate Indication, Request and Response {#terminate-indication}
 
-There are three Management messages involved in terminating a Link or Docking Session:
+The Terminate messages are used to cleanly bring down a Link or Docking Session.
+There are three messages:
 
 -   Terminate Indication
 
@@ -2610,23 +2554,56 @@ There are three Management messages involved in terminating a Link or Docking Se
 
 -   Terminate Response
 
-The Indication and Request both inform the peer that the sender wishes to terminate the Link or Docking Session. The difference is that the Indication is imperative, informing the peer that the sender is unilaterally terminating the Link or Docking Session immediately and no response is expected. The Request informs the peer that the sender wishes to terminate but will wait until the peer returns a Terminate Response. (Of course, if the sender gets tired of waiting for a Response, it could send an Indication and terminate immediately).
+The Indication and Request both inform the peer that the sender wishes
+to terminate the Link or Docking Session. The difference is that the
+Indication is imperative, informing the peer that the sender is
+unilaterally terminating the Link or Docking Session immediately and
+no response is expected. The Request informs the peer that the sender
+wishes to terminate but will wait until the peer returns a Terminate
+Response. (Of course, if the sender gets tired of waiting for a
+Response, it could send an Indication and terminate immediately).
 
 The Indication and Request have the same format:
 
 ``` mermaid
 %%| fig-cap: Terminate Indication and Request Management Message Data formats
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +8: "Reason Code"
 +8: "Data Length"
 +32: "(optional) Additional Data"
++32: "Pad (variable length)"
++32: "MICV (Variable Length)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
-:   Is a sequence number uniquely identifying the indication or request.
+:   Is a sequence number used to match requests and responses..
 
 Reason Code
 :   A numeric reason code; one of the following:
@@ -2646,21 +2623,55 @@ Data Length
 Additional Data
 :   Optional additional data (such as a human-readable message more fully explaining the termination).
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire
+   ZDP message.
+
 The format of the Terminate Response Management Message Data is:
 
 ``` mermaid
 %%| fig-cap: ZDP Terminate Response Management Message Data
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +8: "Response Code"
 +8: "Data Length"
 +32: "(optional) Additional Data"
++32: "Pad (variable length)"
++32: "MICV (Variable Length)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
-:   Is a sequence number identifying the indication or request for which this is a response.
+:   Is a sequence number from the request which generates this response.
 
 Response Code
 :   Indicates whether the termination will be done or not and, if not, why. The following response codes are defined:
@@ -2678,15 +2689,21 @@ Data Length
 Additional Data
 :   Optional additional data (such as a human-readable message more fully explaining the termination response).
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire
+   ZDP management message.
+
 Terminate Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
-### Hello Request and Response
+### Hello Request and Response{#sec:hello-request-and-response}
 
 The Hello Message and response are sent once, when a Link or Docking Session comes up. Each Node sends a Hello Request to its peer and receives a Hello Response from its peer. These messages are used to verify the Link or Docking Session as a part of bringing it up.
 
 The ZDP type field indicates that these are Hello Request and Response Messages.
-
-The Hello Request and Response messages are Non-Per-Flow Management messages.
 
 Link Hello Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
@@ -2697,28 +2714,85 @@ The Hello Request Message Data is:
 ``` mermaid
 %%| fig-cap: Hello Request Message Data
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See [@sec:requestresponse-semantics] for more information.
+
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
-#### Hello Response Message
+MICV
+:   Message Integrity Check Value calculated over the entire ZDP management message.
+
+#### Hello Response Message{#sec:hello-response-message}
 
 The format of the response Management Message Data is:
 
 ``` mermaid
 %%| fig-cap: Hello Response Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +16: "Status"
 +64: "Hello Response TLVs (variable length)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See [@sec:requestresponse-semantics] for more information.
 
 Transaction ID
 :   Is a sequence number identifying the request for which this is a response.
@@ -2739,100 +2813,132 @@ If the status code is not success (0) then the Hello Response TLV field must con
 Hello Response TLVs
 :   A series of TLV (type/length/value) structures containing the hello data. The format of a TLV is:
 
-``` mermaid
-%%| fig-cap: TLV Format
-packet
-+8: "Type"
-+8: "Length"
-+16: "Value (variable length)"
-```
+    ``` mermaid
+    %%| fig-cap: TLV Format
+    packet
+    +8: "Type"
+    +8: "Length"
+    +16: "Value (variable length)"
+    ```
 
-The following TLVs are defined:
+    The following TLVs are defined:
 
-+------+---------------------------------------------------------------+
-| Type | Description                                                   |
-+======+===============================================================+
-| 0    | A NULL TLV. If the TYPE is 0 then the length and value fields |
-|      | are not present (this allows TYPE=0 TLVs to be used as        |
-|      | padding).                                                     |
-+------+---------------------------------------------------------------+
-| 1    | Policy ID                                                     |
-|      |                                                               |
-|      | Is the ID of the Policy under which the Link or Docking       |
-|      | Session was initiated, accepted, or rejected. If a Link or    |
-|      | Docking Session was rejected because there was no policy that |
-|      | explicitly accepted it (as opposed to one explicitly          |
-|      | rejecting it) then the Policy TLV is not present.             |
-|      |                                                               |
-|      | **Ed. Note**: The Policy is included in the messages to       |
-|      | assist auditing. An implementation SHOULD log that the Link   |
-|      | or Docking Session was allowed per the Policy ID in the Hello |
-|      | Response.                                                     |
-+------+---------------------------------------------------------------+
-| 2    | Version                                                       |
-|      |                                                               |
-|      | Is the version information of the peer. **The exact content   |
-|      | of this field is TBD.** It should indicate A) the             |
-|      | implementation version of the peer and B) which ZPR RFC       |
-|      | version the peer implements.                                  |
-|      |                                                               |
-|      | > **Ed. Note**: general field added per request from Mathias. |
-+------+---------------------------------------------------------------+
-| 2    | Endpoint Authentication ZPR Address (EAZA).\                  |
-|      | This is the ZPR Address that the Adapter MUST use as the      |
-|      | "source address" when communicating with the Auth Service to  |
-|      | perform ZPR Authentication.                                   |
-+------+---------------------------------------------------------------+
-| 3    | Auth Service ZPR Address (ASZA)\                              |
-|      | The ZPR Address of the Authentication Service. The Adapter    |
-|      | MUST send all ZPR Authentication messages to this ZPR         |
-|      | Address.                                                      |
-+------+---------------------------------------------------------------+
-| 4    | Stream ID Length (SIL)\                                       |
-|      | The length of Stream IDs that the sender of the Hello         |
-|      | Response wishes the receiver to use when sending ZDP packets  |
-|      | with Stream IDs (such as transit packets) to the response     |
-|      | sender.                                                       |
-|      |                                                               |
-|      | Valid Stream ID Lengths are 1, 2, 4, 8, and 16 bytes. All     |
-|      | ZDP nodes MUST be able to support all valid lengths.          |
-|      |                                                               |
-|      | This TLA is optional. The default is 2 bytes for stream IDs   |
-|      | going between a Dock and an Adapter and 8 bytes for stream    |
-|      | IDs going between a Dock and a Forwarder or between           |
-|      | Forwarders.                                                   |
-+------+---------------------------------------------------------------+
-| 5    | Reserved for future use. These values MUST NOT be used. If a  |
-| -252 | Hello Response contains any of these values it MUST be        |
-|      | dropped, the event reported, and the Docking Session or Link  |
-|      | terminated.                                                   |
-+------+---------------------------------------------------------------+
-| 253  | Experimental                                                  |
-|      |                                                               |
-|      | This is used to experiment with new TLVs. The first byte of   |
-|      | the Value contains the Type code point proposed for the TLV.  |
-|      | The type is in the range 3-252, inclusive.                    |
-+------+---------------------------------------------------------------+
-| 254  | Vendor Specific.                                              |
-|      |                                                               |
-|      | This TLV contains vendor specific (that is, non-standard)     |
-|      | TLVs. The first three bytes of the Value contain an IEEE802   |
-|      | OUI identifying the vendor.                                   |
-+------+---------------------------------------------------------------+
-| 255  | Locally defined.                                              |
-+------+---------------------------------------------------------------+
+    +------+---------------------------------------------------------------+
+    | Type | Description                                                   |
+    +======+===============================================================+
+    | 0    | A NULL TLV. If the TYPE is 0 then the length and value fields |
+    |      | are not present (this allows TYPE=0 TLVs to be used as        |
+    |      | padding).                                                     |
+    +------+---------------------------------------------------------------+
+    | 1    | Policy ID                                                     |
+    |      |                                                               |
+    |      | Is the ID of the Policy under which the Link or Docking       |
+    |      | Session was initiated, accepted, or rejected. If a Link or    |
+    |      | Docking Session was rejected because there was no policy that |
+    |      | explicitly accepted it (as opposed to one explicitly          |
+    |      | rejecting it) then the Policy TLV is not present.             |
+    |      |                                                               |
+    |      | **Ed. Note**: The Policy is included in the messages to       |
+    |      | assist auditing. An implementation SHOULD log that the Link   |
+    |      | or Docking Session was allowed per the Policy ID in the Hello |
+    |      | Response.                                                     |
+    +------+---------------------------------------------------------------+
+    | 2    | Version                                                       |
+    |      |                                                               |
+    |      | Is the version information of the peer. **The exact content   |
+    |      | of this field is TBD.** It should indicate A) the             |
+    |      | implementation version of the peer and B) which ZPR RFC       |
+    |      | version the peer implements.                                  |
+    |      |                                                               |
+    |      | > **Ed. Note**: general field added per request from Mathias. |
+    +------+---------------------------------------------------------------+
+    | 2    | Endpoint Authentication ZPR Address (EAZA).\                  |
+    |      | This is the ZPR Address that the Adapter MUST use as the      |
+    |      | "source address" when communicating with the Auth Service to  |
+    |      | perform ZPR Authentication.                                   |
+    +------+---------------------------------------------------------------+
+    | 3    | Auth Service ZPR Address (ASZA)\                              |
+    |      | The ZPR Address of the Authentication Service. The Adapter    |
+    |      | MUST send all ZPR Authentication messages to this ZPR         |
+    |      | Address.                                                      |
+    +------+---------------------------------------------------------------+
+    | 4    | Stream ID Length (SIL)\                                       |
+    |      | The length of Stream IDs that the sender of the Hello         |
+    |      | Response wishes the receiver to use when sending ZDP packets  |
+    |      | with Stream IDs (such as transit packets) to the response     |
+    |      | sender.                                                       |
+    |      |                                                               |
+    |      | Valid Stream ID Lengths are 1, 2, 4, 8, and 16 bytes. All     |
+    |      | ZDP nodes MUST be able to support all valid lengths.          |
+    |      |                                                               |
+    |      | This TLA is optional. The default is 2 bytes for stream IDs   |
+    |      | going between a Dock and an Adapter and 8 bytes for stream    |
+    |      | IDs going between a Dock and a Forwarder or between           |
+    |      | Forwarders.                                                   |
+    +------+---------------------------------------------------------------+
+    | 5    | Reliable Delivery Window Size\                                |
+    |      | The maximum receive window size of the sending node.          |
+    +------+---------------------------------------------------------------+
+    | 6    | Reserved for future use. These values MUST NOT be used. If a  |
+    | -252 | Hello Response contains any of these values it MUST be        |
+    |      | dropped, the event reported, and the Docking Session or Link  |
+    |      | terminated.                                                   |
+    +------+---------------------------------------------------------------+
+    | 253  | Experimental                                                  |
+    |      |                                                               |
+    |      | This is used to experiment with new TLVs. The first byte of   |
+    |      | the Value contains the Type code point proposed for the TLV.  |
+    |      | The type is in the range 3-252, inclusive.                    |
+    +------+---------------------------------------------------------------+
+    | 254  | Vendor Specific.                                              |
+    |      |                                                               |
+    |      | This TLV contains vendor specific (that is, non-standard)     |
+    |      | TLVs. The first three bytes of the Value contain an IEEE802   |
+    |      | OUI identifying the vendor.                                   |
+    +------+---------------------------------------------------------------+
+    | 255  | Locally defined.                                              |
+    +------+---------------------------------------------------------------+
 
-: Hello Response TLV types
+    : Hello Response TLV types
 
-The Hello Response MUST contain the POLICY ID TLV and VERSION TLV.
+    The Hello Response MUST contain the POLICY ID TLV and VERSION TLV.
 
-If any required TLV is missing then it is considered a handshake failure and the Docking Session or Link is not brought up.
+    If any required TLV is missing then it is considered a handshake failure and the Docking Session or Link is not brought up.
 
-TLVs may be in any order.
+    TLVs may be in any order.
 
-A TLV MUST NOT appear more than once in a Hello Response.
+    A TLV MUST NOT appear more than once in a Hello Response.
 
-### Stream ID Request
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire
+   ZDP management message.
+
+XXX XXX XXX XXX XXX XXX
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+DELETE TO HERE
+
+
+### Stream ID Request {#sec:stream-id-request}
 
 The Stream ID Request message requests a Stream ID to use in forwarding packets via a specified Visa/Stream be returned.
 
@@ -2845,17 +2951,47 @@ The format of the Stream ID Request Message is:
 ``` mermaid
 %%| fig-cap: Stream ID Request Message Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Offered Stream ID"
 +16: "Visa & Stream Name Length"
 +16: "First Packet Length"
 +16: "Visa & Stream Name (variable length)"
 +32: "First Packet (Optional)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
+
+Offered Stream  ID
+:   A stream ID that is being offered to the peer. The peer may accept or reject this stream ID.
 
 First Packet Length
 :   If this field is non-0 then the first packet of the stream is being carried in the request. If the first packet of the stream can fit in the request (which is likely if the request a TCP SYN or similar packet) then the upstream MAY include the packet in the request in order to reduce latency. The downstream would then send the packet on in the same manner if the herald operation succeeds. See Figure 12 for the packet structure.
@@ -2868,14 +3004,17 @@ Visa&Stream Name Length
 Visa&Stream Name
 :   Is the name of the Visa and Stream for which a Stream ID is being requested.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
-### Stream ID Response
+MICV
+:   Message Integrity Check Value calculated over the entire ZDP management message.
+
+### Stream ID Response{#sec:stream-id-response}
 
 The Stream ID Response is sent in response to receiving a Stream ID Request. It indicates whether the Stream has been provisioned or not. If not, it indicates why. If the Stream is in service, it returns the Stream ID to use by the upstream to send packets under the auspices of the Visa. This ID may be the offered ID or an ID that the sender of the Response selects.
 
 The ZDP Type field indicates that the message is a Stream ID Response.
-
-The Stream ID Response is a Per-Flow message.
 
 The ZDP Stream ID contains the Offered ID from the Stream ID Request.  The Management Message Payload contains, among other things the ID the upstream should actually use.
 
@@ -2884,6 +3023,12 @@ The format of the Stream ID Response is:
 ``` mermaid
 %%| fig-cap: Stream ID Response Message Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +8: "Info Len"
 +8: "Status Code"
@@ -2891,9 +3036,29 @@ packet
 +16: "Visa Name Length"
 +16: "Visa Name (variable length)"
 +32: "Status Info (Optional, variable length)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the Stream ID Request that this message is in response to.
@@ -2926,17 +3091,21 @@ Stream ID
 
     The length of this field is determined by the Hello Response TLV.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire ZDP management message.
+
 If an Upstream Forwarder receives a Stream ID Response from a Downstream Forwarder and the Offered Stream ID in the response contains a Stream ID for a Stream that does not exist (perhaps it was deleted due to some deferred error) then the Upstream MUST silently discard the Response.  Further, the Upstream MUST NOT send a ZDP message specifying the non-existent Stream to any other ZPR entity (This avoids packet storms).
 
 As soon as an Upstream Forwarder receives a successful Response it may send ZDP Transit Packets using the Stream ID specified in the response.
 
-### Stream ID Withdrawal Request and Response
+### Stream ID Withdrawal Request and Response{#sec:stream-id-withdrawal-request-and-response}
 
 The Stream ID Withdrawal request message is used when a Node must take a Stream out of service that it had formerly placed in service.
 
 The ZDP Type field indicates that the message is a Stream ID Withdrawal Request.
-
-The Stream ID Withdrawal Request and Response messages are Per-Flow messages.
 
 The ZDP Stream ID contains the Final Stream ID that was used when the Stream was initially heralded.
 
@@ -2945,16 +3114,46 @@ The format of the Request is:
 ``` mermaid
 %%| fig-cap: Stream ID Withdrawal Request Management Message Data Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Stream ID"
 +16: "Additional Data Length"
 +8: "Code"
 +24: "Additional Data (variable length)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
+
+Stream ID
+:   Is the stream ID to be withdrawn.
 
 Code
 :   Is a code indicating the reason that the Stream ID is being withdrawn.  Typically, this value would be entered in local logs or displayed on a console. Codes include:
@@ -2972,6 +3171,12 @@ Additional Data Length
 Additional Data
 :   Is additional data explaining the reason for withdrawing the Stream ID. Typically, this information would be entered in local logs or displayed on a console. The Node MUST NOT have any expectations as to the content of this field nor may it make any decisions based on the content of the field.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire ZDP management message.
+
 The Stream ID Withdrawal Response is used to indicate that the node received the request and has taken appropriate action.
 
 The ZDP Type field indicates that the message is a Stream ID Withdrawal Response.
@@ -2981,16 +3186,46 @@ The format of the Stream ID Withdrawal Response:
 ``` mermaid
 %%| fig-cap: Stream ID Withdrawal Response Message Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Stream ID"
 +16: "Additional Data Length"
 +8: "Code"
 +24: "Additional Data (variable length)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
+
+Stream ID
+:   Is the stream ID to be withdrawn.
 
 Code
 :   Indicates the status of the Stream ID Withdrawal:
@@ -3008,6 +3243,13 @@ Additional Data Length
 Additional Data
 :   Is additional data explaining the reason for retracting the Visa.  Typically, this information would be entered in local logs or displayed on a console. The Node MUST NOT have any expectations as to the content of this field nor may it make any decisions based on the content of the field.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
 If the request specifies a Stream which is no longer in service, a response indicating success will still be issued.
 
 Stream ID Withdrawal Request and Response follow the common Request/Response semantics ([@sec:requestresponse-semantics]).
@@ -3018,23 +3260,48 @@ The Register Endpoint Addresses Request allows the Adapter to inform the Endpoin
 
 > Ed Note: Rationale: When an Endpoint is a server (*e.g.*, a DNS server), it normally does not send packets (Endpoint Packets) until it receives a request (the request is also an Endpoint Packet). In order to route these requests to the Endpoint, the ZPR network must know to which Dock the Endpoint is connected (and therefore the Endpoint's IP address). This management message is the mechanism by which the network learns which Dock is serving which Endpoint IP Address.
 
-These messages are not Per-Flow Management messages.
-
 #### Request
 
 The Register and Deregister Requests have the same format.
+They are differentiated by the message type.
 
 The formats of the Register and Deregister Request messages is:
 
 ``` mermaid
 %%| fig-cap: Register and Deregister Endpoint Address Management Message Data
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +8: "IP Version"
 +32: "Endpoint IP address (4 or 16 bytes)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -3045,24 +3312,57 @@ IP Version
 Endpoint IP Address
 :   Is IP address of the Endpoint.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
 #### Response
 
 The response indicates the status of the request.
 
 The Register and Deregister Responses have the same format.
+They are differentiated by the message type.
 
 The format of the Register and Deregister Responses is:
 
 ``` mermaid
 %%| fig-cap: ENDPOINT Address Registration and Deregistration Response Packet Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +16: "Additional Info Length"
 +8: "Status Code"
 +24: "Additional Status Information (variable length)"
++32: "Pad (variable length)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3099,7 +3399,7 @@ Status Code
     ...         ...
     -----------------------------------------------------------------------
 
-    : Endpoint Addresses Binding Response Status Codes
+    : Register/De-register Endpoint Response Codes
 
     Note that there is not a failure code indicating that the registration failed because the network's policies do not allow the address specified in the request. This is because a compromised peer could exhaustively try various addresses to see which are and are not allowed by policy. Such a peer would then gain some knowledge of the policies in the network.
 
@@ -3108,8 +3408,14 @@ Status Code
 Additional Info Len
 :   Is the length of the Additional Information field. It may be 0.
 
-Additional Information
+Additional Status Information
 :   Is any additional status information. Typically, this might be a human-readable message designed to assist diagnosis of the issue.
+
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
 
 #### Processing
 
@@ -3180,38 +3486,47 @@ The response indicates the status of the request.
 
 The format of the Bind Request message (diagram includes ZDP header and MICV) is:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+----
-|Vers.| ZHSAID  |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Common
-|     Type      | Excess-Length |         Sequence Number       | ZDP
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ Header
-|                           Stream ID                           |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+----
-| Packet Count  |
-+-+-+-+-+-+-+-+-+
-Following repeated Packet Count times:
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|         Transaction ID.       |    Endpoint Packet Length     |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|                                                               |
-                  Initial Endpoint Packet
-|                                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+---
-|                              Pad                              | Common
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ ZDP
-|                              MAC                              | MICV
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+---
-\end{verbatim}
-\caption{Bind Endpoint Address Request Management Message}
-\end{figure}
 
-[IS METATADA NEEDED IN THIS REQUEST -- TO, FOR EXAMPLE, CARRY A DATA TAG (ALL TRAFFIC IN THIS CONNECTION IS "SECRET") ... STUFF THAT CAN NOT BE INFERRED FROM THE ADDRESS & PORT INFO. IT CAN ALSO BE USED TO CONTAIN STUFF TO LINK A QUIC UDP HEADER WITH (SAY) THE ORIGINAL HTTP REQUEST WHOSE ALTSVC CAUSED THE QUIC TO COME UP]{.mark}
+CONVERT THE FOLLOWING TO THE NEW FORM
 
-Where:
+``` mermaid
+%%| fig-cap: Bind Address Request Message Format
+packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++16: "Transaction ID"
++32: "Stream ID"
++8:  "Packet Count"
++8: "Packets..."
++8: "Pad(variable)"
++32: "MICV (variable)"
+```
+Where
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
+Transaction ID
+:   Is the Transaction ID of the request for which this message is a response.
 
 Streamid
 :   Is set to 0
@@ -3219,18 +3534,39 @@ Streamid
 Packet Count
 :   The number of Initial Endpoint Packets in the message. Must be at least 1. Each such packet is, in effect, a separate bind request.
 
-Transaction ID
-:   Is a sequence number uniquely identifying the request.
+Packets
+:   One or more endpoint packets that initiated the bind address process.
 
-Endpoint Packet Length
-:   The length of the Endpoint Packet field.
+These packets have the following format:
+
+``` mermaid
+%%| fig-cap: Bind Address Request Packet Format
+packet
+
++16: "Packet Length"
++16: "Initial Endpoint Packet..."
+```
+
+Where
+
+Packet Length
+:   Is the length of the Initial Endpoint Packet
 
 Initial Endpoint Packet
 :   The Endpoint Packet that started the process. It SHOULD be the entire packet. The sender may send less than the entire packet only if the entire packet will not fit in a single request message; in this case bytes from the end of the Endpoint Packet may be dropped.
 
     The Initial Endpoint Packet does not include any data link headers; it starts with the outer-most IP header of the Endpoint Packet and includes all IP headers, option fields and extension headers, transport headers, and application data.
 
-The Debind request does not have any Management Message Data; the Stream ID in the ZDP header specifies the Stream ID being de-binded.
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+[IS METATADA NEEDED IN THIS REQUEST -- TO, FOR EXAMPLE, CARRY A DATA TAG (ALL TRAFFIC IN THIS CONNECTION IS "SECRET") ... STUFF THAT CAN NOT BE INFERRED FROM THE ADDRESS & PORT INFO. IT CAN ALSO BE USED TO CONTAIN STUFF TO LINK A QUIC UDP HEADER WITH (SAY) THE ORIGINAL HTTP REQUEST WHOSE ALTSVC CAUSED THE QUIC TO COME UP]{.mark}
+
+
+The Stream ID in the Debind request identifies the stream being de-binded.
 
 Multiple responses may be carried in a single packet.
 
@@ -3239,7 +3575,14 @@ The format of the Bind and Unbind Responses is:
 ``` mermaid
 %%| fig-cap: Bind and Unbind Endpoint Address Response Management Message Data
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Stream ID"
 +8: "Status Code"
 +8: "Length"
 +32: "Optional Additional Status Information (variable length)"
@@ -3247,9 +3590,28 @@ packet
 +24: "Traffic Classification Specification (variable length)"
 +16: "A2A MICV Key Length"
 +16: "A2A MICV Keying Material (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
-
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3288,9 +3650,9 @@ Status Code
                 address).
     -----------------------------------------------------------------------
 
-    : Endpoint Addresses Binding Response Status Codes
+    : Bind ZPR Address Response Codes
 
-     that there is not a failure code indicating that the registration failed because the network's policies do not allow the binding specified in the request. This is because a compromised peer could exhaustively try various bindings to see which are and are not allowed by policy. Such a peer would then gain some knowledge of the policies in the network.
+     Note that there is not a failure code indicating that the registration failed because the network's policies do not allow the binding specified in the request. This is because a compromised peer could exhaustively try various bindings to see which are and are not allowed by policy. Such a peer would then gain some knowledge of the policies in the network.
 
 Info Len
 :   Is the length of the Status Information field. It may be 0.
@@ -3310,7 +3672,14 @@ A2A MICV Keying Material Length
 A2A MICV Keying Material
 :   This is the keying material for the A2A MICV. The Endpoint uses this to generate the A2A MICV. They keying material is encrypted using a Visa/Endpoint security association. If there are multiple Visa servers, each providing a portion of the keying material, then each portion is encrypted in an SA between the originating Visa Server and the Adapter.
 
-For a successful Bind Response, the ZDP header's Stream ID field specifies the stream ID to use. For a response indicating an error, the Stream ID is 0. For the Debind response, the ZDP header's Stream ID field confirms the Stream ID being removed from service.
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+For a successful Bind Response, the message's Stream ID field specifies the stream ID to use. For a response indicating an error, the Stream ID is 0. For the Debind response, the Stream ID field confirms the Stream ID being removed from service.
 
 The Bind Endpoint Address Request and Response messages follow the request/response semantics described in [@sec:requestresponse-semantics].
 
@@ -3389,7 +3758,7 @@ Source Port
 Destination Port
 :   The destination TCP or UDP port that packets must match to be accepted by the classifier. This field is present if and only if the "D" bit is present and the IP Protocol is either TCP or UDP.
 
-### Authentication Messages
+### Authentication Messages{#sec:mgmt-authentication-pkt}
 
 The Authentication messages carry opaque authentication data between a Dock and Adapter. Data can go in either direction. The Authentication Request transports opaque authentication data from Dock to Adapter, or vice versa. The Authentication Response indicates whether the request message was received and is correct, or not. The response DOES NOT indicate the results of the authentication operation.
 
@@ -3398,12 +3767,38 @@ The format of the Authentication Request message is:
 ``` mermaid
 %%| fig-cap: Authentication Request Management Message
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +16: "Data Length"
 +32: "Opaque Authentication Data (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -3414,18 +3809,53 @@ Data Length
 Opaque Authentication Data
 :   Is the authentication data. The length of the data is in the length field of the overall packet, see Figure 31.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+
 The format of the Authentication Response message is:
 
 ``` mermaid
 %%| fig-cap: Authentication Response Management Message Data
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
 +8: "Status Code"
 +8: "Info Length"
 +32: "Optional Additional Status Information (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery
+   of the message to the peer. See {#sec:requestresponse-semantics}
+   for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3439,7 +3869,7 @@ Status Code
 | 1    | OTHER -- some error other than those listed below occurred OR to avoid passing too much information to the peer. |
 | ...  | Failure |
 
-: Authentication Response Status Codes
+:  ZPR Authentication Response Codes
 
 Info Len
 :   Is the length of the Status Information field. It may be 0.
@@ -3447,24 +3877,60 @@ Info Len
 Status Information
 :   Is any additional status information. Typically, this might be a human-readable message designed to assist diagnosis of the issue.
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+
 The Authentication Request and Response messages use the Request Response semantics described in [@sec:requestresponse-semantics].
 
-### Report
+### Report{#sec:report}
 
 The Report packet carries a report message from an Adapter to a Dock to be entered into the ZPR reporting system. The Dock MAY perform filtering, rate limiting, and so on, on Report messages received from Adapters.
-
-This is a Non-Per-Stream message.
 
 The format of the packet is:
 
 ``` mermaid
 %%| fig-cap: ZIP Report Message Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++16: "Transaction ID"
 +16: "Report Data Length"
 +48: "Report Data (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
+Transaction ID
+:   Is the Transaction ID of the request for which this message is a response.
 
 Report Data Length
 :   Is the length of the Report Data, in bytes.
@@ -3472,8 +3938,13 @@ Report Data Length
 Report data
 :   Is the data to be reported.
 
-### Set Path MTU Request and Response
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+### Set Path MTU Request and Response{#sec:set-path-mtu-request-and-response}
 The Set Path MTU request and response messages are bidirectional. They are used
 
 1)  When a Dock needs to inform an Adapter of a PMTU to use. The Dock learns of the PMTU from the Visa.
@@ -3482,24 +3953,61 @@ The Set Path MTU request and response messages are bidirectional. They are used
 
 [Section @sec:ip-fragmentation-and-path-mtu-considerations] provides rationale and justification for these messages.  They are provided as a convenience in order to avoid a future path MTU violation.
 
-Set Path MTU is a Per-Flow management operation, the MTU is applicable to the flow identified in the header's Stream ID field.
+Set Path MTU operates on a flow-by flow basis.
+The MTU is applicable onlt to the flow identified in the Stream ID field.
 
 The format of the Path MTU Request message is:
 
 ``` mermaid
 %%| fig-cap: Path MTU Request Management Message Data
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Stream ID"
 +16: "New PMTU"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
 
+Stream ID
+:   Identifies the stream to which the new PMTU applies.
+
 New PMTU
-:   Is the new Path MTU to use for all packets sent via the Tether.
+:   Is the new Path MTU to use for all packets sent via the stream.
+
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
 
 The message is propagated back to the Ingress Adapter.
 
@@ -3508,17 +4016,47 @@ The Path MTU Response message is sent in response to a Path MTU Request.  It ind
 ``` mermaid
 %%| fig-cap: Path MTU Response Management Message
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Transaction ID"
++32: "Stream ID"
 +16: "New PMTU"
 +16: "Status Code"
 +16: "Additional Information Length"
 +32: "Additional Information (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
 
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
 Transaction ID
-:   Is the Transaction ID of the request for which this message is a response.
+:   Is a sequence number uniquely identifying the request.
+
+Stream ID
+:   Identifies the stream to which the new PMTU applies.
 
 New MTU
 :   The MTU that the upstream is using. The PMTU MAY be smaller than the PMTU in the request.
@@ -3532,7 +4070,7 @@ Status Code
 | 1    | OTHER -- some error other than those listed below occurred OR to avoid passing too much information to the peer. |
 | ...  | Other codes, TBD, they all indicate Failure |
 
-: Set Path MTU Request Response Codes
+: Set Path MTU Response Codes
 
 Additional Information Length
 :   Is the length of the additional information field. If no additional information is present then this field contains 0.
@@ -3540,13 +4078,23 @@ Additional Information Length
 Additional Information
 :   Any additional information the sender may wish to include in the message (for example, it may be a string to include in a logging message).
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
 The Set Path MTU Request and Response messages use the Request Response semantics described in [@sec:requestresponse-semantics].
+
+
+### Destination Unreachable{#sec:mgmt-destun-pkt}
 
 ### Destination Unreachable
 
 A Node or Adapter uses the Destination Unreachable message to inform the source Endpoint that a ZDP Transit packet could not be delivered. This message is analogous to ICMP Destination Unreachable messages in IP networks. If the Ingress Adapter receives a Destination Unreachable it MAY fabricate a proper ICMP Destination Unreachable to send to the Source Endpoint.
 
-This is a Per-Flow Message, the Stream ID field of the header identifies the flow from which a packet caused a Substrate Destination Unreachable message. That is, if a ZDP Transit packet is received on Stream *S*, then the Stream Id field in the Destination Unreachable is set to S.
+This messages applies to a single flow.
+The Stream ID field of the header identifies the flow from which a packet caused a Substrate Destination Unreachable message. That is, if a ZDP Transit packet is received on Stream *S*, then the Stream Id field in the Destination Unreachable is set to S.
 
 ZDP Destination Unreachables MUST NOT be sent by a Node as a result of receiving an ICMP destination unreachable from a substrate (see [@sec:liveness-detection-and-failure-processing]).  If an Adapter receives an ICMP destination unreachable (or similar indication) from the network connecting the Adapter and the Endpoint then the Adapter SHOULD generate an appropriate ZDP Destination Unreachable message to send to the source.
 
@@ -3555,14 +4103,44 @@ The format of the Management Message Data is:
 ``` mermaid
 %%| fig-cap: Destination Unreachable Management Message Data Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++32: "Stream ID"
 +32: "Code"
 +16: "Code Info Length"
 +16: "Code-specific Additional Information (variable length)"
 +16: "Original Packet Length"
 +16: "Portion of original Endpoint Packet (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+
+Stream ID
+:   Identifies the stream to which the destination unreachable applies.
 
 Code
 :   Is a code indicating the reason that the packet could not reach its destination:
@@ -3620,7 +4198,7 @@ Code
     |          | for some reason.                                          |
     +----------+-----------------------------------------------------------+
 
-    : ZIP Destination Unreachable Reason Codes
+    : Destination Unreachable Reason Codes
 
 Code Info Length
 :   The size of the "Code Specific Additional Information" field, in bytes.
@@ -3636,9 +4214,15 @@ Original Packet Length
 Portion of Original Endpoint Packet
 :   Is a portion of the packet. This should be as much of the original packet as is available to the Node generating the message. Typically, this is what is returned in the ICMP message reporting the condition).
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
 A Node SHOULD implement mechanisms to limit the rate at which these messages are generated in order to mitigate the effect of attacks designed to flood nodes with these messages.
 
-### Configuration Request & Response
+### Configuration Request & Response{#sec:configuration-request-response}
 
 **TBD:**
 
@@ -3664,7 +4248,7 @@ Grr.
 
 This can be big....
 
-### Initiate Authentication Request and Response
+### Initiate Authentication Request and Response{#sec:initiate-authentication-request-and-response}
 
 The Initiate Authentication message is used by the Dock to direct an Adapter to start the ZPR Authentication process on behalf of the Endpoint.
 
@@ -3673,15 +4257,41 @@ The format of the request message is:
 ``` mermaid
 %%| fig-cap: Initiate Authentication Request
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Request ID"
-+7: "Reserved"
++7: "0000000"
 +1: "F"
 +8: "Blob Type"
 +16: "Blob Length"
 +16: "Blob (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is a sequence number that uniquely identifies the Request.
@@ -3698,43 +4308,78 @@ Blob Type
 Blob Length
 :   Is the length of the Blob, in bytes.
 
-The following blob types and formats are defined:
+   The following blob types and formats are defined:
 
-Blob Type 0
-:   This is the "null" blob, to be used for testing and debugging. It should never be used in a production environment. This blob is empty; the Blob Length MUST be 0.
+   Blob Type 0
+   :   This is the "null" blob, to be used for testing and debugging. It should never be used in a production environment. This blob is empty; the Blob Length MUST be 0.
 
-Blob Type 1
-:   This is a nonce/timestamp/HMAC blob. Its format is:
+   Blob Type 1
+   :   This is a nonce/timestamp/HMAC blob. Its format is:
 
-``` mermaid
-%%| fig-cap: Type 1 Blob Format
-packet
-+64: "Nonce"
-+64: "Timestamp"
-+64: "HMAC"
-```
+   ``` mermaid
+   %%| fig-cap: Type 1 Blob Format
+   packet
+   +64: "Nonce"
+   +64: "Timestamp"
+   +64: "HMAC"
+   ```
 
-Where:
+   Where:
 
-Nonce
-:   Is a 64-bit nonce. **DETAILS TBD: WHEN UPDATED, HOW, ETC**
+   Nonce
+   :   Is a 64-bit nonce. **DETAILS TBD: WHEN UPDATED, HOW, ETC**
 
-Timestamp
-:   Is a 64-bit timestamp that is the number of seconds since 00:00:00 01/01/1970, UTC (conveniently, the value returned on unix/linux sytems by the time() system call).
+   Timestamp
+   :   Is a 64-bit timestamp that is the number of seconds since 00:00:00 01/01/1970, UTC (conveniently, the value returned on unix/linux sytems by the time() system call).
 
-HMAC
-:   A 64-byte HMAC calculated over **WHAT?**
+   HMAC
+   :   A 64-byte HMAC calculated over **WHAT?**
+
+
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
 
 The format of the response is:
 
 ``` mermaid
 %%| fig-cap: Initiate Authentication Response
 packet
-0-15: "Request ID"
-16-31: "Status Code"
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++16: "Request ID"
++16: "Status Code"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and
+   the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is the Request ID of the Request for which this is a response.
@@ -3749,7 +4394,13 @@ Status Code
 
 : Init Authentication Response Codes
 
-### Acquire ZPR Address Request and Response
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+### Acquire ZPR Address Request and Response{#sec:acquire-zpr-address-request-and-response}
 
 The Acquire ZPR Address Request is used by the Adapter to request a ZPR Address for the Endpoint. The response is used to acknowledge receipt of the request or indicate that the request failed for some reason.
 
@@ -3758,15 +4409,41 @@ The format of the Request is
 ``` mermaid
 %%| fig-cap: Acquire ZPR Address Request Management Message Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Request ID"
 +16: "Blob Length"
 +8: "IP Version"
 +8: "Address Count"
 +16: "Addresses (variable length)"
 +32: "Blob (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is a sequence number that uniquely identifies the Request.
@@ -3786,18 +4463,50 @@ Addresses
 Blob
 :   The Blob received when authentication finishes (step 15 in [@sec:zpr-authentication]).
 
-**ED. NOTE:** Should this be something like a SHA of the blob, plus some secret, proving that the requester has the blob, without actually revealing the blob? This can help protect against compromised nodes -- I think.
+   **ED. NOTE:** Should this be something like a SHA of the blob, plus some secret, proving that the requester has the blob, without actually revealing the blob? This can help protect against compromised nodes -- I think.
+
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
 
 The format of the response is:
 
 ``` mermaid
 %%| fig-cap: Acquire ZPR Address Response
 packet
-0-15: "Request ID"
-16-31: "Status Code"
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++16: "Request ID"
++16: "Status Code"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is the Request ID of the Request for which this is a response.
@@ -3812,7 +4521,13 @@ Status Code
 
 : Acquire ZPR Address Response Codes
 
-### Grant ZPR Address Request and Response
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+### Grant ZPR Address Request and Response{#sec:grant-zpr-address-request-and-response}
 
 The Grant ZPR Address Request and Response messages are used by the Dock to give ZPR Addresses to the Adapter/Endpoint. The Dock sends the address to the Adapter via the Grant ZPR Address Request. The Adapter uses the Grant ZPR Address Response acknowledge receipt of the request or indicate that the request failed for some reason.
 
@@ -3821,6 +4536,12 @@ The format of the Request is
 ``` mermaid
 %%| fig-cap: Grant ZPR Request Management Message Format
 packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
 +16: "Request ID"
 +16: "Blob Length"
 +8: "IP Version"
@@ -3829,9 +4550,29 @@ packet
 +32: "Blob (variable length)"
 +16: "DHCP Option Length"
 +16: "DHCP Options (variable length)"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is a sequence number that uniquely identifies the Request.
@@ -3859,16 +4600,50 @@ DHCP Option Length
 DHCP Options
 :   DHCP Options^[@rfc2131] to be configured in the Endpoint. The details for this are TBD. (**Ed. Note:** This is a place holder as we believe that the parameters assigned via DHCP will also want to be assigned via ZPR; this is the mechanism we think will do it).
 
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of
+   encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+
 The format of the response is:
 
 ``` mermaid
 %%| fig-cap: Grant ZPR Address Response
 packet
-0-15: "Request ID"
-16-31: "Status Code"
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++16: "Request ID"
++16: "Status Code"
++8: "Pad(variable)"
++32: "MICV (variable)"
 ```
 
 Where:
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is the Request ID of the Request for which this is a response.
@@ -3883,104 +4658,254 @@ Status Code
 
 : Grant ZPR Address Response Codes
 
-### Withdraw ZPR Addresses
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
+
+### Withdraw ZPR Addresses{#sec:withdraw-mgmt-pkt}
 
 **TODO: NEED TO ADD PROTOCOL MECHANISM FOR THE DOCK TO REMOVE AN ADDRESS. PROBABLY THE SAME PACKETS AS THE GRANT, BUT THE SEMANTIC IS "REMOVE THESE ADDRESSES"**
+
+### Acknowledge{#sec:acknowledge}
+
+The `Acknowledge` message is used to ackowledge the receipt of a
+specified management message.
+`Acknowledge` indicates that the message being acknowledged
+
+1 Was received,
+1 Has a correct version number,
+1 Was decrypted per the SA specified in the message header,
+1 Passed the message integrity check, and
+1 Contains a type value that is correct.
+
+`Acknowledge` **does not** indicate the success or failure of the
+operation requested by the message.
+
+``` mermaid
+%%| fig-cap: Acknowledgement Packet Structure
+packet
++3: "Version"
++5: "ZHSAID"
++8: "Type"
++8: "Excess-Length"
++8: "Unused"
++16: "Sequence Number"
++32: "Pad (variable length)"
++32: "MAC"
+```
+
+Where
+
+Version
+:   ZDP Version of the packet. This document describes version 1.
+
+ZHSAID
+:   ZDP Header Security Association ID
+
+Type
+:   Packet type. See [@sec:zdp-types].
+
+Excess-Length
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
+
+Unused
+:   Unused. MUST be set to 0 on transit. Ignore on receive.
+
+Sequence Number
+:   Is the Sequence Number of the management message being acknowledged.
+
+Pad (variable length)
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
+
+MICV
+:   Message Integrity Check Value calculated over the entire message.
 
 ### Experimental and Private Use
 
 These messages are for experimental and private use. If an implementation receives such a message that it does not understand it MUST silently discard the message. It MAY log the reception of the message.
 
-## Request/Response Semantics
+## Reliable Messaging Semantics{#sec:requestresponse-semantics}
 
-Many message exchanges require request/response semantics. One peer sends a request of some form and then waits for a response. If a response is not forthcoming, it may either retransmit the request or take some other reporting or error recovery action. Since these semantics are common for all protocols, they are documented once.
+Many management message exchanges require reliable delivery of their requests and associated responses.
 
-The two parties to the Request/Response are termed the requester and responder. The requester initiates some action; the responder generates the response.
+This section defines a common method that is used by all management messages that require reliable delivery.
 
-Transaction ID numbers are used to match responses to requests, verifying that a request was received and associating any information in the response with the request (*e.g.* a "status code" in a response to a requested operation).
+### Sequence Number{#sec:requestresponse-semantics-seqnum}
 
-The Transaction ID number space is finely divided. The numbers are per-link/docking session, per message type, and per stream ID (for per-stream messages).
+All messages contain a *sequence number*. The default size of the
+sequence number is 2 bytes. A different size may be set by the Hello
+Response Message ([@sec:hello-response-message]).
 
-Transaction IDs may wrap.
+Sequence numbers are assigned sequentially, starting at 0.
+Each direction on each Link and Tether has its own sequence number
+space.
+When the maximum sequence number value is reached, the number rolls
+over to 0 (*e.g.,* from `0xffff` to `0x0000` for two-byte sequence
+numbers.
 
-Transaction ID numbers must be used in sequence, with no gaps.
+When a managment request or response is sent, it is assigned the next
+sequence number for the Link or Tether. The next sequence number is
+then incremented.
 
-Sequence numbers start at 0.
+When a management request or response message is received, it is acknowldged.
+An `Acknowledge` message is sent (see [@sec:acknowledge]).
+The `Acknowledge` indicates only that the one message with the sequence number
+was received.
 
-The request/response semantics have a window of 1; that is, a request with Transaction ID number *n* MUST receive response from the peer, acting as a positive acknowledgement before a new request with sequence number *n+1* is sent.
+> [**ED NOTE**: I thought about making the `Acknowledge` message contain
+a list of sequence numbers but decided against it. It adds complexity.
+Since this is only to be used for management messages, it is not likely to
+provide any meaningful benefit.]{.mark}
 
-Requests and responses that are out of the window are counted and MUST be silently discarded.
+NOTE that a Link or Tether has a sequence number space for each
+direction. Thus, a management response will not necessarily have the
+same sequence number as the associated request.
 
-The requester handles the following events:
+### Window{#sec:requestresponse-semantics-window}
 
-- Request Transmission:
+Each side of a Link or Tether has a receive window size.  The window
+size is the number of messages that may be sent without receiving an
+acknowledgement.
+The window acts as a control flow/backpressure
+mechanism, not a congestion control mechanism.
 
-  1. The requester generates the request message.
+The maximum size of the receive window is fixed.  Each node informs
+its peer of the node's receive window via the Hello Message's Maximum
+Receive Window TLV.
 
-  2. The message is assigned the next Transaction ID number to send for the message-type, Stream ID, and Link or Docking Session.
+The transmitting node may transmit a message only if the peer's receive
+window is not 0. If the peer's recive window is 0, the transmitting
+node MUST NOT buffer the message. It must terminate the message
+transmission with a failure indicating that the peer's receive window
+is 0.
 
-  3. Enough information MUST be retained so that the original request, including the Transaction ID number assigned to the request, can be re-transmitted, should the need arise.
+Retransmission of messages does not change the window size.
 
-  4. The `next_Transaction_ID` number is incremented.
+Messages may be retransmitted if the window size is 0.
 
-  5. The request is transmitted.
+When the transmitter receives an Acknowledge message for a previously
+unacknowledged sequence number, it opens the window by 1.  Any
+additional Acknowledges of the same sequence number do not change
+the transmit window.
 
-  6. A Response Timer is set to 1 second (this is a default value, it may be overridden by Policy or by circumstances) and started.
+For every reliable message received, the receiver sends an
+Acknowledgement message back to the sender.  The Acknowledgement has
+the sequence number from the original message, regardlessof whetherthe
+receiver has seen this sequence number or not.  The receiver must
+process the message if and only if it has not previously received and
+processed the message with that sequence number.
 
-  7. A retransmit count is set to 3 (this is a default value, it may be overridden by policy or circumstances).
+The receiver should not process or respond to messages whose sequence
+number is greater than the lowest sequence number which it has not
+received by the window size or more.  Senders likewise should not send
+a message whose sequence number is greater than the lowest sequence
+number for which an Acknowledgement has been received by the window
+size or more.  Thus, at most a number of messages equal to the window
+size may be unacknowledged, and the amount of state which
+receivers and senders must maintain is proportional to the window
+size.
 
-- Response Timer Expires\
-  If the response timer expires it indicates that the response has not been received. Either the response is retransmitted, or the request is declared to have failed:
+(A receiver may also choose not to acknowledge any message received
+whose sequence number is lower than the highest sequence number seen
+by the window size or more.  This is a consequence of the fact that a
+correctly operating sender must not have sent a message with said
+highest sequence number if the said lower sequence number had not yet
+already been acknowledged.  So such a message should only be seen due
+to a race between it and said prior acknowledgement, and it thus need
+not be re-acknowledged.)
 
-  * If the retransmit count is 0 then the request is deemed to have failed and appropriate action taken. At the very least
+Note that message processing may occur out of order.  However, the
+sequence number of each message is available for inspection for any
+code which wishes to determine the relative order of messages.
 
-    1.  The failure is counted
+By the above mechanism, we guarantee (a) eventual and timely reliable
+delivery of all ZDP management messages, or that the link stalls
+entirely; (b) that no message is processed in duplicate; (c) that
+messages may be pipelined across a link with high RTT; and (d) that a
+slow link or receiver is not flooded by a fast (but cooperative)
+sender.
 
-    2.  The failure is reported
+### Timeout and Retransmission{#sec:requestresponse-semantics-timeout}
 
-    3.  Further action is taken as described for the specific request.
+After transmitting a message, the transmitter starts a timer.  If the
+timer goes off before the message is acknowledged, the message is
+retransmitted, with exactly the same sequence number and body.
 
-  - If the retransmission counter is not 0
+The initial timer value SHOULD be configured.  The default SHOULD be
+between 100ms and 1000ms.
 
-    1.  The Request message is retransmitted. The message contains the same Transaction ID number as the original request.
+Nodes MAY do a dynamic RTT measurement and update the timeout accordingly.
 
-    2.  The response timer is set to 1 second and restarted.
+Messages may be retransmitted even if the window size is 0.
 
-    3.  The retransmission counter is decremented.
+### Message Failure{#sec:requestresponse-semantics-failure}
 
-- Receive Response
+A message may be retansmitted no more than *N* times.
+If it has been retransmitted *N* times without an Acknowledgment, the transmit fails.
+The higher level is notified of the failure.
 
-  1. Responses contain the Transaction ID number of the request to which they are responding. If a response cannot be matched up with the Transaction ID number of the request that is awaiting a response, then an error has occurred and
+The Reliable Messageing functionality *takes no action* affecting the Link or Tether.
+It *only* informs the higher level functionality, which may take action.
 
-     a. The response is counted,
+The default maximum retransmission count is 3.
+THe maximum retransmission count may be overidded by the
+`Maximum Retransmission Count` Hello Response TLV.
 
-     b. A report detailing the response is generated,
+The maximum retransmission count MUST NOT be 0 and MUST NOT be \"infinite\".
+Implementations SHOULD limit the count to 10 or less.
 
-     c. Action as specified for the specific request/response pair is taken.
+### Transactions{#sec:requestresponse-semantics-transactions}
 
-  2.  The response's request Transaction ID number matches the sequence number of an outstanding request. The response timer is cancelled.
+Many management messages use a request/response semantic: One node
+sends a request message to its peer on a Link or Docking Session. The
+peer then attempts to perform the requested action. It reports the
+results to the requestor.
 
-  3.  The response is acted upon as described for the specific request/response.
+Request/Response messages contain a two-byte Transaction ID.
 
-### Responder
+The Transaction ID field is completely managed by the requestor.  That
+is, the requestor is responsible for allocating and deallocating
+Transaction IDs such that they do not conflict for outstanding
+transactions (request-response sequences).  The responder typically
+simply echos back any received Transaction ID in its response(s) to a
+request containing a Transaction ID.
 
-The responder acts only in response to receiving a request. The responder
+Certain messages may be said to "open a transaction", "reference a
+transaction", and "close a transaction".  For each type of transaction
+(*e.g.* Bind Agent Address), the requestor is expected to maintain a
+table mapping Transaction IDs to state relevant to that sequence
+(*e.g.*, the 5-tuple being bound).  The responder may also require
+such a table for certain transaction types, but often there is no
+state on the responder's side so this is unnecessary.  The mapping for
+a given Transaction ID exists exactly between open and close of that
+transaction.
 
-1)  Processes the request, including checking to make sure that the request's Transaction ID number is the expected Transaction ID number, If so, the expected Transaction ID number is incremented.
+Using the Bind Agent Address Request and Response as an example, the
+Request opens a transaction with the given ID (which is chosen freely
+by the requestor).  The Response to that Request echos back the
+Transaction ID; it both references the transaction (the sender will
+retrieve the relevant state upon receipt of the Response) and closes
+the transaction.  The Transaction ID can then be reused by the sender
+if it chooses.
 
-2)  Generates a response,
+Each Link maintains its own Transaction ID namespace.  Transaction IDs
+are not per-stream or per-message type.  This allows the possibility
+for cross-stream transactions, and message types which may apply to
+different transaction types.  There is in general no limit to the
+number of Transaction IDs in use at one time (beyond the limit imposed
+by the size of the field in the header, currently 2^16, since the
+requestor both allocates them and typically holds all state relevant
+to a transaction.
 
-3)  Puts the request's Transaction ID number in the response,
+When a requester sends a request of some form it then waits for a
+response. If a response is not forthcoming, it may either retransmit
+the request or take some other reporting or error recovery action.
 
-4)  Sends the response.
-
-The request/response semantics implicitly guarantee ordering because only a single request can be outstanding at a time.
-
-When a response to a request is received, the software initiating the request SHOULD be informed of the number of re-transmissions required and the latency between the request and response.
-
-### Performance Considerations
-
-ARQ is a simple algorithm and can be performance limited. We chose it because A) the operations which use it are low-frequency operations which are not very performance critical and B) its simplicity minimizes the possibility of implementation errors, pathological anomalies, or security vulnerabilities cropping up. If the performance becomes an issue, then this algorithm could be changed to something else, such as TCP's sliding window.
+The timeout MUST be at least as long as it takes for the reliable
+message funtionality to time out. This ensures that only one copy of
+the request is in the network at any one time.
 
 # Discussion of Options
 
@@ -4476,7 +5401,7 @@ ZPR ARP is used when
 
 ZPR ARP is used to determine the binding between a ZPR Node Address and that Node's Ethernet MAC Address.
 
-ZPR ARP messages are carried as Management Message Data in ZDP packets (see [@sec:non-per-flow-mgmt-pkt]).
+ZPR ARP messages are carried as Management Message Data in ZDP packets.
 
 ZPR ARP messages may be exchanged before security associations are established between the peers. If so, the ZPI identifies just the ZPR Configuration in use. The NULL security association is used (see [@sec:zpi-0]). The ZPR ARP messages are transmitted in the clear and are presumed to not be modified in transit. This does not represent a significant security hole since immediately following the ZPR ARP exchange, the peers will bring up the Link or Docking Session and perform the necessary cryptographic authentication with each other.
 
