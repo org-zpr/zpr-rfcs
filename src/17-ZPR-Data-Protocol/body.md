@@ -2196,123 +2196,58 @@ All ZDP packets contain a 1-byte type field.
 This field indicates what the packet is.
 The following Type values are assigned.
 
-------------------------------------------------------------------------
-Value dec./hex Type                           Flow-\      Ref.
-                                              Oriented?
--------------- ------------------------------ ----------- --------------
-0/0x00         Transit Packet                 Yes         [@sec:transit-packets]
+| Decimal | Hex   | Type                             | Flow? | Ref. |
+| ------- | ----- | -------------------------------- | ----- | ---- |
+| 0       | 00    | Transit Packet                   | Yes   | [@sec:transit-packets] |
+| 1       | 01    | Unused                           | Yes   | N/A  |
+| 2       | 02    | Destination Unreachable          | Yes   | [@sec:destination-unreachable] |
+| 3       | 03    | Visa Herald Request              | Yes   | [@sec:stream-id-request] |
+| 4       | 04    | Visa Herald Response             | Yes   | [@sec:stream-id-request] |
+| 5       | 05    | Unused                           | Yes   | N/A  |
+| 6       | 06    | Unused                           | Yes   | N/A  |
+| 7       | 07    | Visa Retract Request             | Yes   | TBD  |
+| 8       | 08    | Visa Retract Response            | Yes   | TBD  |
+| 9       | 09    | Stream ID Withdrawl Request      | Yes   | [@sec:stream-id-withdrawal-request-and-response] |
+| 10      | 0a    | Stream ID Withdrawl Response     | Yes   | [@sec:stream-id-withdrawal-request-and-response] |
+| 11      | 0b    | Bind Endpoint Address Request    | Yes   | [@sec:bind-unbind] |
+| 12      | 0c    | Bind Endpoint Address Response   | Yes   | [@sec:bind-unbind] |
+| 13      | 0d    | Unbind Endpoint Address Request  | Yes   | [@sec:bind-unbind] |
+| 14      | 0e    | Unbind Endpoint Address Response | Yes   | [@sec:bind-unbind] |
+| 15      | 0f    | Authentication Request           | Yes   | TBD  |
+| 16      | 10    | Authentication Response          | Yes   | TBD  |
+| 17      | 11    | Set Path MTU Request             | Yes   | [@sec:set-path-mtu-request-and-response] |
+| 17      | 11    | Set Path MTU Response            | Yes   | [@sec:set-path-mtu-request-and-response] |
+| 18-95   | 12-5f | Unallocated                      | Yes   | N/A  |
+| 96-126  | 60-7e | Reserved for private use and experimentation| Yes | N/A |
+| 127     | 7f    | Reserved, must not be used[^E]   | N/A   | N/A  |
+| 128     | 80    | ZPR ARP                          | No    | [@sec:zpr-arp-protocol] |
+| 129     | 81    | Key Management (*e.g.* IKEv2)    | No    | [@sec:zdp-key-management-packets] |
+| 130     | 82    | Discard                          | No    | [@sec:discard-message] |
+| 131     | 83    | Echo Request                     | No    | [@sec:echo-request-and-response] |
+| 132     | 84    | Echo Response                    | No    | [@sec:echo-request-and-response] |
+| 133     | 85    | Terminate Link or Docking Session Request | No | [@sec:terminate-indication] |
+| 134     | 86    | Terminate Link or Docking Session Response | No | [@sec:terminate-indication] |
+| 135     | 87    | Terminate Link or Docking Session Indication | No | [@sec:terminate-indication] |
+| 136     | 88    | Hello Request                    | No    | [@sec:hello-request-and-response] |
+| 137     | 89    | Hello Response                   | No    | [@sec:hello-request-and-response] |
+| 138     | 8a    | Configuration Request            | No    | [@sec:configuration-request-response] |
+| 139     | 8b    | Configuration Response           | No    | [@sec:configuration-request-response] |
+| 140     | 8c    | Acquire ZPR Address Request      | No    | [@sec:acquire-zpr-address-request-and-response] |
+| 141     | 8d    | Unused                           | No    | N/A  |
+| 142     | 8e    | Acquire ZPR Address Response     | No    | [@sec:acquire-zpr-address-request-and-response] |
+| 143     | 8f    | Unused                           | No    | N/A  |
+| 144     | 90    | Unused                           | No    | N/A  |
+| 145     | 91    | Report                           | No    | [@sec:report] |
+| 146     | 92    | Init Authentication Request      | No    | [@sec:initiate-authentication-request-and-response] |
+| 147     | 93    | Init Authentication Response     | No    | [@sec:initiate-authentication-request-and-response] |
+| 148     | 94    | Grant ZPR Address Request        | No    | [@sec:grant-zpr-address-request-and-response] |
+| 149     | 95    | Grant ZPR Address Response       | No    | [@sec:grant-zpr-address-request-and-response] |
+| 150     | 96    | Acknowledge                      | No    | [@sec:acknowledge] |
+| 151-224 | 97-df | Unallocated                      | No    | N/A  |
+| 224-254 | e0-fe | Experimental and Private Use     | No    | N/A  |
+| 255     | ff    | Reserved, must not be used[^E]   | N/A   | N/A  |
 
-1/0x01         Unused                         Yes
-
-2/0x02         Destination Unreachable        Yes         [@sec:destination-unreachable]
-
-3/0x03         Visa Herald Request            Yes         [@sec:stream-id-request]
-
-4/0x04         Visa Herald Response           Yes         [@sec:stream-id-request]
-
-5/0x05         Unused
-
-6/0x06         Unused
-
-7/0x07         Visa Retract Request           Yes
-
-8/0x08         Visa Retract Response          Yes
-
-9/0x09         Stream ID Withdrawl Request    Yes         [@sec:stream-id-withdrawal-request-and-response]
-
-10/0x0a        Stream ID Withdrawl Response   Yes         [@sec:stream-id-withdrawal-request-and-response]
-
-11/0x0b        Bind Endpoint Address Request  Yes         [@sec:bind-unbind]
-
-12/0x0c        Bind Endpoint Address Response Yes         [@sec:bind-unbind]
-
-13/0x0d        Unbind Endpoint Address        Yes         [@sec:bind-unbind]
-               Request
-
-14/0x0e        Unbind Endpoint Address        Yes         [@sec:bind-unbind]
-               Response
-
-15/0x0f        Authentication Request         Yes
-
-16/0x10        Authentication Response        Yes
-
-17/0x11        Set Path MTU Request           Yes         [@sec:set-path-mtu-request-and-response]
-
-17/0x11        Set Path MTU Response          Yes         [@sec:set-path-mtu-request-and-response]
-
-18/0x12...     Unallocated                    Yes
-95/0x5f
-
-96-126/\       Reserved for private use and   Yes
-0x60-0x7e      experimentation
-
-127/0x7f       Reserved, must not be used\    Yes
-               Messages receive with this
-               value MUST be silently
-               discarded.
-
-128/0x80       ZPR ARP                        No          [@sec:zpr-arp-protocol]
-
-129/0x81       Key Management (*e.g.* IKEv2)  No          [@sec:zdp-key-management-packets]
-
-130/0x82       Discard                        No          [@sec:discard-message]
-
-131/0x83       Echo Request                   No          [@sec:echo-request-and-response]
-
-132/0x84       Echo Response                  No          [@sec:echo-request-and-response]
-
-133/0x85       Terminate Link or Docking      No          [@sec:terminate-indication]
-               Session Request
-
-134/0x86       Terminate Link or Docking      No          [@sec:terminate-indication]
-               Session Response
-
-135/0x87       Terminate Link or Docking      No          [@sec:terminate-indication]
-               Session Indication
-
-136/0x88       Hello Request                  No          [@sec:hello-request-and-response]
-
-137/0x89       Hello Response                 No          [@sec:hello-request-and-response]
-
-138/0x8a       Configuration Request          No          [@sec:configuration-request-response]
-
-139/0x8b       Configuration Response         No          [@sec:configuration-request-response]
-
-140/0x8c       Acquire ZPR Address Request    No          [@sec:acquire-zpr-address-request-and-response]
-
-141/0x8d       unused                         No
-
-142/0x8e       Acquire ZPR Address Response   No          [@sec:acquire-zpr-address-request-and-response]
-
-143/0x8f       Unused                         No
-
-144/0x90       Unused
-
-145/0x91       Report                         No          [@sec:report]
-
-146/0x92       Init Authentication Request    No          [@sec:initiate-authentication-request-and-response]
-
-147/0x93       Init Authentication Response   No          [@sec:initiate-authentication-request-and-response]
-
-148/0x94       Grant ZPR Address Request      No          [@sec:grant-zpr-address-request-and-response]
-
-149/0x95       Grant ZPR Address Response     No          [@sec:grant-zpr-address-request-and-response]
-
-150/0x96       Acknowledge                    No          [@sec:acknowledge]
-
-151/0x97...    Unallocated                    No
-224/0xdf
-
-0xe0-0xfe\     Experimental and Private Use   No          [@sec:initiate-authentication-request-and-response]
-224-254
-
-255 (0xff)     Reserved. Must not be used.\   N/A         N/A
-               Messages received with this
-               value MUST be silently
-               discarded.
-------------------------------------------------------------------------
-
-Packets with unknown type field values MUST be silently discarded.
+[^E]: Messages received with this value MUST be silently discarded.
 
 The following sections describe the various ZDP messages.
 
@@ -2345,46 +2280,33 @@ packet
 Where:
 
 Version
-:   A three-bit field that indicates the ZDP Version of the packet.
-   This document describes version 1.
+:   A three-bit field that indicates the ZDP Version of the packet. This document describes version 1.
 
 ZHSAID
-:   ZDP Header Security Association ID - identifies the security
-   association used to process the ZDP header.
+:   ZDP Header Security Association ID - identifies the security association used to process the ZDP header.
 
 Type
 :   Packet type. Is 0 for a Transit Packet.
 
 Excess Length
-:   A 1-byte field that is the difference between the size of the ZDP packet and
-   the size of the Substrate Packet that contains the ZDP packet.
+:   A 1-byte field that is the difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
 
-   The field is an unsigned integer.
+    The field is an unsigned integer.
 
-   The motivation is that some Substrate Networks will have minimum
-   packet payload sizes that may be larger than a ZDP message. For
-   example, an Ethernet frame's data must be at least 46 bytes long)
-   which might be longer than the encapsulated ZDP packet.  This field
-   represents the difference between the two. If a management packet
-   (such as an echo message) is small, say 30 bytes, and is carried on
-   an Ethernet, this field would contain 16.
+    The motivation is that some Substrate Networks will have minimum packet payload sizes that may be larger than a ZDP message. For example, an Ethernet frame's data must be at least 46 bytes long) which might be longer than the encapsulated ZDP packet.  This field represents the difference between the two. If a management packet (such as an echo message) is small, say 30 bytes, and is carried on an Ethernet, this field would contain 16.
 
-    ZDP packets MUST be transmitted in the smallest substrate packet
-    possible, consistent with the Substrates minimum packet size (if
-    any).
+    ZDP packets MUST be transmitted in the smallest substrate packet possible, consistent with the Substrates minimum packet size (if any).
 
 Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Stream ID
-:   Identifies the stream carrying the compressed endpoint packet.
-   It selects a PEP, which directs the handling of the packet.
+:   Identifies the stream carrying the compressed endpoint packet. It selects a PEP, which directs the handling of the packet.
 
-   The size of the Stream ID is declared in the Hello Response.
+    The size of the Stream ID is declared in the Hello Response.
 
 Pad
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
     When generating a packet, the pad MUST be set to all 0's to avoid
     leaking internal data. On reception the pad MUST be checked and,
@@ -2398,18 +2320,11 @@ Header MICV
     algorithm selected by the security association.
 
 A2A Security Association ID
-:   The Adapter-to-Adapter Security Association ID. This field
-   selects the A2A SA. Since each Visa (and therefore each stream)
-   has its own A2A SAs, the A2A SAID selects an SA within the
-   context of the Visa by which the packet travelled.
+:   The Adapter-to-Adapter Security Association ID. This field selects the A2A SA. Since each Visa (and therefore each stream) has its own A2A SAs, the A2A SAID selects an SA within the context of the Visa by which the packet travelled.
 
-    The size of the A2A SAID field is determined by the MICV
-    algorithm used.
+    The size of the A2A SAID field is determined by the MICV algorithm used.
 
-    This field is 1 byte long. This is adequate since A) We
-    expect that there will be a relatively small number of
-    A2A Security Associations in effect at any one time, and
-    B) A2A SAID values can be reused.
+    This field is 1 byte long. This is adequate since A) We expect that there will be a relatively small number of A2A Security Associations in effect at any one time, and B) A2A SAID values can be reused.
 
     See [@sec:zdp-security-associations]
 
@@ -2417,15 +2332,9 @@ Compressed Endpoint Packet
 :   This field contains the Endpoint Packet in its entirety.
 
 A2A MICV
-:   Message integrity check value calculated over the entire
-   Uncompressed Endpoint Packet. This MAC is calculated prior to
-   compression (see [@sec:endpoint-packet-compression-and-expansion])
-   by the Ingress Adapter and after decompression (see
-   [@sec:endpoint-packet-compression-and-expansion]) by the Egress
-   Adapter.
+:   Message integrity check value calculated over the entire Uncompressed Endpoint Packet. This MAC is calculated prior to compression (see [@sec:endpoint-packet-compression-and-expansion]) by the Ingress Adapter and after decompression (see [@sec:endpoint-packet-compression-and-expansion]) by the Egress Adapter.
 
-   The size of the A2A MAC field is determined by the MAC algorithm
-   selected by the security association.
+    The size of the A2A MAC field is determined by the MAC algorithm selected by the security association.
 
 
 ### Discard Message
@@ -2484,7 +2393,7 @@ The ID is provided only to assist in determining packet loss and in reporting. T
 
 Discard messages are provided as an analogy to RFC863, "The Discard Protocol" for TCP and UDP.
 
-The Discard message *does not use* the reliable transmission mechanism described in {#sec:requestresponse-semantics}.
+The Discard message *does not use* the reliable transmission mechanism described in {@sec:requestresponse-semantics}.
 
 The Discard Message *does not* use the transaction semantics.
 
@@ -2509,8 +2418,7 @@ packet
 Where
 
 Version
-:   ZDP Version of the packet
-   This document describes version 1.
+:   ZDP Version of the packet. This document describes version 1.
 
 ZHSAID
 :   ZDP Header Security Association ID
@@ -2600,7 +2508,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number used to match requests and responses..
@@ -2608,8 +2516,8 @@ Transaction ID
 Reason Code
 :   A numeric reason code; one of the following:
 
-| Code | Name                | Meaning |
-| ---- | ------------------- | ------- |
+| Code | Name                | Meaning                               |
+| ---- | ------------------- | ------------------------------------- |
 | TBD  | OTHER               | This value is used when any of the following is inappropriate. |
 | TBD  | BAD_SEQUENCE_NUMBER | A sequence number in a response to an earlier request is not a sequence number to a valid request. |
 | TBD  | REQUEST_TIME_OUT    | Some operation has timed out, resulting in termination of the connection. |
@@ -2624,12 +2532,10 @@ Additional Data
 :   Optional additional data (such as a human-readable message more fully explaining the termination).
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
-:   Message Integrity Check Value calculated over the entire
-   ZDP message.
+:   Message Integrity Check Value calculated over the entire ZDP message.
 
 The format of the Terminate Response Management Message Data is:
 
@@ -2668,7 +2574,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number from the request which generates this response.
@@ -2676,8 +2582,8 @@ Transaction ID
 Response Code
 :   Indicates whether the termination will be done or not and, if not, why. The following response codes are defined:
 
-| Code | Meaning |
-| ---- | ------- |
+| Code | Meaning                                             |
+| ---- | --------------------------------------------------- |
 | 0    | Success -- Link or Dock Session will be terminated. |
 | 1    | OTHER. This value is used when any of the following is inappropriate or to avoid passing too much information to a peer. |
 
@@ -2690,12 +2596,10 @@ Additional Data
 :   Optional additional data (such as a human-readable message more fully explaining the termination response).
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
-:   Message Integrity Check Value calculated over the entire
-   ZDP management message.
+:   Message Integrity Check Value calculated over the entire ZDP management message.
 
 Terminate Request and Response messages use the Request/Response semantics specified in [@sec:requestresponse-semantics].
 
@@ -2800,11 +2704,11 @@ Transaction ID
 Status Code
 :   Indicates the status of the request.
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | Success, the hello was accepted by the peer.
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 0    | Success, the hello was accepted by the peer.      |
 | 1    | OTHER. This value is used when there is an error other than listed below or to avoid passing too much information to the peer. |
-| TBD  | TBD |
+| TBD  | TBD                                               |
 
 : Hello Response Status Codes
 
@@ -2910,12 +2814,10 @@ Hello Response TLVs
     A TLV MUST NOT appear more than once in a Hello Response.
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
-:   Message Integrity Check Value calculated over the entire
-   ZDP management message.
+:   Message Integrity Check Value calculated over the entire ZDP management message.
 
 XXX XXX XXX XXX XXX XXX
 DELETE TO HERE
@@ -2985,7 +2887,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -3058,7 +2960,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the Stream ID Request that this message is in response to.
@@ -3066,9 +2968,9 @@ Transaction ID
 Status Code
 :   Indicates the status of installing the Visa:
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | Stream provisioned successfully. |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 0    | Stream provisioned successfully.                  |
 | 1    | Other -- none of the following or to avoid passing too much information to the peer. |
 | TBD  | No Such Name - No Visa/Stream with the given name exists. |
 
@@ -3147,7 +3049,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -3158,9 +3060,9 @@ Stream ID
 Code
 :   Is a code indicating the reason that the Stream ID is being withdrawn.  Typically, this value would be entered in local logs or displayed on a console. Codes include:
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | No reason given. |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 0    | No reason given.                                  |
 | TBD  | Egress Dock Session Terminated. Forwarders receiving this code MUST NOT attempt to find alternate routes to the egress. |
 
 : Stream ID Withdrawal Reason Codes
@@ -3219,7 +3121,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3230,9 +3132,9 @@ Stream ID
 Code
 :   Indicates the status of the Stream ID Withdrawal:
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | Stream ID withdrawn successfully |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 0    | Stream ID withdrawn successfully                  |
 | 1    | OTHER -- error other than those listed below occurred OR to avoid passing too much information to the peer. |
 
 : Stream ID Withdrawal Response Codes
@@ -3244,8 +3146,7 @@ Additional Data
 :   Is additional data explaining the reason for retracting the Visa.  Typically, this information would be entered in local logs or displayed on a console. The Node MUST NOT have any expectations as to the content of this field nor may it make any decisions based on the content of the field.
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
 :   Message Integrity Check Value calculated over the entire message.
@@ -3301,7 +3202,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -3362,7 +3263,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3370,34 +3271,15 @@ Transaction ID
 Status Code
 :   Is a code indicating the status of the Register or Deregister operation. Defined status codes are:
 
-    -----------------------------------------------------------------------
-    Value       Meaning
-    ----------- -----------------------------------------------------------
-    0           Success -the registration has been accepted and installed
-                in the network OR the registration is not explicitly
-                allowed by a ZPR policy. In the latter case, the peer MUST
-                A) Report the policy violation and B) install the necessary
-                state to receive packets with the address and silently
-                discard them.
-
-    1           OTHER -- some error other than those listed below OR to
-                avoid passing too much information to the peer.
-
-                Unsupported address family: Address family is 4 or 6, but
-                that version of IP is not supported
-
-                Length Error (*e.g*., the IP version is 4 but the two
-                addresses are not a total of 8 bytes long).
-
-                Invalid address family (value is neither 4 nor 6).
-
-                No resources
-
-                Addresses invalid for some reason OTHER THAN policy
-                specifications (*e.g*., specifying an IP broadcast address)
-
-    ...         ...
-    -----------------------------------------------------------------------
+    | Code | Meaning                                           |
+    | ---- | ------------------------------------------------- |
+    | 0    | Success -- the registration has been accepted and installed in the network OR the registration is not explicitly allowed by a ZPR policy. In the latter case, the peer MUST A) Report the policy violation and B) install the necessary state to receive packets with the address and silently discard them. |
+    | 1    | OTHER -- some error other than those listed below OR to avoid passing too much information to the peer. |
+    | TBD  | Unsupported address family: Address family is 4 or 6, but that version of IP is not supported |
+    | TBD  | Length Error (*e.g*., the IP version is 4 but the two addresses are not a total of 8 bytes long). |
+    | TBD  | Invalid address family (value is neither 4 nor 6). |
+    | TBD  | No resources |
+    | TBD  | Addresses invalid for some reason OTHER THAN policy specifications (*e.g*., specifying an IP broadcast address) |
 
     : Register/De-register Endpoint Response Codes
 
@@ -3523,7 +3405,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3611,7 +3493,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3619,36 +3501,16 @@ Transaction ID
 Status Code
 :   Is a code indicating the status of the Bind or Unbind operation.  Defined status codes are:
 
-    -----------------------------------------------------------------------
-    Value       Meaning
-    ----------- -----------------------------------------------------------
-    0           Success - the binding has been accepted and installed in
-                the network OR the binding is not explicitly allowed by a
-                ZPR policy. In the latter case, the peer MUST A) Report the
-                policy violation and B) install the necessary state to
-                receive packets with the Stream ID and silently discard
-                them.
-
-    1           OTHER -- some error other than those listed below OR to
-                avoid passing too much information to the peer.
-
-    2           Not Authenticated\
-                The Adapter/Endpoint has not performed ZPR Authentication.
-
-                Unsupported address family: Address family is 4 or 6, but
-                that version of IP is not supported.
-
-                Length Error (*e.g*., the IP version is 4 but the two
-                addresses are not a total of 8 bytes long).
-
-                Invalid address family (value is neither 4 nor 6).
-
-                No resources.
-
-                Addresses invalid for some reason OTHER THAN policy
-                specifications (*e.g*., specifying an IP broadcast
-                address).
-    -----------------------------------------------------------------------
+    | Code | Meaning                                           |
+    | ---- | ------------------------------------------------- |
+    | 0    | Success - the binding has been accepted and installed in the network OR the binding is not explicitly allowed by a ZPR policy. In the latter case, the peer MUST A) Report the policy violation and B) install the necessary state to receive packets with the Stream ID and silently discard them. |
+    | 1    | OTHER -- some error other than those listed below OR to avoid passing too much information to the peer. |
+    | 2    | Not Authenticated - The Adapter/Endpoint has not performed ZPR Authentication. |
+    | TBD  | Unsupported address family: Address family is 4 or 6, but that version of IP is not supported. |
+    | TBD  | Length Error (*e.g*., the IP version is 4 but the two addresses are not a total of 8 bytes long). |
+    | TBD  | Invalid address family (value is neither 4 nor 6). |
+    | TBD  | No resources. |
+    | TBD  | Addresses invalid for some reason OTHER THAN policy specifications (*e.g*., specifying an IP broadcast address). |
 
     : Bind ZPR Address Response Codes
 
@@ -3673,8 +3535,7 @@ A2A MICV Keying Material
 :   This is the keying material for the A2A MICV. The Endpoint uses this to generate the A2A MICV. They keying material is encrypted using a Visa/Endpoint security association. If there are multiple Visa servers, each providing a portion of the keying material, then each portion is encrypted in an SA between the originating Visa Server and the Adapter.
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
 :   Message Integrity Check Value calculated over the entire message.
@@ -3798,7 +3659,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -3853,9 +3714,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery
-   of the message to the peer. See {#sec:requestresponse-semantics}
-   for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3863,11 +3722,11 @@ Transaction ID
 Status Code
 :   Is a code indicating the status of the Request message. Defined status codes are:
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | Success |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 0    | Success                                           |
 | 1    | OTHER -- some error other than those listed below occurred OR to avoid passing too much information to the peer. |
-| ...  | Failure |
+| ...  | Failure                                           |
 
 :  ZPR Authentication Response Codes
 
@@ -3878,8 +3737,7 @@ Status Information
 :   Is any additional status information. Typically, this might be a human-readable message designed to assist diagnosis of the issue.
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
 :   Message Integrity Check Value calculated over the entire message.
@@ -3927,7 +3785,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is the Transaction ID of the request for which this message is a response.
@@ -3992,7 +3850,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -4050,7 +3908,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Transaction ID
 :   Is a sequence number uniquely identifying the request.
@@ -4064,11 +3922,11 @@ New MTU
 Status Code
 :   Indicates the status of the Request. Code values are:
 
-| Code | Meaning |
-| ---- | ------- |
-| 0    | Success |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
+| 0    | Success                                           |
 | 1    | OTHER -- some error other than those listed below occurred OR to avoid passing too much information to the peer. |
-| ...  | Other codes, TBD, they all indicate Failure |
+| ...  | Other codes, TBD, they all indicate Failure       |
 
 : Set Path MTU Response Codes
 
@@ -4137,7 +3995,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Stream ID
 :   Identifies the stream to which the destination unreachable applies.
@@ -4145,58 +4003,58 @@ Stream ID
 Code
 :   Is a code indicating the reason that the packet could not reach its destination:
 
-    +----------+-----------------------------------------------------------+
-    | Value    | Description                                               |
-    +==========+===========================================================+
-    | 0        | Unspecified. There is no additional Code Specific         |
-    |          | Information.                                              |
-    +----------+-----------------------------------------------------------+
-    | TBD      | Terminated or Unknown Tether\                             |
-    |          | A Dock or Adapter received a packet from the peer with a  |
-    |          | Tether ID that is unknown or known to be closed. In this  |
-    |          | case the Code Specific Additional Information field       |
-    |          | contains the Tether ID.                                   |
-    +----------+-----------------------------------------------------------+
-    | TBD      | Unknown Stream ID.                                        |
-    |          |                                                           |
-    |          | The Code Specific Additional Information Field contains   |
-    |          | the unknown Stream ID.                                    |
-    |          |                                                           |
-    |          | If the Visa ID is not one that the Node receiving this    |
-    |          | message has in service for sending Endpoint Packets to    |
-    |          | the peer, the node MUST silently discard the message. It  |
-    |          | SHOULD report this to the admin service as a potential    |
-    |          | attack.                                                   |
-    |          |                                                           |
-    |          | If a Forwarder, Dock, or Adapter receives this message    |
-    |          | from downstream it SHOULD remove any entries in its       |
-    |          | lookup and forwarding tables that could result in sending |
-    |          | messages downstream with the specified ID.                |
-    |          |                                                           |
-    |          | **Ed. Note**: I could have had the downstream send a      |
-    |          | "delete visa" message to the upstream. I decided to send  |
-    |          | an "unknown id" instead since it separates the detection  |
-    |          | of the unknown ID (by the downstream) and the decision of |
-    |          | what to do about it (by the upstream). For example, in    |
-    |          | this model the upstream might decide to reherald the visa |
-    |          | rather than do the delete.                                |
-    +----------+-----------------------------------------------------------+
-    | TBD      | Path MTU Exceeded                                         |
-    |          |                                                           |
-    |          | This message is generated by a Forwarder Egress Adapter,  |
-    |          | or Egress Dock in the event that a ZDP Transit packet is  |
-    |          | too large for the next hop's Path MTU[^11]. It is sent    |
-    |          | upstream toward the Ingress Adapter. The Ingress Adapter  |
-    |          | then performs the correct ICMP operation (*e.g*., sending |
-    |          | a path MTU Exceeded ICMP message to the Endpoint).        |
-    |          |                                                           |
-    |          | The Code Specific Additional Information Field contains   |
-    |          | the suggested Path MTU.                                   |
-    +----------+-----------------------------------------------------------+
-    | TBD      | Destination Endpoint Unreachable\                         |
-    |          | The egress adapter can not reach the destination Endpoint |
-    |          | for some reason.                                          |
-    +----------+-----------------------------------------------------------+
+    +------+-----------------------------------------------------------+
+    | Code | Description                                               |
+    +======+===========================================================+
+    | 0    | Unspecified. There is no additional Code Specific         |
+    |      | Information.                                              |
+    +------+-----------------------------------------------------------+
+    | TBD  | Terminated or Unknown Tether\                             |
+    |      | A Dock or Adapter received a packet from the peer with a  |
+    |      | Tether ID that is unknown or known to be closed. In this  |
+    |      | case the Code Specific Additional Information field       |
+    |      | contains the Tether ID.                                   |
+    +------+-----------------------------------------------------------+
+    | TBD  | Unknown Stream ID.                                        |
+    |      |                                                           |
+    |      | The Code Specific Additional Information Field contains   |
+    |      | the unknown Stream ID.                                    |
+    |      |                                                           |
+    |      | If the Visa ID is not one that the Node receiving this    |
+    |      | message has in service for sending Endpoint Packets to    |
+    |      | the peer, the node MUST silently discard the message. It  |
+    |      | SHOULD report this to the admin service as a potential    |
+    |      | attack.                                                   |
+    |      |                                                           |
+    |      | If a Forwarder, Dock, or Adapter receives this message    |
+    |      | from downstream it SHOULD remove any entries in its       |
+    |      | lookup and forwarding tables that could result in sending |
+    |      | messages downstream with the specified ID.                |
+    |      |                                                           |
+    |      | **Ed. Note**: I could have had the downstream send a      |
+    |      | "delete visa" message to the upstream. I decided to send  |
+    |      | an "unknown id" instead since it separates the detection  |
+    |      | of the unknown ID (by the downstream) and the decision of |
+    |      | what to do about it (by the upstream). For example, in    |
+    |      | this model the upstream might decide to reherald the visa |
+    |      | rather than do the delete.                                |
+    +------+-----------------------------------------------------------+
+    | TBD  | Path MTU Exceeded                                         |
+    |      |                                                           |
+    |      | This message is generated by a Forwarder Egress Adapter,  |
+    |      | or Egress Dock in the event that a ZDP Transit packet is  |
+    |      | too large for the next hop's Path MTU[^11]. It is sent    |
+    |      | upstream toward the Ingress Adapter. The Ingress Adapter  |
+    |      | then performs the correct ICMP operation (*e.g*., sending |
+    |      | a path MTU Exceeded ICMP message to the Endpoint).        |
+    |      |                                                           |
+    |      | The Code Specific Additional Information Field contains   |
+    |      | the suggested Path MTU.                                   |
+    +------+-----------------------------------------------------------+
+    | TBD  | Destination Endpoint Unreachable\                         |
+    |      | The egress adapter can not reach the destination Endpoint |
+    |      | for some reason.                                          |
+    +------+-----------------------------------------------------------+
 
     : Destination Unreachable Reason Codes
 
@@ -4291,7 +4149,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is a sequence number that uniquely identifies the Request.
@@ -4308,37 +4166,35 @@ Blob Type
 Blob Length
 :   Is the length of the Blob, in bytes.
 
-   The following blob types and formats are defined:
+The following blob types and formats are defined:
 
-   Blob Type 0
-   :   This is the "null" blob, to be used for testing and debugging. It should never be used in a production environment. This blob is empty; the Blob Length MUST be 0.
+Blob Type 0
+:   This is the "null" blob, to be used for testing and debugging. It should never be used in a production environment. This blob is empty; the Blob Length MUST be 0.
 
-   Blob Type 1
-   :   This is a nonce/timestamp/HMAC blob. Its format is:
+Blob Type 1
+:   This is a nonce/timestamp/HMAC blob. Its format is:
 
-   ``` mermaid
-   %%| fig-cap: Type 1 Blob Format
-   packet
-   +64: "Nonce"
-   +64: "Timestamp"
-   +64: "HMAC"
-   ```
+``` mermaid
+%%| fig-cap: Type 1 Blob Format
+packet
++64: "Nonce"
++64: "Timestamp"
++64: "HMAC"
+```
 
-   Where:
+Where:
 
-   Nonce
-   :   Is a 64-bit nonce. **DETAILS TBD: WHEN UPDATED, HOW, ETC**
+Nonce
+:   Is a 64-bit nonce. **DETAILS TBD: WHEN UPDATED, HOW, ETC**
 
-   Timestamp
-   :   Is a 64-bit timestamp that is the number of seconds since 00:00:00 01/01/1970, UTC (conveniently, the value returned on unix/linux sytems by the time() system call).
+Timestamp
+:   Is a 64-bit timestamp that is the number of seconds since 00:00:00 01/01/1970, UTC (conveniently, the value returned on unix/linux sytems by the time() system call).
 
-   HMAC
-   :   A 64-byte HMAC calculated over **WHAT?**
-
+HMAC
+:   A 64-byte HMAC calculated over **WHAT?**
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
 :   Message Integrity Check Value calculated over the entire message.
@@ -4372,14 +4228,13 @@ Type
 :   Packet type. See [@sec:zdp-types].
 
 Excess-Length
-:   The difference between the size of the ZDP packet and
-   the size of the Substrate Packet that contains the ZDP packet.
+:   The difference between the size of the ZDP packet and the size of the Substrate Packet that contains the ZDP packet.
 
 Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is the Request ID of the Request for which this is a response.
@@ -4387,10 +4242,10 @@ Request ID
 Status Code
 :   Indicates the status of the request:
 
-| Code | Meaning |
-| ---- | ------- |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
 | 0    | No Error: The Initiate Authentication Request has been received, and the authentication procedure will begin. **NOTE WELL**: this does not mean that authentication has completed successfully. |
-| TBD  | Errors ... **TBD** |
+| TBD  | Errors ... **TBD**                                |
 
 : Init Authentication Response Codes
 
@@ -4443,7 +4298,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is a sequence number that uniquely identifies the Request.
@@ -4463,7 +4318,7 @@ Addresses
 Blob
 :   The Blob received when authentication finishes (step 15 in [@sec:zpr-authentication]).
 
-   **ED. NOTE:** Should this be something like a SHA of the blob, plus some secret, proving that the requester has the blob, without actually revealing the blob? This can help protect against compromised nodes -- I think.
+    **ED. NOTE:** Should this be something like a SHA of the blob, plus some secret, proving that the requester has the blob, without actually revealing the blob? This can help protect against compromised nodes -- I think.
 
 Pad (variable length)
 :   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
@@ -4506,7 +4361,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is the Request ID of the Request for which this is a response.
@@ -4514,10 +4369,10 @@ Request ID
 Status Code
 :   Indicates the status of the request:
 
-| Code | Meaning |
-| ---- | ------- |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
 | 0    | No Error: The Request has been properly received and will be acted upon in due time. **NOTE WELL**: this message simply acks (or rejects) the request; it does not contain the granted address. |
-| TBD  | Errors ... **TBD** |
+| TBD  | Errors ... **TBD**                                |
 
 : Acquire ZPR Address Response Codes
 
@@ -4572,7 +4427,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is a sequence number that uniquely identifies the Request.
@@ -4601,8 +4456,7 @@ DHCP Options
 :   DHCP Options^[@rfc2131] to be configured in the Endpoint. The details for this are TBD. (**Ed. Note:** This is a place holder as we believe that the parameters assigned via DHCP will also want to be assigned via ZPR; this is the mechanism we think will do it).
 
 Pad (variable length)
-:   Padding used to make the ZPR header an integral number of
-   encryption cipher blocks in length.
+:   Padding used to make the ZPR header an integral number of encryption cipher blocks in length.
 
 MICV
 :   Message Integrity Check Value calculated over the entire message.
@@ -4643,7 +4497,7 @@ Unused
 :   Unused. MUST be set to 0 on transit. Ignore on receive.
 
 Sequence Number
-:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {#sec:requestresponse-semantics} for more information.
+:   Message sequence number, used in guaranteeing delivery of the message to the peer. See {@sec:requestresponse-semantics} for more information.
 
 Request ID
 :   Is the Request ID of the Request for which this is a response.
@@ -4651,10 +4505,10 @@ Request ID
 Status Code
 :   Indicates the status of the request:
 
-| Code | Meaning |
-| ---- | ------- |
+| Code | Meaning                                           |
+| ---- | ------------------------------------------------- |
 | 0    | No Error: The Grant Request has been properly received and accepted. |
-| TBD  | Errors ... **TBD** |
+| TBD  | Errors ... **TBD**                                |
 
 : Grant ZPR Address Response Codes
 
@@ -4741,6 +4595,7 @@ Response Message ([@sec:hello-response-message]).
 Sequence numbers are assigned sequentially, starting at 0.
 Each direction on each Link and Tether has its own sequence number
 space.
+
 When the maximum sequence number value is reached, the number rolls
 over to 0 (*e.g.,* from `0xffff` to `0x0000` for two-byte sequence
 numbers.
@@ -4768,6 +4623,7 @@ same sequence number as the associated request.
 Each side of a Link or Tether has a receive window size.  The window
 size is the number of messages that may be sent without receiving an
 acknowledgement.
+
 The window acts as a control flow/backpressure
 mechanism, not a congestion control mechanism.
 
