@@ -1611,6 +1611,12 @@ IP Options
 The compressed IPv4 header format is
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 12px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Compressed IPv4 header
 packet
 +4: "Hdr Len"
@@ -1619,9 +1625,9 @@ packet
 8-15: "TOS"
 16-31: "ID"
 32-35: "Flags"
-36-47: "Frag. Offset"
+36-47: "Fragment Offset (optional)"
 48-55: "TTL"
-56-63: "IP Options... (variable length)"
+56-63: "IP Options (variable length)"
 ```
 
 Where:
@@ -1644,7 +1650,7 @@ TTL
 Flags
 :   The flag bits from the original IP header. These bits are present only if the F bit is set.
 
-Frag Offset
+Fragment Offset
 :   The fragment offset field of the original IP header. This field is present only if the F bit (above) is set.
 
 IP Options
@@ -1679,6 +1685,12 @@ Destination IP Address
 The compressed IPv6 header format is
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Compressed IPv6 header
 packet
 +4: "0110"
@@ -1720,6 +1732,12 @@ Checksum
 The compressed UDP header format is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Compressed Udp header
 packet
 +16: "Checksum"
@@ -1760,6 +1778,12 @@ TCP Options
 The compressed TCP header format is
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Compressed TCP header
 packet
 +32: "Sequence Number"
@@ -2071,43 +2095,23 @@ This chapter defines the packet formats for ZDP.
 
 ## General Considerations
 
-Packets are always "packed", even though a packet format diagram may make it appear otherwise. For example, if a packet format is diagrammed as:
-
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+
-| One-byte-field|
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| Four byte field                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\end{figure}
-
-The packet is sent as five bytes:
-
-\begin{figure}
-\begin{verbatim}
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-| One-byte-field| Four byte field                                               |
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\end{figure}
-
-In packet diagrams, the start of the packet is the topmost/leftmost component. The transmit order of the above 5-byte packet is as shown in the above diagram.
+In packet diagrams, the start of the packet is the topmost/leftmost component. The transmit order is as shown in the diagram.
 
 Packets are diagrammed and sent in "big endian" order (aka network byte order). For example, a four-byte field containing the numeric value 1234510 (0x3039, or 0b00110000 00111001) would be:
 
-\begin{figure}
-\begin{verbatim}
- 0                   1                   2                   3
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-|0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 1 0 0 0 0 0 0 1 1 1 0 0 1|
-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-\end{verbatim}
-\end{figure}
+``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
+packet
++8: "0000 0000"
++8: "0000 0000"
++8: "0011 0000"
++8: "0011 1001"
+```
 
 ## ZPR Data Protocol (ZDP)
 
@@ -2262,6 +2266,12 @@ in Transit Packets.
 The structure of the Transit Packet, is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: ZPR Transit Packet Format
 packet
 +3: "Vers."
@@ -2270,7 +2280,7 @@ packet
 +8: "Excess-Length"
 +8: "Unused"
 +32: "Stream ID"
-+8: "Pad (variable length)"
++32: "Pad (variable length)"
 +32: "MICV (variable length)"
 +8: "A2A SAID"
 +24: "Compressed Endpoint Packet (variable length)"
@@ -2346,6 +2356,12 @@ them, preferably at a "debug" level.
 The format of the Discard Message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Discard Message Format
 packet
 +3: "Version"
@@ -2404,6 +2420,12 @@ The Echo message provides a mechanism to send a message to a peer and receive a 
 The format of the Echo Message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Discard Message Format
 packet
 +3: "Version"
@@ -2474,6 +2496,12 @@ Response, it could send an Indication and terminate immediately).
 The Indication and Request have the same format:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Terminate Indication and Request Management Message Data formats
 packet
 +3: "Version"
@@ -2485,7 +2513,7 @@ packet
 +16: "Transaction ID"
 +8: "Reason Code"
 +8: "Data Length"
-+32: "(optional) Additional Data"
++16: "(optional) Additional Data"
 +32: "Pad (variable length)"
 +32: "MICV (Variable Length)"
 ```
@@ -2540,6 +2568,12 @@ MICV
 The format of the Terminate Response Management Message Data is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: ZDP Terminate Response Management Message Data
 packet
 +3: "Version"
@@ -2551,9 +2585,9 @@ packet
 +16: "Transaction ID"
 +8: "Response Code"
 +8: "Data Length"
-+32: "(optional) Additional Data"
-+32: "Pad (variable length)"
-+32: "MICV (Variable Length)"
++16: "(optional) Additional Data"
++16: "Pad (variable length)"
++16: "MICV (Variable Length)"
 ```
 
 Where:
@@ -2616,6 +2650,12 @@ Link Hello Request and Response messages use the Request/Response semantics spec
 The Hello Request Message Data is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Hello Request Message Data
 packet
 +3: "Version"
@@ -2626,7 +2666,7 @@ packet
 +16: "Sequence Number"
 +16: "Transaction ID"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -2663,6 +2703,12 @@ MICV
 The format of the response Management Message Data is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Hello Response Format
 packet
 +3: "Version"
@@ -2673,9 +2719,9 @@ packet
 +16: "Sequence Number"
 +16: "Transaction ID"
 +16: "Status"
-+64: "Hello Response TLVs (variable length)"
++48: "Hello Response TLVs (variable length)"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -2718,6 +2764,12 @@ Hello Response TLVs
 :   A series of TLV (type/length/value) structures containing the hello data. The format of a TLV is:
 
     ``` mermaid
+    ---
+    config:
+      themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+      packet:
+        bitWidth: 20
+    ---
     %%| fig-cap: TLV Format
     packet
     +8: "Type"
@@ -2851,6 +2903,12 @@ The Request message is a Per-Flow management message. The Stream ID Field of the
 The format of the Stream ID Request Message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Stream ID Request Message Format
 packet
 +3: "Version"
@@ -2863,10 +2921,10 @@ packet
 +32: "Offered Stream ID"
 +16: "Visa & Stream Name Length"
 +16: "First Packet Length"
-+16: "Visa & Stream Name (variable length)"
-+32: "First Packet (Optional)"
++32: "Visa & Stream Name (variable length)"
++32: "First Packet (Optional, variable legnth)"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -2923,6 +2981,12 @@ The ZDP Stream ID contains the Offered ID from the Stream ID Request.  The Manag
 The format of the Stream ID Response is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Stream ID Response Message Format
 packet
 +3: "Version"
@@ -2936,10 +3000,10 @@ packet
 +8: "Status Code"
 +32: "Stream ID"
 +16: "Visa Name Length"
-+16: "Visa Name (variable length)"
++32: "Visa Name (variable length)"
 +32: "Status Info (Optional, variable length)"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3014,6 +3078,12 @@ The ZDP Stream ID contains the Final Stream ID that was used when the Stream was
 The format of the Request is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Stream ID Withdrawal Request Management Message Data Format
 packet
 +3: "Version"
@@ -3026,9 +3096,9 @@ packet
 +32: "Stream ID"
 +16: "Additional Data Length"
 +8: "Code"
-+24: "Additional Data (variable length)"
++40: "Additional Data (variable length)"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3086,6 +3156,12 @@ The ZDP Type field indicates that the message is a Stream ID Withdrawal Response
 The format of the Stream ID Withdrawal Response:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Stream ID Withdrawal Response Message Format
 packet
 +3: "Version"
@@ -3098,9 +3174,9 @@ packet
 +32: "Stream ID"
 +16: "Additional Data Length"
 +8: "Code"
-+24: "Additional Data (variable length)"
++40: "Additional Data (variable length)"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3169,6 +3245,12 @@ They are differentiated by the message type.
 The formats of the Register and Deregister Request messages is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Register and Deregister Endpoint Address Management Message Data
 packet
 +3: "Version"
@@ -3180,8 +3262,8 @@ packet
 +16: "Transaction ID"
 +8: "IP Version"
 +32: "Endpoint IP address (4 or 16 bytes)"
-+32: "Pad (variable length)"
-+32: "MICV (variable)"
++24: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3229,6 +3311,12 @@ They are differentiated by the message type.
 The format of the Register and Deregister Responses is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: ENDPOINT Address Registration and Deregistration Response Packet Format
 packet
 +3: "Version"
@@ -3240,9 +3328,9 @@ packet
 +16: "Transaction ID"
 +16: "Additional Info Length"
 +8: "Status Code"
-+24: "Additional Status Information (variable length)"
++40: "Additional Info (variable length)"
 +32: "Pad (variable length)"
-+32: "MICV (variable)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3290,7 +3378,7 @@ Status Code
 Additional Info Len
 :   Is the length of the Additional Information field. It may be 0.
 
-Additional Status Information
+Additional Information
 :   Is any additional status information. Typically, this might be a human-readable message designed to assist diagnosis of the issue.
 
 Pad (variable length)
@@ -3372,6 +3460,12 @@ The format of the Bind Request message (diagram includes ZDP header and MICV) is
 CONVERT THE FOLLOWING TO THE NEW FORM
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Bind Address Request Message Format
 packet
 +3: "Version"
@@ -3382,10 +3476,10 @@ packet
 +16: "Sequence Number"
 +16: "Transaction ID"
 +32: "Stream ID"
-+8:  "Packet Count"
++8: "Packet Count"
 +8: "Packets..."
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++16: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 Where
 
@@ -3422,11 +3516,17 @@ Packets
 These packets have the following format:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Bind Address Request Packet Format
 packet
 
 +16: "Packet Length"
-+16: "Initial Endpoint Packet..."
++48: "Initial Endpoint Packet..."
 ```
 
 Where
@@ -3455,6 +3555,12 @@ Multiple responses may be carried in a single packet.
 The format of the Bind and Unbind Responses is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Bind and Unbind Endpoint Address Response Management Message Data
 packet
 +3: "Version"
@@ -3466,14 +3572,14 @@ packet
 +16: "Transaction ID"
 +32: "Stream ID"
 +8: "Status Code"
-+8: "Length"
-+32: "Optional Additional Status Information (variable length)"
++8: "Info Length"
++16: "Status Information (optional, variable length)"
 +8: "TCST"
 +24: "Traffic Classification Specification (variable length)"
 +16: "A2A MICV Key Length"
 +16: "A2A MICV Keying Material (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++32: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 Where:
 
@@ -3516,7 +3622,7 @@ Status Code
 
      Note that there is not a failure code indicating that the registration failed because the network's policies do not allow the binding specified in the request. This is because a compromised peer could exhaustively try various bindings to see which are and are not allowed by policy. Such a peer would then gain some knowledge of the policies in the network.
 
-Info Len
+Info Length
 :   Is the length of the Status Information field. It may be 0.
 
 Status Information
@@ -3583,6 +3689,12 @@ The Dock in Node 2 is informed of the Endpoint Addresses, IP protocol, and port 
 The format of the type-0 Traffic Classifier, the "IP 5-Tuple Traffic Classifier" is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: IP 5-Tuple Traffic Classification Spec
 packet
 +5: "Reserved"
@@ -3590,7 +3702,7 @@ packet
 +1: "S"
 +1: "D"
 +8: "IP Protocol"
-+48: "Source and Destination Endpoint Addresses (8 or 32 bytes)"
++64: "Endpoint Addresses (8 or 32 bytes)"
 +16: "Source TCP/UDP Port"
 +16: "Destination TCP/UDP Port"
 ```
@@ -3609,9 +3721,8 @@ D
 IP Protocol
 :   Is the IP protocol for packets to be accepted by the classifier.
 
-Source and Destination Endpoint Addresses
-:   Are the source and destination Endpoint Addresses of packets to be
-  accepted by the classifier.
+Endpoint Addresses
+:   Are the source and destination Endpoint Addresses of packets to be accepted by the classifier.
 
 Source Port
 :   The source TCP or UDP port that packets must match to be accepted by the classifier. This field is present if and only if the "S" bit is present and the IP Protocol is either TCP or UDP.
@@ -3626,6 +3737,12 @@ The Authentication messages carry opaque authentication data between a Dock and 
 The format of the Authentication Request message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Authentication Request Management Message
 packet
 +3: "Version"
@@ -3636,9 +3753,9 @@ packet
 +16: "Sequence Number"
 +16: "Transaction ID"
 +16: "Data Length"
-+32: "Opaque Authentication Data (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++40: "Opaque Authentication Data (variable length)"
++8: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3680,6 +3797,12 @@ MICV
 The format of the Authentication Response message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Authentication Response Management Message Data
 packet
 +3: "Version"
@@ -3691,9 +3814,9 @@ packet
 +16: "Transaction ID"
 +8: "Status Code"
 +8: "Info Length"
-+32: "Optional Additional Status Information (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++40: "Status Information (optional, variable length)"
++8: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3752,6 +3875,12 @@ The Report packet carries a report message from an Adapter to a Dock to be enter
 The format of the packet is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: ZIP Report Message Format
 packet
 +3: "Version"
@@ -3762,9 +3891,9 @@ packet
 +16: "Sequence Number"
 +16: "Transaction ID"
 +16: "Report Data Length"
-+48: "Report Data (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++40: "Report Data (variable length)"
++8: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3817,6 +3946,12 @@ The MTU is applicable onlt to the flow identified in the Stream ID field.
 The format of the Path MTU Request message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Path MTU Request Management Message Data
 packet
 +3: "Version"
@@ -3828,8 +3963,8 @@ packet
 +16: "Transaction ID"
 +32: "Stream ID"
 +16: "New PMTU"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++16: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3872,6 +4007,12 @@ The message is propagated back to the Ingress Adapter.
 The Path MTU Response message is sent in response to a Path MTU Request.  It indicates the status of the request. The format of the response is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Path MTU Response Management Message
 packet
 +3: "Version"
@@ -3885,9 +4026,9 @@ packet
 +16: "New PMTU"
 +16: "Status Code"
 +16: "Additional Information Length"
-+32: "Additional Information (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++16: "Additional Information (variable length)"
++32: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -3945,8 +4086,6 @@ MICV
 The Set Path MTU Request and Response messages use the Request Response semantics described in [@sec:requestresponse-semantics].
 
 
-### Destination Unreachable{#sec:mgmt-destun-pkt}
-
 ### Destination Unreachable
 
 A Node or Adapter uses the Destination Unreachable message to inform the source Endpoint that a ZDP Transit packet could not be delivered. This message is analogous to ICMP Destination Unreachable messages in IP networks. If the Ingress Adapter receives a Destination Unreachable it MAY fabricate a proper ICMP Destination Unreachable to send to the Source Endpoint.
@@ -3959,6 +4098,12 @@ ZDP Destination Unreachables MUST NOT be sent by a Node as a result of receiving
 The format of the Management Message Data is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 12px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Destination Unreachable Management Message Data Format
 packet
 +3: "Version"
@@ -3970,11 +4115,11 @@ packet
 +32: "Stream ID"
 +32: "Code"
 +16: "Code Info Length"
-+16: "Code-specific Additional Information (variable length)"
++32: "Code-specific Additional Information (optional, variable length)"
 +16: "Original Packet Length"
-+16: "Portion of original Endpoint Packet (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++40: "Portion of original Endpoint Packet (variable length)"
++8: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4113,6 +4258,12 @@ The Initiate Authentication message is used by the Dock to direct an Adapter to 
 The format of the request message is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Initiate Authentication Request
 packet
 +3: "Version"
@@ -4126,9 +4277,9 @@ packet
 +1: "F"
 +8: "Blob Type"
 +16: "Blob Length"
-+16: "Blob (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++24: "Blob (variable length)"
++8: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4175,6 +4326,12 @@ Blob Type 1
 :   This is a nonce/timestamp/HMAC blob. Its format is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Type 1 Blob Format
 packet
 +64: "Nonce"
@@ -4202,6 +4359,12 @@ MICV
 The format of the response is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Initiate Authentication Response
 packet
 +3: "Version"
@@ -4212,8 +4375,8 @@ packet
 +16: "Sequence Number"
 +16: "Request ID"
 +16: "Status Code"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++16: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4262,6 +4425,12 @@ The Acquire ZPR Address Request is used by the Adapter to request a ZPR Address 
 The format of the Request is
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Acquire ZPR Address Request Management Message Format
 packet
 +3: "Version"
@@ -4274,10 +4443,10 @@ packet
 +16: "Blob Length"
 +8: "IP Version"
 +8: "Address Count"
-+16: "Addresses (variable length)"
-+32: "Blob (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++32: "Addresses (variable length)"
++24: "Blob (variable length)"
++8: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4329,6 +4498,12 @@ MICV
 The format of the response is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Acquire ZPR Address Response
 packet
 +3: "Version"
@@ -4339,8 +4514,8 @@ packet
 +16: "Sequence Number"
 +16: "Request ID"
 +16: "Status Code"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++16: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4389,6 +4564,12 @@ The Grant ZPR Address Request and Response messages are used by the Dock to give
 The format of the Request is
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Grant ZPR Request Management Message Format
 packet
 +3: "Version"
@@ -4401,12 +4582,12 @@ packet
 +16: "Blob Length"
 +8: "IP Version"
 +8: "Address Count"
-+16: "Addresses (variable length)"
++32: "Addresses (variable length)"
 +32: "Blob (variable length)"
 +16: "DHCP Option Length"
 +16: "DHCP Options (variable length)"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++32: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4465,6 +4646,12 @@ MICV
 The format of the response is:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Grant ZPR Address Response
 packet
 +3: "Version"
@@ -4475,8 +4662,8 @@ packet
 +16: "Sequence Number"
 +16: "Request ID"
 +16: "Status Code"
-+8: "Pad(variable)"
-+32: "MICV (variable)"
++16: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where:
@@ -4528,16 +4715,22 @@ The `Acknowledge` message is used to ackowledge the receipt of a
 specified management message.
 `Acknowledge` indicates that the message being acknowledged
 
-1 Was received,
-1 Has a correct version number,
-1 Was decrypted per the SA specified in the message header,
-1 Passed the message integrity check, and
-1 Contains a type value that is correct.
+- Was received,
+- Has a correct version number,
+- Was decrypted per the SA specified in the message header,
+- Passed the message integrity check, and
+- Contains a type value that is correct.
 
 `Acknowledge` **does not** indicate the success or failure of the
 operation requested by the message.
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Acknowledgement Packet Structure
 packet
 +3: "Version"
@@ -4546,8 +4739,8 @@ packet
 +8: "Excess-Length"
 +8: "Unused"
 +16: "Sequence Number"
-+32: "Pad (variable length)"
-+32: "MAC"
++16: "Pad (variable length)"
++32: "MICV (variable length)"
 ```
 
 Where
@@ -5149,6 +5342,12 @@ ZPR may use IKEv2 for key management between adjacent Forwarders and between an 
 The Link Management ZDP Packet's Management Message field carries the complete IKEv2 message:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: Key Management Message Format
 packet
 +16: "Type"
@@ -5195,14 +5394,20 @@ ZPR ARP is a non-flow oriented management message.
 The ZPR ARP Management Message Data has the following format:
 
 ``` mermaid
+---
+config:
+  themeCSS: ".packetLabel { font-size: 14px } .packetByte { font-size: 11px }"
+  packet:
+    bitWidth: 20
+---
 %%| fig-cap: ZPR Arp Management Data Format
 packet
 +8: "Operation"
 +8: "NAF"
 +32: "Sender's Node Address (variable length)"
 +32: "Receiver's Node Address (variable length)"
-+6: "Sender's Ethernet Address"
-+6: "Receiver's Ethernet Address"
++6: "Sender's Eth Addr"
++6: "Receiver's Eth Addr"
 ```
 
 Where:
