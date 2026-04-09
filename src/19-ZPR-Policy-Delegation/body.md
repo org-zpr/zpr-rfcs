@@ -32,16 +32,16 @@ semantics are not defined here and are treated as future work.
 
 # Delegation Model and Hierarchy
 
-In policy delegation what is delegated is the ability to control access to
+In policy delegation, what is delegated is the ability to control access to
 services. The system guarantees that delegated policy is authentic and remains
 within the scope defined by the delegating administrator. The delegation act
-itself produces explicit evidence that the visa service can verify, this
-evidence which we here call a "token" is part of the policy configuration.
+itself produces explicit evidence that the visa service can verify. This
+evidence, which we here call a "token", is part of the policy configuration.
 
 Delegation always involves a hierarchy of administrators. At the top sits a root
 or high privilege administrator (A) who owns the global view of the network.
 Administrator A can delegate to many downstream administrators (B through Z).
-This hierarchy can be very shallow in practice, for example a single top level
+This hierarchy can be very shallow in practice; for example, a single top level
 admin that delegates to many peers, or deeper if there are multiple layers of
 regional or functional admins.
 
@@ -170,14 +170,15 @@ Trusted services play a key role in enforcement by strictly controlling attribut
 
 Trusted services that back attributes may also support different views of data
 based on credentials. This may be a whole separate delegated access hierarchy
-not under the control of ZPR. ZPR, as a client of trusted services is of course
-bound by whatever hierarchy is configured behind the scenes. For example, Active
-Directory may be configured such that users with different credentials are able
-to query for and view different attributes. Service access credentials are part
-of delegated policy configuration so an administrator can take advantage of this
-to sandbox delegated administrators. Since the policy configuration requires
-that all attributes are declared the ZPR compiler can detect if attributes
-listed in configuration are not permitted when using a service credential.
+not under the control of ZPR. ZPR, as a client of trusted services is, of
+course, bound by whatever hierarchy is configured behind the scenes. For
+example, Active Directory may be configured such that users with different
+credentials are able to query for and view different attributes. Service access
+credentials are part of delegated policy configuration so an administrator can
+take advantage of this to sandbox delegated administrators. Since the policy
+configuration requires that all attributes are declared the ZPR compiler can
+detect if attributes listed in configuration are not permitted when using a
+service credential.
 
 It is important to note that this carving up of the ZPR network only works if
 attributes are correctly managed in the underlying systems. ZPR relies on these
@@ -205,12 +206,12 @@ goals simultaneously:
 
 # Future Work
 
-1. Service discoverability is an unresolved design issue for ZPR, but will be
+1. Service discoverability is an unresolved design issue for ZPR but will be
    closely tied to delegation. The ability to find a service, not just access
    it, should be governed by policy rules.
 
 2. Originally conceived as a part of ZPL, assertions are also useful as their
-   own as a set of stand-alone rules. The "Triangle of Auditability" vertex
+   own set of stand-alone rules. The "Triangle of Auditability" vertex
    labelled "assertions" is referring to this stand-alone concept of assertions.
    For example, there may be assertions written that constrain the reference
    data or any of the ZPL content. Who can write assertions and about what --
