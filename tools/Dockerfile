@@ -24,14 +24,12 @@ EOF
 ENTRYPOINT []
 
 RUN <<EOF
-tlmgr option repository https://ftp.tu-chemnitz.de/pub/tug/historic/systems/texlive/2025/tlnet-final
-tlmgr update --self || true
-tlmgr install titlesec tex-gyre
+tlmgr update --self && tlmgr install titlesec tex-gyre
 # Change the font directory away from a user directory to prevent them being rebuilt
 texconfig font vardir /opt/texlive/texdir/texmf-var/fonts
 # Build the missing fonts
-mktexpk --mfmode / --bdpi 600 --mag 1+0/600 --dpi 600 ectt1095 || true
-mktexpk --mfmode / --bdpi 600 --mag 1+0/600 --dpi 600 tctt1095 || true
+mktexpk --mfmode / --bdpi 600 --mag 1+0/600 --dpi 600 ectt1095
+mktexpk --mfmode / --bdpi 600 --mag 1+0/600 --dpi 600 tctt1095
 # Rebuild the LS-R
 texhash
 updmap-sys
