@@ -8,3 +8,10 @@ all: $(PDFS)
 pdf/%.pdf: src/%/* $(DEFAULTS) $(TEMPLATES)
 	SOURCE_DATE_EPOCH=$(shell git log -1 --pretty="format:%ct" $<) \
 	pandoc src/$*/*.md -o $@ --defaults ${DEFAULTS} --resource-path src/$* --metadata-file src/$*/metadata.yaml
+
+%.docx: src/%/*
+	pandoc src/$*/*.md \
+	  --standalone --number-sections \
+	  --metadata-file src/$*/metadata.yaml \
+	  --resource-path src/$* \
+	  -o $@
