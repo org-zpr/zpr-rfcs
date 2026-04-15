@@ -53,3 +53,13 @@
     b.  In section 4.1 explain in more detail how "on" works.
 
     c.  In section 4.1 remove the "through" keyword and rewrite examples that were using it.
+
+6. Revision as of April 8, 2026 (MK)
+
+    a.  New section 2.4.
+
+    b.  In section 3.5, introduce the "link" class.
+
+    c.  In section 4.1, introduce the "over" keyword with examples.
+
+    d.  In section 4.3, added a "never...over" example.
