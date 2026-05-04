@@ -106,6 +106,14 @@ associated with a flow. Services have identities and associated
 attributes, and permissions can depend on attributes of a service
 involved in the flow.
 
+## What is a Link?
+
+A link is a connection between two network nodes in a ZPRnet. Links may have
+identities and associated attributes, such as location, provider, security
+level, or cost tier. Link information is specified in the configuration
+description. Policy statements may constrain the links over which communication
+is allowed or denied.
+
 ## What is ZPL's Concept of Identity?
 
 Every endpoint, user or service in a ZPR network (ZPRnet) has an
@@ -301,7 +309,8 @@ services), allowing access to the referenced entity's attributes.
 ZPL comes with predefined classes of entities that have identity and
 attributes: `endpoints`, `users` and `services`, and a predefined sub-class of
 `endpoints` called `servers`, that has a set-valued attribute called
-`services`. Additional classes can be defined that inherit their
+`services`. ZPL includes a predefined class `link` with plural synonym `links`.
+Additional classes can be defined that inherit their
 attributes from a previously defined class, forming a strict hierarchy.
 The class definitions can also specify additional attributes for members
 of the class. The definition can also restrict the allowable values of
@@ -426,6 +435,17 @@ like this:
 In other words, both the load balancer and the server endpoints must be
 separately permissioned.
 
+An `allow` statement may include an `over` clause that constrains the
+links used by the communication path.  Examples:
+
+> `Allow sales employees to access customer databases over secure links.`
+
+> `Allow finance users to access payroll-services over location:usa links.`
+
+A statement with an `over` clause applies only if there exists an allowed
+communications path whose links all satisfy the specified link
+description.
+
 
 ## Statements that Define New Classes
 
@@ -486,6 +506,8 @@ allow statement with the keyword `Never` added at the front:
 > `Never allow internet-gateways to access internal services.`
 
 > `Never allow role:intern users to access classified services.`
+
+> `Never allow regulated services to access backup-services over foreign links.`
 
 (Note: the keyword `Never` is used instead of `Deny` because it is
 consistent with English grammar, and because `Deny` has different meanings
