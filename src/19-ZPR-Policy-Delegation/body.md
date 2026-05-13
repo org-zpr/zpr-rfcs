@@ -150,11 +150,12 @@ But, assuming that all the marketing services have an attribute like
 In the above example the finance admin is trying to gain access to a marketing
 database service.  If the finance credential used to access the attribute
 service is configured to never return the `marketing-service-role` attribute the
-ZPL will never match anything.  Another benefit is that the error could be
-caught at the compiler when it queries the attribute service using the finance
-credential.  Even if the ZPL is not flagged at the compiler stage, the visa
-service will refuse to allow the binding of two service names onto the
-same identity.
+ZPL will never match anything.  With a correctly configured attribute service,
+the error could be caught at the compiler when it queries the service using the
+finance credential.  Even if the ZPL is not flagged at the compiler stage, and
+the attribute service is mis-configured, the visa service will refuse to allow
+the binding of two service names onto the same identity so an error will be
+raised.
 
 Using a realm specific attribute tied to an access credential as illustrated
 above is best practice. However, you can also add assertions to the realm
