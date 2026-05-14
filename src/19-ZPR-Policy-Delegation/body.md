@@ -17,10 +17,37 @@ ZPL are typically performed by different entities within an organization. In
 addition, to ensure a secure environment, all of these aspects of ZPR must be
 auditable.
 
-The "Triangle of Auditability" diagram below illustrates that a complete ZPR
-environment involves three separately managed domains.
+## Issues that delegation needs to solve
+
+1. Who can create a service?
+2. Where is a service defined?
+3. What keeps services from being created/modified/deleted by an unauthorized
+   party?
+4. What constraints can be enforced for a service within the service namespace?
+5. Who can read a service?
+6. Who can write "Allow" policies?
+7. What is the scope of these policies?
+8. Who can write "Never" policies?
+9. What is the scope of these policies?
+10. Who can read policies?
+
+## Other issues that are related to delegation
+
+1. How are services resolved?
+2. How dynamic is the resolution?
+3. Can service discovery purposely fail if attributes don't match?
+4. Is there a benefit to obfuscating IP addresses to prevent cross-user hacking
+   attempts?   
+
+# Auditing
+
+A key design of ZPR is the ability to thoroughly audit the system.  The
+"Triangle of Auditability" diagram below illustrates that a complete ZPR
+environment involves (at least) three separately managed domains.
 
 ![The Triangle of Auditability](triangle.png){height="3in"}
+
+# Delegation Model and Hierarchy
 
 The remainder of this paper focuses specifically on delegation support for the
 authoring of ZPL policies. It describes how delegated policy is constrained,
@@ -28,9 +55,6 @@ verified, and enforced, and how reference data from trusted services is used
 safely within those constraints. While assertions are a critical part of the
 overall ZPR security model, their delegation, authoring, and enforcement
 semantics are not defined here and are treated as future work.
-
-
-# Delegation Model and Hierarchy
 
 In policy delegation, what is delegated is the ability to control access to
 services. The system guarantees that delegated policy is authentic and remains
