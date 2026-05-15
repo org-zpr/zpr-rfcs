@@ -10,10 +10,11 @@ guarantees.
 In any ZPR deployment of meaningful scale, policy delegation is only one part of
 the overall network security environment. In addition to policy, ZPR
 incorporates reference data from trusted services, manages a namespace for
-services, and enforces authoring permissions for ZPL itself.  Each of these
-components has a delegation component which is managed outside of the ZPR
-ecosystem but supported by it.  In addition, to ensure a secure environment, all
-of these aspects of the network configuration must be auditable.
+services deployed on the network, and enforces authoring permissions for ZPL
+itself.  Each of these aspects has a delegation component which is managed
+outside of the ZPR ecosystem but supported by it.  In addition, to ensure a
+secure environment, all of these aspects of the network configuration must be
+auditable.
 
 The "Triangle of Auditability" diagram below illustrates that a complete ZPR
 environment involves three separately managed domains.
@@ -248,6 +249,343 @@ three goals simultaneously:
    Misconfigurations can be detected through verification of delegation tokens,
    compiler checks, and visa service validation -- as long as attribute sources
    and realm restrictions remain consistent.
+
+
+# Example
+
+In this example we consider a company with an accounting department and a
+marketing department. The company initially deploys ZPR without delegation using
+the default realm.  We first show the monolithic single-realm setup, then show
+how it decomposes under delegation.
+
+This assumes some familiarity with ZPL and the TOML configuration syntax used in
+the reference implementation.
+
+
+## Starting point: A single policy and configuration
+
+The visa service is configured with the DNS root set to `corp.com` so all the
+services in ZPL are found at the root (eg, "aboutus.corp.com").
+
+The ZPL policy looks like this with rules for both accounting and marketing.
+
+
+```
+define aboutus as a service with marketing-service-role:abweb.
+define templates as a service with marketing-service-role:templates.
+define mktdb as a service with marketing-service-role:db.
+define timetrack as a service with accounting-service-role:timedb.
+define expenselog as a service with accounting-service-role:expenses.
+define audits as a service with accounting-service-role:audit.
+define actdb as a service with accounting-service-role:db.
+
+
+define employee as a user with corp-id:.
+define marketing-employee as an employee with dept:marketing.
+define fulltimer as an employee with emp-type:fte.
+define auditor as an employee with dept:accounting, role:auditor.
+
+allow aboutus to access mktdb.
+allow templates to access mktdb.
+allow timetrack to access actdb.
+allow expenselog to access actdb.
+allow audits to access actdb.
+allow marketing-employees to access templates.
+allow auditors to access audits.
+allow employees to access timetrack.
+allow fulltimers to access expenselog.
+allow employees to access aboutus.
+allow internet-gateway endpoints to access aboutus.
+```
+
+And the relevant bits of the configuration. Note that by accessing the attribute
+service with a "global" credential, it returns the role attributes for both
+accounting and marketing.
+
+```toml
+[dns]
+root = "corp.com"
+cnames = [
+  "corp.com -> aboutus.corp.com"
+]
+
+[trusted_services.okta_auth]
+api = "validation"
+credential = "global_oktakey.1231299439949"
+returns_attributes = [
+  "corp-id -> user.corp.id",
+  "dept -> user.dept",
+  "emp-type -> user.emp-type",
+  "role -> user.role"
+]
+identity_attributes = [ "corp-id" ]
+
+[trusted_services.ldap1]
+api = "attributes"
+credential = "global_apikey.120301230023002"
+returns_attributes = [
+  "marketing-service-role -> service.marketing-service-role",
+  "accounting-service-role -> service.accounting-service-role",
+  "aud -> service.aud",
+  "pubgw -> #endpoint.internet-gateway"
+]
+
+
+[protocol.https]
+l4protocol = "TCP"
+port = 443
+
+[protocol.redis]
+l4protocol = "TCP"
+port = 6379
+
+[protocol.odb]
+l4protocol = "TCP"
+port = 1521
+
+[services.aboutus]
+protocol = "https"
+
+[services.templates]
+protocol = "https"
+
+[services.mktdb]
+protocol = "redis"
+
+[services.timetrack]
+protocol = "https"
+
+[services.expenselog]
+protocol = "https"
+
+[services.audits]
+protocol = "https"
+
+[services.actdb]
+protocol = "odb"
+```
+
+We now decompose this into two delegated realms, one for marketing and one for
+accounting.
+
+
+## Delegation With Visa Service (Reference Implementation)
+
+Given the concept of realms described above, there are many ways they could be
+implemented in practice.  Here is how realms and delegation are implemented in
+the reference implementation of the Visa Service. The visa service supports
+delegation through administrative mechanisms all accessed through an API.
+
+It manages a set of realms. The first realms must be created by the ZPR
+administrator but delegated administrators can create realms too if they are
+permission'd to do so. The visa service manages its own set of administrators
+along with what realm they are in and their associated permissions. Realm
+policies are submitted via the API in ZPL form and the visa service manages the
+compilation step, ensuring that all the delegation restrictions are applied
+before accepting/installing the policy.  Finally, the visa service provides
+auditing capabilities, returning the full policy for each realm including all
+inherited restrictions.
+
+To get started, the ZPR administrator configures a base configuration for the
+root realm that includes trusted service information. Note that the `cnames`
+section has been updated since the `aboutus` service is now inside the
+`marketing` realm.
+
+```toml
+[dns]
+root = "corp.com"
+cnames = [
+  "corp.com -> aboutus.marketing.corp.com"
+]
+
+[trusted_services.okta_auth]
+api = "validation"
+credential = "global_oktakey.1231299439949"
+returns_attributes = [
+  "corp-id -> user.corp.id",
+  "dept -> user.dept",
+  "emp-type -> user.emp-type",
+  "role -> user.role"
+]
+identity_attributes = [ "corp-id" ]
+
+[trusted_services.ldap1]
+api = "attributes"
+
+# credential is not specified here but is required to use this
+
+# This is a mapping for any attribute that can be returned - the actual
+# attributes returned depends on the credential.
+returns_attributes = [
+  "marketing-service-role -> service.marketing-service-role",
+  "accounting-service-role -> service.accounting-service-role",
+  "aud -> service.aud",
+  "pubgw -> #endpoint.internet-gateway"  # is a tag
+]
+
+```
+
+
+The ZPR administrator creates two realms using the visa service REST API.
+Essentially submitting realm data structures.
+
+Here is an example for the "marketing" realm:
+
+```json
+{
+  "parent_realm":"root",
+  "realm":"marketing",
+  "administrators":["marketing_admin"],
+  "validation_services":["okta_auth"],
+  "attribute_services":["ldap1"],
+  "restrictions":[
+    "never allow aud:internal services to access endpoint.internet-gateway services"
+  ]
+}
+```
+
+It is not shown here, but the JSON for the "accounting" realm follows roughly
+the same structure as "marketing" above.
+
+The ZPR administrator adds the `marketing_admin` and the `accounting_admin` to the
+visa service admin user database, each associated with their realm.
+
+Now each administrator is able to create their own ZPL and configuration and
+install them into the visa service using their realm administrator keys. When
+the realm policies are submitted, the visa service performs compilation and
+incorporates all the restrictions applied through delegation.
+
+
+### Marketing Policy
+
+The marketing ZPR administrator only needs to write policy about services
+managed by the marketing department.  As is the case with realms, there is no
+way for the marketing policy to impact other realms because the attributes
+required to do so are hidden through the use of a specific attribute service
+credential.
+
+Additionally, all the services defined in the marketing realm will be found in
+DNS in the correct subdomain (which is the realm name, eg,
+"aboutus.marketing.corp.com") and no other realm can add or alter names in the
+marketing namespace.
+
+
+The marketing ZPL:
+
+```
+define aboutus as a service with marketing-service-role:abweb.
+define templates as a service with marketing-service-role:templates.
+define mktdb as a service with marketing-service-role:db.
+
+define employee as a user with corp-id:.
+define marketing-employee as an employee with dept:marketing.
+
+allow aboutus to access mktdb.
+allow templates to access mktdb.
+allow marketing-employee to access templates.
+
+allow employees to access aboutus.
+allow internet-gateway endpoints to access aboutus.
+```
+
+And the relevant bits of the marketing configuration is below. Notice that
+this uses a marketing specific credential to talk to the "ldap1" attribute
+service.
+
+```toml
+[trusted_services.okta_auth]
+inherit = true
+
+[trusted_services.ldap1]
+inherit = true
+credential = "marketing_apikey.1208748778383002"
+
+[protocol.https]
+l4protocol = "TCP"
+port = 443
+
+[protocol.redis]
+l4protocol = "TCP"
+port = 6379
+
+[services.aboutus]
+protocol = "https"
+
+[services.templates]
+protocol = "https"
+
+[services.mktdb]
+protocol = "redis"
+```
+
+### Accounting Policy
+
+The accounting ZPL is similarly the accounting-relevant subset of the monolithic policy.
+
+
+```
+define timetrack as a service with accounting-service-role:timedb.
+define expenselog as a service with accounting-service-role:expenses.
+define audits as a service with accounting-service-role:audit.
+define actdb as a service with accounting-service-role:db.
+
+
+define employee as a user with corp-id:.
+define fulltimer as an employee with emp-type:fte.
+define auditor as an employee with dept:accounting, role:auditor.
+
+allow timetrack to access actdb.
+allow expenselog to access actdb.
+allow audits to access actdb.
+
+allow auditors to access audits.
+allow employees to access timetrack.
+allow fulltimers to access expenselog.
+```
+
+And the relevant bits of the accounting configuration are below. Notice that it
+uses an accounting specific credential to talk to the "ldap1" attribute service.
+
+```toml
+[trusted_services.okta_auth]
+inherit = true
+
+[trusted_services.ldap1]
+inherit = true
+credential = "accounting_apikey.120941238688493002"
+
+[protocol.https]
+l4protocol = "TCP"
+port = 443
+
+[protocol.odb]
+l4protocol = "TCP"
+port = 1521
+
+[services.timetrack]
+protocol = "https"
+
+[services.expenselog]
+protocol = "https"
+
+[services.audits]
+protocol = "https"
+
+[services.actdb]
+protocol = "odb"
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
