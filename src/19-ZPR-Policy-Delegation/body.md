@@ -41,6 +41,7 @@ safely to adhere to existing hierarchical access controls.
 ## The Problem Space
 
 TODO: background context here...
+TODO: whole section needs work.
 
 
 ### Issues that delegation needs to solve (MD)
@@ -75,7 +76,7 @@ TODO: background context here...
 To support policy delegation we added several capabilities to the Reference
 Implementation Visa Service:
 
-1. Resolution of service names to addresses is fully under ZPR control. The ZPR
+1. Resolution of service names to addresses is fully under ZPR control. The ZPRnet
    provides DNS for services hosted in ZPR.
 
 This gives the visa service the ability to control not just who can place a
@@ -90,7 +91,7 @@ hierarchy in arbitrary ways.
 The Visa Service must enforce a collection of policies that are each constrained
 to parts of the corporate namespace. As a content management system it enforces
 permissioned user access. Interaction with the PMS is through a REST API and
-access is controlled by api keys. The PMS also allows for a domain to be
+access is controlled by API keys. The PMS also allows for a domain to be
 sub-delegated in a way that maps naturally to how domain names are used. For
 example, the domain tied to `marketing.corp.com` could delegate
 `accounts.marketing.corp.com` to another administrator.
@@ -115,7 +116,7 @@ restrictions in the chain.
 5. The Visa Service handles compilation of ZPL.
 
 The Visa Service needs to enforce ZPL restrictions that are authored separately
-from a domain policy. To make this work the Visa Service must be responsible for
+from a domain policy. To make this work the Visa Service is responsible for
 actually compiling the domain policy, which it does in the presence of all
 applicable restrictions. Only policies that pass compilation can be applied to
 the network.
@@ -131,14 +132,17 @@ policy.  A domain incorporates:
 3. Restrictions on what is allowed to be expressed in the domain policy.
 4. A policy and configuration written in ZPL.
 
-The first three items in a domain are managed by the domain creator (also called
-its parent), and we can think of these as comprising the domain "envelope". The
+The first three items in a domain are managed by the domain creator (aka
+_delegator_), and we can think of these as comprising the domain "envelope". The
 final item, the policy, can be thought of as the "contents" of the "envelope".
-The "contents", written in ZPL, define services and their associated policies.
+The "contents", written in ZPL by the _delegatee_, define services and their
+associated policies.
 
-When users access services in ZPRnet they do so using DNS names. As stated
-earlier, the binding of names to addresses is a function provided by the ZPRnet.
-Each domain has a DNS root in which all the defined services can be found.
+When users access services in ZPRnet they do so using DNS names. Each domain has
+a DNS root in which all the defined services can be found and so sets the
+services place in DNS. Attributes from trusted services match services to their
+providers, and at runtime a request to a service is matched by address, protocol
+and port.
 
 ZPL always exists in a domain. A simple ZPRnet installation has a single, unnamed
 domain; explicit domain naming is only required when you want to use delegation.
@@ -182,8 +186,8 @@ permitted.  As an example, the administrator may include a statement such as:
 This prevents finance services from ever communicating with the public internet,
 regardless of what the domain policy permits.
 
-(TODO: Pretty sure that the restrictions need to run under the credential of the
-domain creator -- not the delegatee. Explain this here.)
+Note that the restrictions on a domain run under the credential of the domain
+creator -- not the delegatee.
 
 The key consequence of domain delegation is that the delegator always retains
 the ability to define restrictions for a delegated namespace. A delegatee cannot
@@ -201,19 +205,20 @@ domains, right? Like in finance domain you can't say 'never allow finance users
 to access marketing services'. So if that is desired policy, you need the finance
 admin to add a rule. Right?)
 
-
+(TODO: Probably need to talk a bit about CNAMEs here too.)
 
 
 # Nested Delegation
 
 The domain system is flexible enough to support nested delegation to arbitrary
 levels: a delegatee can further delegate their namespace to others.  For
-example, the domain owner of `marketing.corp.com` can delegate
+example, an admin in charge of `marketing.corp.com` can delegate
 `it.marketing.corp.com` or any other subdomain as she sees fit.
 
 Restrictions imposed by any ancestor domain are enforced at all levels; a deeply
-nested delegatee cannot circumvent a `never allow` rule set by any of its
-predecessors.
+nested delegatee cannot circumvent a `never allow` restriction set by any of its
+predecessors.  Unlike restrictions, the actual domain policy only ever applies
+to the domain it is in.
 
 
 # Delegation Attributes
@@ -227,8 +232,8 @@ Recall that in ZPL the only way to bind a service to a providing identity is
 through attributes. Attribute names may be system wide so a domain administrator
 could theoretically reference attributes outside of their authority unless care
 is taken. To prevent the binding of services that lie outside of the
-administrative control of the domain owner you must restrict the attributes in
-use.
+administrative control of the domain administrator you must restrict the
+attributes in use.
 
 For example, it is perfectly acceptable for the finance administrator to write a
 ZPL statement to permit marketing users to access some financial service like
@@ -273,7 +278,7 @@ delegated administrator from accidentally or intentionally authoring policy that
 escapes their delegated scope.
 
 Even though the Visa Service manages compilation, the compiler is still
-available as a stand alone tool and can be useful for local testing even without
+available as a standalone tool and can be useful for local testing even without
 access to the domain restrictions. API calls to the visa service can be used by
 policy administrators to "test compile" their domain policy in the fuller
 network policy context.
@@ -287,10 +292,9 @@ environment, the visa service runs many domains at once.
 
 A crucial invariant is that `never allow` rules and assertions are enforced
 everywhere in the delegation hierarchy.  When traffic is evaluated, the visa
-service always denies if a `never allow` statement matches or an assertion
-fails. Policy is evaluated based on the domain holding the service being
-accessed. In the absence of a `never allow` the first `allow` statement in the
-policy matches.
+service always denies if a `never allow` statement matches. Policy is evaluated
+based on the domain holding the service being accessed. In the absence of a
+`never allow` the first `allow` statement in the policy matches.
 
 Each domain maintains its own attribute cache for the trusted services it uses.
 This keeps attributes in domains isolated from one another and reduces
@@ -302,16 +306,32 @@ To grant a visa for a specific request, the visa service first identifies the
 service by comparing its protocol details (address, protocol, port). If the
 service is bound to a domain, the visa service checks for any `never allow`
 statements in the domain policy or its restrictions. Then it looks for any
-`never allow` statements in all parent policies and restrictions.
+`never allow` statements in all parent policy restrictions.
 
 If no `never` statement matches in the delegation chain then the visa service
 tries to match the request against the domain `allow` statements (in the order
-as written in ZPL) starting at the most deeply nested domain and working back
-up. If an `allow` is found a visa is granted. (TODO: DOES THIS SEEM RIGHT?)
+as written in ZPL). If an `allow` is found a visa is granted.
+
+(TODO: DOES THIS SEEM RIGHT? ==> the DENY path only looks restrictions on the
+domain, and on any parent domain, and then in the domain policy itself. The
+ALLOW path only looks at the domain policy itself.)
+
+
 
 
 
 # Enforcement Guarantees
+
+
+To summarize how domains work:
+
+- A domain owns service names under its DNS root.
+- A domain policy may define and allow access only to services in that domain.
+- Ancestor restrictions always constrain descendants.
+- Policy rules in a domain only apply to that domain.
+- Restrictions compile/evaluate with the delegator’s authority, not the delegatee’s.
+- Attribute visibility is determined by domain credentials and may be narrowed by assertions.
+
 
 Trusted services play a key role in enforcement by strictly controlling
 attribute distribution. They must:
@@ -340,7 +360,7 @@ three goals simultaneously:
 
 3. It provides clear, auditable boundaries for administrative authority.
    Misconfigurations can be detected through policy audits, compiler checks, and
-   visa service validation. Enfocement will be correct so long as attribute
+   visa service validation. Enforcement will be correct so long as attribute
    sources and domain restrictions remain consistent.
 
 
