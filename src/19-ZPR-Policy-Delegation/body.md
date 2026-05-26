@@ -1,165 +1,258 @@
 # Introduction
 
-In ZPR, policy delegation is the mechanism that allows a central authority to
+Policy delegation is the mechanism that allows a central authority to
 safely share control of network access policy with subordinate policy authors
 while still enforcing a coherent global security posture. As ZPR deployments
 grow in size and organizational complexity, delegation becomes necessary to
 distribute policy authoring without fragmenting control or weakening security
 guarantees.
 
-In any ZPR deployment of meaningful scale, policy delegation is only one part of
-the overall network security environment. In addition to policy, ZPR
-incorporates reference data from trusted services, manages a namespace for
-services deployed on the network, and enforces authoring permissions for ZPL
-itself.  Each of these aspects has a delegation component which is managed
-outside of the ZPR ecosystem but supported by it.  In addition, to ensure a
-secure environment, all of these aspects of the network configuration must be
-auditable.
+In any ZPR deployment of meaningful scale there will be many delegation
+hierarchies, for instance:
 
-The "Triangle of Auditability" diagram below illustrates that a complete ZPR
-environment involves three separately managed domains.
+- Management of users and groups and their attributes.
+- Ability to create and name services.
+- Controls around access to data sources like LDAP.
+- Issuance of credentials.
+- Ability to connect machines and VMs.
+- Physical network configuration.
+- Management of who can create, edit, read or delete network policy.
 
-![The Triangle of Auditability](triangle.png){height="3in"}
+These systems support their own delegation mechanisms. For example, Active
+Directory (and most databases and applications) manage users, groups, etc. and
+who is allowed to create/read/edit/delete (CRED), and who is allowed to bestow
+and manage such authority to others.
 
-The remainder of this paper focuses specifically on delegation support through
-what we call "realms". It describes how delegated policy is constrained,
+Authentication and attributes are handled through Trusted Services using
+existing third party or in-house systems. The physical substrate and ZPR
+configuration are also handled elsewhere using their own tools (and hierarchies)
+
+What remains are services, name spaces, and policies. With ZPL, services are
+declared and access to them is controlled. To manage name spaces we tightly
+integrate with DNS. Support for delegating policies is built into the Visa
+Service using a concept called _domains_.
+
+The remainder of this paper focuses on _domains_, our delegation mechanism in
+the Reference Implementation. It describes how delegated policy is constrained,
 verified, and enforced, and how reference data from trusted services is used
-safely within those constraints.
+safely to adhere to existing hierarchical access controls.
 
 
-# Introducing Realms
+## The Problem Space
 
-ZPR uses the concept of a **realm** to describe the unit of delegation of a ZPR
-policy.  A realm incorporates:
+TODO: background context here...
 
-- The namespace (DNS root) for all services.
-- Credentials for accessing reference data through trusted services.
-- Restrictions on what is allowed to be expressed in ZPL.
-- A policy written in ZPL.
 
-When users access services in ZPRnet they do so using DNS names. The binding of
-names to addresses is a function provided by the ZPRnet. Each realm has a DNS
-root in which all the defined services can be found.
+### Issues that delegation needs to solve (MD)
 
-ZPL always exists in a realm. A simple ZPRnet installation has a single, unnamed
-realm; explicit realm naming is only required when you want to use delegation.
+1. Who can create a service?
+2. Where is a service defined?
+3. What keeps services from being created/modified/deleted by an unauthorized party?
+4. How are services named?
+5. What constraints can be enforced for a service within the service namespace?
+6. Who can use a service?
+7. Who can write "Allow" policies?
+8. What is the scope of these policies?
+9. What order are the policies evaluated (priority)?
+10. Who can write "Never" policies?
+11. What is the scope of these policies?
+12. Who can read policies?
+13. How are the service definitions and access policies audited?
 
-Within a realm, policy statements can only reference attributes accessible via
-the realm's credentials, and can only affect services defined within the realm's
+
+
+### Other issues that are related to delegation (MD)
+
+1. How are services resolved?
+2. How dynamic is the resolution?
+3. Can service discovery purposely fail if attributes don't match?
+4. Is there a benefit to obfuscating IP addresses to prevent cross-user hacking attempts?
+
+
+
+## The Solution (Reference Implementation)
+
+To support policy delegation we added several capabilities to the Reference
+Implementation Visa Service:
+
+1. Resolution of service names to addresses is fully under ZPR control. The ZPR
+   provides DNS for services hosted in ZPR.
+
+This gives the visa service the ability to control not just who can place a
+service within a DNS domain, but also who can find it.  The ZPR administrator
+can also make use of DNS `cname` records to reorganize the policy delegation
+hierarchy in arbitrary ways.
+
+
+2. A policy management system (PMS) for creating, updating, reading and deleting
+   policy tied to domains.
+
+The Visa Service must enforce a collection of policies that are each constrained
+to parts of the corporate namespace. As a content management system it enforces
+permissioned user access. Interaction with the PMS is through a REST API and
+access is controlled by api keys. The PMS also allows for a domain to be
+sub-delegated in a way that maps naturally to how domain names are used. For
+example, the domain tied to `marketing.corp.com` could delegate
+`accounts.marketing.corp.com` to another administrator.
+
+
+3. Policy domains use their own credentials to interact with trusted services.
+
+To fit in with access control on existing trusted services (eg, attribute
+databases, LDAP, etc) each domain is given credentials that permit it
+domain-appropriate trusted service access.
+
+
+4. Within a domain, policy is subject to restrictions set by whomever configured
+   the domain.
+
+When a domain is created, the creator can use a subset of ZPL and assertions to
+set restrictions on the kinds of policy rules that can be used in the domain. If
+a domain is part of a chain of delegated domains, it is subject to all the
+restrictions in the chain.
+
+
+5. The Visa Service handles compilation of ZPL.
+
+The Visa Service needs to enforce ZPL restrictions that are authored separately
+from a domain policy. To make this work the Visa Service must be responsible for
+actually compiling the domain policy, which it does in the presence of all
+applicable restrictions. Only policies that pass compilation can be applied to
+the network.
+
+
+# Policy Domains
+
+ZPR uses the concept of a **domain** to describe the unit of delegation of a ZPR
+policy.  A domain incorporates:
+
+1. The namespace (DNS root) for all services.
+2. Credentials for accessing reference data through trusted services.
+3. Restrictions on what is allowed to be expressed in the domain policy.
+4. A policy and configuration written in ZPL.
+
+The first three items in a domain are managed by the domain creator (also called
+its parent), and we can think of these as comprising the domain "envelope". The
+final item, the policy, can be thought of as the "contents" of the "envelope".
+The "contents", written in ZPL, define services and their associated policies.
+
+When users access services in ZPRnet they do so using DNS names. As stated
+earlier, the binding of names to addresses is a function provided by the ZPRnet.
+Each domain has a DNS root in which all the defined services can be found.
+
+ZPL always exists in a domain. A simple ZPRnet installation has a single, unnamed
+domain; explicit domain naming is only required when you want to use delegation.
+
+Within a domain, policy statements can only reference attributes accessible via
+the domain's credentials, and can only affect services defined within the domain's
 namespace. For example:
 
 > `Allow interns to access lifecycle:test services`
 
-In the above `services` means "services in this realm".
+In the above `services` means "services in this domain".
 
 
 
-# Configuring a Realm
+# Configuring a domain
 
 To delegate policy a top level ZPR administrator first needs to organize the
-service namespace. This step is tightly coupled to service discovery. We use DNS
-here but other schemes are possible.  For example, if the root domain is
-"corp.com" the administrator may split the namespace into "marketing.corp.com"
-and "finance.corp.com" with the intention of delegating those service areas to
-separate groups within the organization.  What this means in practice is that
-the marketing department is free to define services with names like
-`database.marketing.corp.com` or `addserver.marketing.corp.com`, while the
-finance department can define services with names like
-`database.finance.corp.com`, etc.
+service namespace. This step is tightly coupled to service discovery for which
+we rely on DNS.  For example, if the root domain is "corp.com" the administrator
+may split the namespace into "marketing.corp.com" and "finance.corp.com" with
+the intention of delegating those service areas to separate groups within the
+organization.  What this means in practice is that the marketing department is
+free to define services with names like `database.marketing.corp.com` or
+`addserver.marketing.corp.com`, while the finance department can define services
+with names like `database.finance.corp.com`, etc.
 
-Next the administrator needs to decide how each realm will access the reference
+Next the administrator decides how each domain will access the reference
 data available on the network. Reference data is accessed through _trusted
 services_, for example an LDAP service. Access to those services requires
-credentials which must be specified for each realm.  Attributes available to a
+credentials which must be specified for each domain.  Attributes available to a
 user with a finance role may be different from those available to a user with a
 marketing role.  This is an organizational IT decision not managed by ZPR, but
-the support for realm credentials means ZPR adheres to organizational policies.
+the support for domain credentials means ZPR adheres to organizational policies.
 
-Finally the administrator can add restrictions to each realm. The restrictions
+Finally the administrator adds restrictions to each domain. The restrictions
 are written in a subset of ZPL: only `never allow` statements and assertions are
 permitted.  As an example, the administrator may include a statement such as:
 
 > `Never allow role:finance services to access internet-gateway services.`
 
 This prevents finance services from ever communicating with the public internet,
-regardless of what the realm policy permits.
+regardless of what the domain policy permits.
 
-The key consequence of realm delegation is that when A delegates to B, A defines
-the service namespace that falls under B's authority and sets the credentials
-with which B's policy will access trusted services. The delegator always retains
+(TODO: Pretty sure that the restrictions need to run under the credential of the
+domain creator -- not the delegatee. Explain this here.)
+
+The key consequence of domain delegation is that the delegator always retains
 the ability to define restrictions for a delegated namespace. A delegatee cannot
 set policy for anything outside the namespace defined by its delegator.
 
-Since realms use service namespaces it is best practice to leave the assignment
+Since domains use service namespaces it is best practice to leave the assignment
 of addresses to the ZPRnet itself. That way there can be no accidental duplicate
 address assignment. However, even if IP addresses are set in the configuration,
 duplicate address assignment can be caught by the visa service at policy install
 time.
 
 
-## Realm Tokens and Deployment
+(TODO: We do not permit policy to write allow rules about services in other
+domains, right? Like in finance domain you can't say 'never allow finance users
+to access marketing services'. So if that is desired policy, you need the finance
+admin to add a rule. Right?)
 
-Once the realms are configured, tokens are generated that verify the realm
-authenticity. For example this could be a cryptographic signature. The purpose
-of a token is to tie the realm service namespace (a DNS root) to the realm
-credentials, owner and restrictions in a way that the visa service can validate.
 
-Realm administrator identities and tokens are provided to the visa service by
-the ZPR administrator. The realm configurations are given to the administrators
-of the organizational units (in our example, finance and marketing).
 
-To use the realm, each realm holder writes policy in ZPL that is then compiled,
-validated against its realm, and then can be separately loaded into the visa
-service which verifies the token before installing the policy.
 
 # Nested Delegation
 
-If the visa service supports it, the realm system is flexible enough to support
-nested delegation to arbitrary levels: a delegatee can delegate their namespace
-to others.  For example, the realm owner of `marketing.corp.com` can delegate
+The domain system is flexible enough to support nested delegation to arbitrary
+levels: a delegatee can further delegate their namespace to others.  For
+example, the domain owner of `marketing.corp.com` can delegate
 `it.marketing.corp.com` or any other subdomain as she sees fit.
 
-Restrictions imposed by any ancestor realm are enforced at all levels; a deeply
+Restrictions imposed by any ancestor domain are enforced at all levels; a deeply
 nested delegatee cannot circumvent a `never allow` rule set by any of its
 predecessors.
 
 
 # Delegation Attributes
 
-Attributes must be carefully controlled in order to keep realm policy from
-matching things it should not.  Within a realm, attributes can be controlled
+Attributes must be carefully controlled in order to keep domain policy from
+matching things it should not.  Within a domain, attributes can be controlled
 through careful configuration of access credentials and/or through the use of
-assertions in the realm restriction.
+assertions in the domain restriction.
 
 Recall that in ZPL the only way to bind a service to a providing identity is
-through attributes. Attribute names may be system wide so a realm administrator
+through attributes. Attribute names may be system wide so a domain administrator
 could theoretically reference attributes outside of their authority unless care
 is taken. To prevent the binding of services that lie outside of the
-administrative control of the realm owner you must restrict the attributes in
+administrative control of the domain owner you must restrict the attributes in
 use.
 
-It is perfectly acceptable for the finance administrator to write a ZPL
-statement to permit marketing users to access some financial service like this:
+For example, it is perfectly acceptable for the finance administrator to write a
+ZPL statement to permit marketing users to access some financial service like
+this:
 
 > `Allow dept:marketing users to access finance-website-01.`.
 
 But, assuming that all the marketing services have an attribute like
-`marketing-service-role`, this should not be allowed in the finance realm:
+`marketing-service-role`, this should not be allowed in the finance domain:
 
-> `Define fake-service as a service with marketing-service-role:dbserver.`
+> `Define shadow-service as a service with marketing-service-role:dbserver.`
+> `Allow dept:finance users to access shadow-service.`
 
 In the above example the finance admin is trying to gain access to a marketing
-database service.  If the finance credential used to access the attribute
-service is configured to never return the `marketing-service-role` attribute the
-ZPL will never match anything.  With a correctly configured attribute service,
-the error could be caught at the compiler when it queries the service using the
-finance credential.  Even if the ZPL is not flagged at the compiler stage, and
-the attribute service is mis-configured, the visa service will refuse to allow
-the binding of two service names onto the same identity so an error will be
-raised.
+database service. The namespace controls ensure that the service will be found
+under the name `shadow-service.finance.corp.com`, but if the only provider
+constraint is based on `marketing-service-role` then the finance ZPR
+administrator has essentially created an alias to the marketing database.
+However if the finance domain credentials used to access the attribute service
+is configured to never return the `marketing-service-role` attribute then the
+ZPL will never match anything, and would cause a compilation error.
 
-Using a realm specific attribute tied to an access credential as illustrated
-above is best practice. However, you can also add assertions to the realm
+Using a domain specific attribute tied to an access credential as illustrated
+above is best practice. However, you can also add assertions to the domain
 restriction that would prevent the delegated administrator from making use of
 specific attributes:
 
@@ -168,53 +261,53 @@ specific attributes:
 
 # Compiler Responsibilities
 
-The policy compiler is the first enforcement point for delegation. Given a realm
-and realm configuration, it is responsible for ensuring that the policy only
+The policy compiler is the first enforcement point for delegation. Given a domain
+and domain configuration, it is responsible for ensuring that the policy only
 uses attributes that are allowed for that delegated author.
 
 The compiler determines the set of allowed attributes from the trusted services.
-That set may then be further reduced by the realm restrictions. These
+That set may then be further reduced by the domain restrictions. These
 constraints are enforced statically at compile time by generating compilation
 errors, preventing the creation of a binary policy file. This design prevents a
 delegated administrator from accidentally or intentionally authoring policy that
 escapes their delegated scope.
 
+Even though the Visa Service manages compilation, the compiler is still
+available as a stand alone tool and can be useful for local testing even without
+access to the domain restrictions. API calls to the visa service can be used by
+policy administrators to "test compile" their domain policy in the fuller
+network policy context.
+
 
 # Visa Service Behavior
 
-A crucial invariant is that `never allow` rules are enforced everywhere in the
-delegation hierarchy.  When traffic is evaluated, the visa service always denies
-if a `never allow` statement matches. Policy is evaluated realm by realm, in ZPL
-policy order. In the absence of a `never allow` the first `allow` matches.
+In a non delegated environment, a visa service runs a single policy in the
+global domain, and makes decisions based purely on that policy. In a delegated
+environment, the visa service runs many domains at once.
 
-In a non delegated environment, a visa service runs a single policy in what can
-be thought of as the global realm, and makes decisions based purely on that
-policy. In a delegated environment, the visa service runs many realms at once.
+A crucial invariant is that `never allow` rules and assertions are enforced
+everywhere in the delegation hierarchy.  When traffic is evaluated, the visa
+service always denies if a `never allow` statement matches or an assertion
+fails. Policy is evaluated based on the domain holding the service being
+accessed. In the absence of a `never allow` the first `allow` statement in the
+policy matches.
 
-To support this, the visa service:
-
-* Confirms the proof of delegation associated with each realm, so malformed or
-  forged delegations are rejected.
-
-* Manages access credentials per realm so that services are only instantiated
-  when they match the realms they are defined in.
-
-* Enforces a single service per identity at service binding time.
-
-Each realm maintains its own attribute cache for the trusted services it uses.
-This keeps attributes in realms isolated from one another and reduces
+Each domain maintains its own attribute cache for the trusted services it uses.
+This keeps attributes in domains isolated from one another and reduces
 the impact of configuration mistakes. At the same time, the visa service uses
 global credentials when talking to the authentication service because identity
-verification is a shared concern, not scoped per realm.
+verification is a shared concern, not scoped per domain.
 
 To grant a visa for a specific request, the visa service first identifies the
 service by comparing its protocol details (address, protocol, port). If the
-service is bound to a realm, the visa service checks for any `never allow`
-statements in the realm policy or its restrictions. Then it looks for any
-`never allow` statements in all parent policies and restrictions.  If no `never`
-statement matches in the delegation chain then the visa service tries to match
-the request against the realm `allow` statements. If an `allow` is found a visa
-is granted.
+service is bound to a domain, the visa service checks for any `never allow`
+statements in the domain policy or its restrictions. Then it looks for any
+`never allow` statements in all parent policies and restrictions.
+
+If no `never` statement matches in the delegation chain then the visa service
+tries to match the request against the domain `allow` statements (in the order
+as written in ZPL) starting at the most deeply nested domain and working back
+up. If an `allow` is found a visa is granted. (TODO: DOES THIS SEEM RIGHT?)
 
 
 
@@ -223,17 +316,17 @@ is granted.
 Trusted services play a key role in enforcement by strictly controlling
 attribute distribution. They must:
 
-* Only return delegated attributes to the actors authorized to receive them.
+* Only return delegated attributes to the entities authorized to receive them.
 
 * Avoid exposing conflicting attribute sets that would place a service under two
-  different delegated realms.
+  different delegated domains.
 
-It is important to note that the strict binding of services to delegated realms
+It is important to note that the strict binding of services to delegated domains
 only works if attributes are correctly managed in the underlying systems.
 
 While assertions give administrators a way to enforce attribute usage within the
 ZPR ecosystem, ZPR normally relies on external, trusted services to return
-accurate attribute sets and to avoid exposing attributes that would give a realm
+accurate attribute sets and to avoid exposing attributes that would give a domain
 administrator influence outside its authorized scope.
 
 When attribute discipline is followed, the delegation model in ZPR achieves
@@ -246,16 +339,16 @@ three goals simultaneously:
    access control through the use of access credentials.
 
 3. It provides clear, auditable boundaries for administrative authority.
-   Misconfigurations can be detected through verification of delegation tokens,
-   compiler checks, and visa service validation -- as long as attribute sources
-   and realm restrictions remain consistent.
+   Misconfigurations can be detected through policy audits, compiler checks, and
+   visa service validation. Enfocement will be correct so long as attribute
+   sources and domain restrictions remain consistent.
 
 
-# Example
+# Example (TODO: NOT UPDATED BY MK YET)
 
 In this example we consider a company with an accounting department and a
 marketing department. The company initially deploys ZPR without delegation using
-the default realm.  We first show the monolithic single-realm setup, then show
+the default domain.  We first show the monolithic single-domain setup, then show
 how it decomposes under delegation.
 
 This assumes some familiarity with ZPL and the TOML configuration syntax used in
@@ -365,31 +458,31 @@ protocol = "https"
 protocol = "odb"
 ```
 
-We now decompose this into two delegated realms, one for marketing and one for
+We now decompose this into two delegated domains, one for marketing and one for
 accounting.
 
 
 ## Delegation With Visa Service (Reference Implementation)
 
-Given the concept of realms described above, there are many ways they could be
-implemented in practice.  Here is how realms and delegation are implemented in
+Given the concept of domains described above, there are many ways they could be
+implemented in practice.  Here is how domains and delegation are implemented in
 the reference implementation of the Visa Service. The visa service supports
 delegation through administrative mechanisms all accessed through an API.
 
-It manages a set of realms. The first realms must be created by the ZPR
-administrator but delegated administrators can create realms too if they are
+It manages a set of domains. The first domains must be created by the ZPR
+administrator but delegated administrators can create domains too if they are
 permission'd to do so. The visa service manages its own set of administrators
-along with what realm they are in and their associated permissions. Realm
+along with what domain they are in and their associated permissions. domain
 policies are submitted via the API in ZPL form and the visa service manages the
 compilation step, ensuring that all the delegation restrictions are applied
 before accepting/installing the policy.  Finally, the visa service provides
-auditing capabilities, returning the full policy for each realm including all
+auditing capabilities, returning the full policy for each domain including all
 inherited restrictions.
 
 To get started, the ZPR administrator configures a base configuration for the
-root realm that includes trusted service information. Note that the `cnames`
+root domain that includes trusted service information. Note that the `cnames`
 section has been updated since the `aboutus` service is now inside the
-`marketing` realm.
+`marketing` domain.
 
 ```toml
 [dns]
@@ -426,15 +519,15 @@ returns_attributes = [
 ```
 
 
-The ZPR administrator creates two realms using the visa service REST API.
-Essentially submitting realm data structures.
+The ZPR administrator creates two domains using the visa service REST API.
+Essentially submitting domain data structures.
 
-Here is an example for the "marketing" realm:
+Here is an example for the "marketing" domain:
 
 ```json
 {
-  "parent_realm":"root",
-  "realm":"marketing",
+  "parent_domain":"root",
+  "domain":"marketing",
   "administrators":["marketing_admin"],
   "validation_services":["okta_auth"],
   "attribute_services":["ldap1"],
@@ -444,29 +537,29 @@ Here is an example for the "marketing" realm:
 }
 ```
 
-It is not shown here, but the JSON for the "accounting" realm follows roughly
+It is not shown here, but the JSON for the "accounting" domain follows roughly
 the same structure as "marketing" above.
 
 The ZPR administrator adds the `marketing_admin` and the `accounting_admin` to the
-visa service admin user database, each associated with their realm.
+visa service admin user database, each associated with their domain.
 
 Now each administrator is able to create their own ZPL and configuration and
-install them into the visa service using their realm administrator keys. When
-the realm policies are submitted, the visa service performs compilation and
+install them into the visa service using their domain administrator keys. When
+the domain policies are submitted, the visa service performs compilation and
 incorporates all the restrictions applied through delegation.
 
 
 ### Marketing Policy
 
 The marketing ZPR administrator only needs to write policy about services
-managed by the marketing department.  As is the case with realms, there is no
-way for the marketing policy to impact other realms because the attributes
+managed by the marketing department.  As is the case with domains, there is no
+way for the marketing policy to impact other domains because the attributes
 required to do so are hidden through the use of a specific attribute service
 credential.
 
-Additionally, all the services defined in the marketing realm will be found in
-DNS in the correct subdomain (which is the realm name, eg,
-"aboutus.marketing.corp.com") and no other realm can add or alter names in the
+Additionally, all the services defined in the marketing domain will be found in
+DNS in the correct subdomain (which is the domain name, eg,
+"aboutus.marketing.corp.com") and no other domain can add or alter names in the
 marketing namespace.
 
 
@@ -583,7 +676,47 @@ protocol = "odb"
 
 
 
+# TODO: ORPHANS - maybe use / maybe throw out
 
+
+## Triangle
+
+In addition to policy, ZPR incorporates reference data from trusted services,
+manages a namespace for services deployed on the network, and enforces authoring
+permissions for ZPL itself.  Each of these aspects has a delegation component
+which is managed outside of the ZPR ecosystem but supported by it.  In addition,
+to ensure a secure environment, all of these aspects of the network
+configuration must be auditable.
+
+The "Triangle of Auditability" diagram below illustrates that a complete ZPR
+environment involves three separately managed domains.
+
+![The Triangle of Auditability](triangle.png){height="3in"}
+
+
+
+
+## Delegation Hierarchies (MD)
+
+PR/ZPL relies $only$ on external systems for authentication, access control, and
+attributes.
+
+These systems support their own delegation mechanisms. For example,
+Active Directory (and most databases and applications) manage users, groups,
+etc. and who is allowed to create/read/edit/delete (CRED), and who is allowed to
+bestow and manage such authority to others.
+
+To use these existing access controls, ZPL uses authenticated credentials
+uniquely associated with each $domain$ to access trusted sources. Visa services
+never use their own credentials, but act on behalf of $domains$.
+
+Trusted sources use $domain$ credentials for access control, and tags from
+authenticated ZPR connections (composite user, app, machine, etc.) to fetch the
+attributes used by policies.
+
+(If ZPR used a superuser to access trusted sources, the onus of enforcing
+delegation and access control would fall on the Visa Services. This would be a
+huge potential security vulnerability for ZPR)
 
 
 
