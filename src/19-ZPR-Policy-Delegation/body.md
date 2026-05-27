@@ -91,9 +91,9 @@ hierarchy in arbitrary ways.
 The Visa Service must enforce a collection of policies that are each constrained
 to parts of the corporate namespace. As a content management system it enforces
 permissioned user access. Interaction with the PMS is through a REST API and
-access is controlled by API keys. The PMS also allows for a domain to be
-sub-delegated in a way that maps naturally to how domain names are used. For
-example, the domain tied to `marketing.corp.com` could delegate
+access is controlled by API keys and/or access tokens. The PMS also allows for a
+domain to be sub-delegated in a way that maps naturally to how domain names are
+used. For example, the domain tied to `marketing.corp.com` could delegate
 `accounts.marketing.corp.com` to another administrator.
 
 
@@ -360,11 +360,10 @@ three goals simultaneously:
 
 3. It provides clear, auditable boundaries for administrative authority.
    Misconfigurations can be detected through policy audits, compiler checks, and
-   visa service validation. Enforcement will be correct so long as attribute
-   sources and domain restrictions remain consistent.
+   visa service validation.
 
 
-# Example (TODO: NOT UPDATED BY MK YET)
+# Example
 
 In this example we consider a company with an accounting department and a
 marketing department. The company initially deploys ZPR without delegation using
@@ -482,25 +481,47 @@ We now decompose this into two delegated domains, one for marketing and one for
 accounting.
 
 
-## Delegation With Visa Service (Reference Implementation)
+## Delegation With Visa Service
 
-Given the concept of domains described above, there are many ways they could be
-implemented in practice.  Here is how domains and delegation are implemented in
-the reference implementation of the Visa Service. The visa service supports
-delegation through administrative mechanisms all accessed through an API.
+The visa service supports delegation through administrative mechanisms all
+accessed through an API.  It manages a set of domains. The first domains must be
+created by the ZPR administrator but delegated administrators can create domains
+too if they are permission'd to do so.
 
-It manages a set of domains. The first domains must be created by the ZPR
-administrator but delegated administrators can create domains too if they are
-permission'd to do so. The visa service manages its own set of administrators
-along with what domain they are in and their associated permissions. domain
-policies are submitted via the API in ZPL form and the visa service manages the
-compilation step, ensuring that all the delegation restrictions are applied
-before accepting/installing the policy.  Finally, the visa service provides
-auditing capabilities, returning the full policy for each domain including all
-inherited restrictions.
+Here is the model used by the Visa Service for a **domain**:
+
+```
+Domain
+ ├── envelope
+ │    ├── namespace
+ │    ├── restrictions
+ │    ├── trusted service bindings
+ │    └── delegation metadata
+ │
+ ├── policy
+ │    ├── zpl
+ │    ├── configuration
+ │    ├── revisions
+ │    └── compiled artifacts
+ │
+ ├── users
+ │
+ └── audit history
+ ```
+
+The visa service manages its own set of administrators along with what domain
+they are in and their associated permissions. Domain policies are submitted via
+the API in ZPL form and the visa service manages the compilation step, ensuring
+that all the delegation restrictions are applied before accepting/installing the
+policy.  Finally, the visa service provides auditing capabilities, with the
+correct permissions an auditor can access:
+
+- All the active policy on the ZPRnet and its hierarchical ordering.
+- All the users who have access to policy and their access level.
+- All historical operations performed on policy and the user access system.
 
 To get started, the ZPR administrator configures a base configuration for the
-root domain that includes trusted service information. Note that the `cnames`
+`root` domain that includes trusted service information. Note that the `cnames`
 section has been updated since the `aboutus` service is now inside the
 `marketing` domain.
 
@@ -524,14 +545,8 @@ identity_attributes = [ "corp-id" ]
 
 [trusted_services.ldap1]
 api = "attributes"
-
-# credential is not specified here but is required to use this
-
-# This is a mapping for any attribute that can be returned - the actual
-# attributes returned depends on the credential.
+credential = "zpr_apikey.1208748778383002"
 returns_attributes = [
-  "marketing-service-role -> service.marketing-service-role",
-  "accounting-service-role -> service.accounting-service-role",
   "aud -> service.aud",
   "pubgw -> #endpoint.internet-gateway"  # is a tag
 ]
@@ -548,39 +563,132 @@ Here is an example for the "marketing" domain:
 {
   "parent_domain":"root",
   "domain":"marketing",
-  "administrators":["marketing_admin"],
-  "validation_services":["okta_auth"],
-  "attribute_services":["ldap1"],
+  "validation_services":[
+    {
+      "service_id": "okta_auth",
+      "inherit": ["credential", "attributes"]
+    }
+  ],
+  "attribute_services":[
+    {
+      "service_id": "ldap1",
+      "inherit": []
+    },
+  ],
   "restrictions":[
     "never allow aud:internal services to access endpoint.internet-gateway services"
   ]
 }
 ```
 
+Since `domain` is set to `marketing` and the `parent_domain` is `root`, the DNS
+root domain for this Visa Service "domain" will be `marketing.corp.com`.
+
+
 It is not shown here, but the JSON for the "accounting" domain follows roughly
 the same structure as "marketing" above.
 
-The ZPR administrator adds the `marketing_admin` and the `accounting_admin` to the
-visa service admin user database, each associated with their domain.
+The Visa Service manages user access to domain content by keeping a database of
+user records along with their authentication details and domain permissions. The
+Visa Service supports a set of roles that can be assigned to users.
 
-Now each administrator is able to create their own ZPL and configuration and
-install them into the visa service using their domain administrator keys. When
-the domain policies are submitted, the visa service performs compilation and
-incorporates all the restrictions applied through delegation.
+
+- **policy_admin**:
+  - Read and write access to all policy in all domains.
+  - Read and write access to all domain and user configuration.
+
+- **policy_writer**:
+  - Read and write access to policy in all domains.
+
+- **policy_auditor**:
+  - Read access to all policy in all domains.
+  - Read access to all Visa Service domain and user configuration.
+
+- **policy_reader**:
+  - Read access to all policy in all domains.
+
+- **domain_admin**:
+  - Read and write access to policy in a domain.
+  - Read and write access to user configuration in a domain.
+  - Ability to create/edit/delete sub-domains.
+
+- **domain_writer**:
+  - Read and write access to policy in a domain.
+
+- **domain_auditor**:
+  - Read access to policy in a domain.
+  - Read access to user configuration in a domain.
+
+- **domain_reader**:
+  - Read access to policy in a domain.
+
+
+For this example, the ZPR administrator adds the `marketing_editor` and the
+`accounting_editor` to the visa service user database, each given write access to
+their domain.  Here is the configuration for the `marketing_editor`:
+
+```json
+{
+   "user_id": "marketing_editor",
+   "provider": "vs.zpr",
+   "access": [
+      { "role": "domain_writer", "domain": "marketing" }
+   ],
+   "status": "enabled"
+}
+```
+
+And the `accounting_editor`:
+
+```json
+{
+   "user_id": "accounting_editor",
+   "provider": "vs.zpr",
+   "access": [
+      { "role": "domain_writer", "domain": "accounting" }
+   ],
+   "status": "enabled"
+}
+```
+
+The Visa Service supports external authentication. Obviously this requires that
+there is already enough policy present for a authentication service to connect,
+but once one is available, a user record can be inserted using it. For example,
+here is the `auditor` record which is authenticated by an Okta service.
+
+
+```json
+{
+   "user_id": "auditor",
+   "provider": "okta",
+   "issuer": "https://corp.okta-gw.corp.com",
+   "subject": "00u1234567890abcdef",
+   "access": [
+      { "role": "policy_auditor" },
+   ],
+   "status": "enabled"
+}
+```
+
+
+Each domain editor creates their own ZPL and configuration details and installs
+them into the visa service using the API. When the domain policies are
+submitted, the visa service performs compilation and incorporates all the
+restrictions applied through delegation.
+
+Note that the visa service is not configured with the trusted service
+credentials directly -- those are provided to the domain administrators out of
+band and submitted with their policy configuration.
 
 
 ### Marketing Policy
 
 The marketing ZPR administrator only needs to write policy about services
-managed by the marketing department.  As is the case with domains, there is no
-way for the marketing policy to impact other domains because the attributes
-required to do so are hidden through the use of a specific attribute service
-credential.
+managed by the marketing department.
 
-Additionally, all the services defined in the marketing domain will be found in
-DNS in the correct subdomain (which is the domain name, eg,
-"aboutus.marketing.corp.com") and no other domain can add or alter names in the
-marketing namespace.
+All the services defined in the marketing domain will be found in DNS in the
+correct subdomain (which is the domain name, eg, "aboutus.marketing.corp.com")
+and no other domain can add or alter names in the marketing namespace.
 
 
 The marketing ZPL:
@@ -595,7 +703,7 @@ define marketing-employee as an employee with dept:marketing.
 
 allow aboutus to access mktdb.
 allow templates to access mktdb.
-allow marketing-employee to access templates.
+allow marketing-employees to access templates.
 
 allow employees to access aboutus.
 allow internet-gateway endpoints to access aboutus.
@@ -612,6 +720,13 @@ inherit = true
 [trusted_services.ldap1]
 inherit = true
 credential = "marketing_apikey.1208748778383002"
+
+# Replace the inherited mapping with our own.
+returns_attributes = [
+  "marketing-service-role -> service.marketing-service-role",
+  "aud -> service.aud",
+  "pubgw -> #endpoint.internet-gateway"
+]
 
 [protocol.https]
 l4protocol = "TCP"
@@ -666,6 +781,12 @@ inherit = true
 [trusted_services.ldap1]
 inherit = true
 credential = "accounting_apikey.120941238688493002"
+returns_attributes = [
+  "accounting-service-role -> service.accounting-service-role",
+  "aud -> service.aud",
+  "pubgw -> #endpoint.internet-gateway"
+]
+
 
 [protocol.https]
 l4protocol = "TCP"
@@ -689,6 +810,35 @@ protocol = "odb"
 ```
 
 
+# Visa Service API Outline
+
+(TODO: This does not exist, just a thought experiment for now. Update this as it is built)
+
+| Endpoint                                           | Method   | Primary Data Types                                   | Purpose                                                                                                   |
+| -------------------------------------------------- | -------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `/v1/domains`                                      | `POST`   | `DomainCreateRequest`, `Domain`                      | Create a delegated domain with namespace ownership, trusted service bindings, and inherited restrictions. |
+| `/v1/domains/{domain}`                             | `GET`    | `Domain`                                             | Retrieve domain metadata, delegation chain, restrictions, and trusted service configuration.              |
+| `/v1/domains/{domain}`                             | `PATCH`  | `DomainUpdateRequest`, `Domain`                      | Update mutable domain configuration such as restrictions, inheritance behavior, or status.                |
+| `/v1/domains/{domain}`                             | `DELETE` | `DeleteResult`                                       | Remove a domain and optionally revoke its delegated authority.                                            |
+| `/v1/domains/{domain}/children`                    | `GET`    | `Domain[]`                                           | List delegated subdomains beneath a domain.                                                               |
+| `/v1/domains/{domain}/effective-restrictions`      | `GET`    | `RestrictionSet`                                     | Return all inherited and local restrictions enforced for a domain.                                        |
+| `/v1/domains/{domain}/services`                    | `GET`    | `ServiceDefinition[]`                                | List services defined within a domain namespace.                                                          |
+| `/v1/services/{fqdn}`                              | `GET`    | `ServiceResolution`                                  | Resolve a service name to protocol, address, and owning domain metadata.                                  |
+| `/v1/domains/{domain}/policy`                      | `PUT`    | `PolicyUploadRequest`, `PolicyRevision`              | Upload or replace ZPL policy and associated configuration for a domain.                                   |
+| `/v1/domains/{domain}/policy`                      | `GET`    | `PolicyDocument`                                     | Retrieve the currently active policy and configuration for a domain.                                      |
+| `/v1/domains/{domain}/policy/revisions`            | `GET`    | `PolicyRevision[]`                                   | List historical policy revisions for a domain.                                                            |
+| `/v1/domains/{domain}/policy/revisions/{revision}` | `GET`    | `PolicyDocument`                                     | Retrieve a specific historical revision of a policy.                                                      |
+| `/v1/domains/{domain}/policy/rollback`             | `POST`   | `RollbackRequest`, `PolicyRevision`                  | Roll back the active policy to a previous revision.                                                       |
+| `/v1/domains/{domain}/compile`                     | `POST`   | `CompileRequest`, `CompileResult`                    | Test-compile policy against inherited restrictions and visible attributes without activation.             |
+| `/v1/domains/{domain}/install`                     | `POST`   | `InstallRequest`, `InstallResult`                    | Compile, validate, and activate a policy revision atomically.                                             |
+| `/v1/domains/{domain}/attributes/visible`          | `GET`    | `AttributeVisibility`                                | Return the attributes visible within the domain based on credentials and assertions.                      |
+| `/v1/users`                                        | `POST`   | `UserCreateRequest`, `UserRecord`                    | Create a Visa Service user and assign global or domain-scoped roles.                                      |
+| `/v1/users/{user_id}`                              | `GET`    | `UserRecord`                                         | Retrieve a user account, authentication provider details, and assigned roles.                             |
+| `/v1/users/{user_id}`                              | `PATCH`  | `UserUpdateRequest`, `UserRecord`                    | Modify user permissions, roles, or account status.                                                        |
+| `/v1/domains/{domain}/users`                       | `GET`    | `UserRecord[]`                                       | List users with permissions within a domain.                                                              |
+| `/v1/domains/{domain}/audit`                       | `GET`    | `DomainAuditReport`                                  | Return an auditable view of domain policy, restrictions, delegation lineage, and permissions.             |
+| `/v1/audit/evaluate`                               | `POST`   | `PolicyEvaluationRequest`, `PolicyEvaluationResult`  | Evaluate whether a source identity may access a destination service under current policy.                 |
+| `/v1/audit/trace`                                  | `POST`   | `PolicyTraceRequest`, `PolicyTraceResult`            | Return a detailed rule-by-rule explanation of policy evaluation and restriction matching.                 |
 
 
 
