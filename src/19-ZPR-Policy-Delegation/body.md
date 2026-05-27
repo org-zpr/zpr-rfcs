@@ -360,11 +360,10 @@ three goals simultaneously:
 
 3. It provides clear, auditable boundaries for administrative authority.
    Misconfigurations can be detected through policy audits, compiler checks, and
-   visa service validation. Enforcement will be correct so long as attribute
-   sources and domain restrictions remain consistent.
+   visa service validation.
 
 
-# Example (TODO: NOT UPDATED BY MK YET)
+# Example
 
 In this example we consider a company with an accounting department and a
 marketing department. The company initially deploys ZPR without delegation using
@@ -482,22 +481,20 @@ We now decompose this into two delegated domains, one for marketing and one for
 accounting.
 
 
-## Delegation With Visa Service (Reference Implementation)
+## Delegation With Visa Service
 
-Given the concept of domains described above, there are many ways they could be
-implemented in practice.  Here is how domains and delegation are implemented in
-the reference implementation of the Visa Service. The visa service supports
-delegation through administrative mechanisms all accessed through an API.
+The visa service supports delegation through administrative mechanisms all
+accessed through an API.
 
 It manages a set of domains. The first domains must be created by the ZPR
 administrator but delegated administrators can create domains too if they are
 permission'd to do so. The visa service manages its own set of administrators
-along with what domain they are in and their associated permissions. domain
+along with what domain they are in and their associated permissions. Domain
 policies are submitted via the API in ZPL form and the visa service manages the
 compilation step, ensuring that all the delegation restrictions are applied
 before accepting/installing the policy.  Finally, the visa service provides
-auditing capabilities, returning the full policy for each domain including all
-inherited restrictions.
+auditing capabilities, with the correct permissions it will return the full
+policy for each domain including all inherited restrictions.
 
 To get started, the ZPR administrator configures a base configuration for the
 root domain that includes trusted service information. Note that the `cnames`
@@ -525,10 +522,9 @@ identity_attributes = [ "corp-id" ]
 [trusted_services.ldap1]
 api = "attributes"
 
-# credential is not specified here but is required to use this
+# This is the root credential and is not inherited by sub domains.
+credential = "zpr_apikey.1208748778383002"
 
-# This is a mapping for any attribute that can be returned - the actual
-# attributes returned depends on the credential.
 returns_attributes = [
   "marketing-service-role -> service.marketing-service-role",
   "accounting-service-role -> service.accounting-service-role",
@@ -548,7 +544,6 @@ Here is an example for the "marketing" domain:
 {
   "parent_domain":"root",
   "domain":"marketing",
-  "administrators":["marketing_admin"],
   "validation_services":["okta_auth"],
   "attribute_services":["ldap1"],
   "restrictions":[
@@ -557,30 +552,47 @@ Here is an example for the "marketing" domain:
 }
 ```
 
+Since `domain` is set to `marketing` and the `parent_domain` is `root`, the DNS
+root domain for this Visa Service "domain" will be `marketing.corp.com`.
+
+
 It is not shown here, but the JSON for the "accounting" domain follows roughly
 the same structure as "marketing" above.
 
-The ZPR administrator adds the `marketing_admin` and the `accounting_admin` to the
-visa service admin user database, each associated with their domain.
+The ZPR administrator adds the `marketing_admin` and the `accounting_admin` to
+the visa service admin user database, each associated with their domain. The
+administrator also adds an auditor user with the ability to read from both
+domains.  This is also done via the api, for example the `marketing_admin`
+user data is submitted like this:
 
-Now each administrator is able to create their own ZPL and configuration and
-install them into the visa service using their domain administrator keys. When
-the domain policies are submitted, the visa service performs compilation and
-incorporates all the restrictions applied through delegation.
+```json
+{
+   "user_id": "marketing_admin",
+   "access": [
+      { "domain": "marketing", "perms": "rw" }
+   ],
+   "api_key": "mkta_934909300_9234003000",
+   "expiration": "20270101T10:01:33Z"
+}
+```
+
+Each administrator creates their own ZPL and configuration details and installs
+them into the visa service using their API keys. When the domain policies are
+submitted, the visa service performs compilation and incorporates all the
+restrictions applied through delegation. Note that the visa service is not
+configured with the trusted service credentials directly -- those are provided
+to the domain administrators out of band and submitted with their policy
+configuration.
 
 
 ### Marketing Policy
 
 The marketing ZPR administrator only needs to write policy about services
-managed by the marketing department.  As is the case with domains, there is no
-way for the marketing policy to impact other domains because the attributes
-required to do so are hidden through the use of a specific attribute service
-credential.
+managed by the marketing department.
 
-Additionally, all the services defined in the marketing domain will be found in
-DNS in the correct subdomain (which is the domain name, eg,
-"aboutus.marketing.corp.com") and no other domain can add or alter names in the
-marketing namespace.
+All the services defined in the marketing domain will be found in DNS in the
+correct subdomain (which is the domain name, eg, "aboutus.marketing.corp.com")
+and no other domain can add or alter names in the marketing namespace.
 
 
 The marketing ZPL:
@@ -612,6 +624,11 @@ inherit = true
 [trusted_services.ldap1]
 inherit = true
 credential = "marketing_apikey.1208748778383002"
+returns_attributes = [
+  "marketing-service-role -> service.marketing-service-role",
+  "aud -> service.aud",
+  "pubgw -> #endpoint.internet-gateway"
+]
 
 [protocol.https]
 l4protocol = "TCP"
@@ -666,6 +683,12 @@ inherit = true
 [trusted_services.ldap1]
 inherit = true
 credential = "accounting_apikey.120941238688493002"
+returns_attributes = [
+  "accounting-service-role -> service.accounting-service-role",
+  "aud -> service.aud",
+  "pubgw -> #endpoint.internet-gateway"
+]
+
 
 [protocol.https]
 l4protocol = "TCP"
