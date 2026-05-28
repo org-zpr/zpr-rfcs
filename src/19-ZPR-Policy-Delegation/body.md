@@ -60,44 +60,44 @@ Implementation Visa Service:
 1. Resolution of service names to addresses is fully under ZPR control. The ZPRnet
    provides DNS for services hosted in ZPR.
 
-   > This gives the visa service the ability to control not just who can place a
-service within a DNS domain, but also who can find it.  The ZPR administrator
-can also make use of DNS `cname` records to reorganize the policy delegation
-hierarchy in arbitrary ways.
+   This gives the visa service the ability to control not just who can place a
+   service within a DNS domain, but also who can find it.  The ZPR administrator
+   can also make use of DNS `cname` records to reorganize the policy delegation
+   hierarchy in arbitrary ways.
 
 
 2. A policy management system (PMS) for creating, updating, reading and deleting
    policy tied to domains.
 
-   > The Visa Service must enforce a collection of policies that are each constrained
-to parts of the corporate namespace. As a content management system it enforces
-permissioned user access. Interaction with the PMS is through a REST API and
-access is controlled by API keys and/or access tokens. The PMS also allows for a
-domain to be sub-delegated in a way that maps naturally to how domain names are
-used. For example, the domain tied to `marketing.corp.com` could delegate
-`accounts.marketing.corp.com` to another administrator.
+   The Visa Service must enforce a collection of policies that are each constrained
+   to parts of the corporate namespace. As a content management system it enforces
+   permissioned user access. Interaction with the PMS is through a REST API and
+   access is controlled by API keys and/or access tokens. The PMS also allows for a
+   domain to be sub-delegated in a way that maps naturally to how domain names are
+   used. For example, the domain tied to `marketing.corp.com` could delegate
+   `accounts.marketing.corp.com` to another administrator.
 
 3. Policy domains use their own credentials to interact with trusted services.
 
-   > To fit in with access control on existing trusted services (eg, attribute
-databases, LDAP, etc) each domain is given credentials that permit it
-domain-appropriate trusted service access.
+   To fit in with access control on existing trusted services (eg, attribute
+   databases, LDAP, etc) each domain is given credentials that permit it
+   domain-appropriate trusted service access.
 
 4. Within a domain, policy is subject to restrictions set by whomever configured
    the domain.
 
-   > When a domain is created, the creator can use a subset of ZPL and assertions to
-set restrictions on the kinds of policy rules that can be used in the domain. If
-a domain is part of a chain of delegated domains, it is subject to all the
-restrictions in the chain.
+   When a domain is created, the creator can use a subset of ZPL and assertions to
+   set restrictions on the kinds of policy rules that can be used in the domain. If
+   a domain is part of a chain of delegated domains, it is subject to all the
+   restrictions in the chain.
 
 5. The Visa Service handles compilation of ZPL.
 
-   > The Visa Service needs to enforce ZPL restrictions that are authored separately
-from a domain policy. To make this work the Visa Service is responsible for
-actually compiling the domain policy, which it does in the presence of all
-applicable restrictions. Only policies that pass compilation can be applied to
-the network.
+   The Visa Service needs to enforce ZPL restrictions that are authored separately
+   from a domain policy. To make this work the Visa Service is responsible for
+   actually compiling the domain policy, which it does in the presence of all
+   applicable restrictions. Only policies that pass compilation can be applied to
+   the network.
 
 ## Policy Domains
 
