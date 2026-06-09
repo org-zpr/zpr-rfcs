@@ -1,77 +1,58 @@
-# Introduction
+# RFC-19 Policy Delegation
 
-Policy delegation is the mechanism that allows a central authority to
-safely share control of network access policy with subordinate policy authors
-while still enforcing a coherent global security posture. As ZPR deployments
-grow in size and organizational complexity, delegation becomes necessary to
-distribute policy authoring without fragmenting control or weakening security
-guarantees.
+**Delegation** is the act of assigning (potentially) constrained authority,
+responsibility, and specific tasks to another person or group.
 
-In any ZPR deployment of meaningful scale there will be many delegation
-hierarchies, for instance:
+A non-trivial ZPR network relies (at minimum) on the configuration data below.
+These data should be managed by different parts of an organization and
+properly delegated to others.
 
-- Management of users and groups and their attributes.
-- Ability to create and name services.
-- Controls around access to data sources like LDAP.
-- Issuance of credentials.
-- Ability to connect machines and VMs.
-- Physical network configuration.
-- Management of who can create, edit, read or delete network policy.
+ZPR Network Data
+- Directory management (access to AD/LDAP)
+- User/group/attribute management
+- Service/policy management
+- Credential management
+- Physical and virtual machine management
+- Physical and ZPR network management
 
-These systems support their own delegation mechanisms. For example, Active
-Directory (and most databases and applications) manage users, groups, etc. and
-who is allowed to create/read/edit/delete (CRED), and who is allowed to bestow
-and manage such authority to others.
+These systems/data sources support their own means of delegation. For example, Active
+Directory, most databases and applications manage users, groups, etc. and
+determine who is allowed to create/read/edit/delete (CRED).  They also manage who
+is allowed to bestow and manage such authority to others (delegation).
 
 Authentication and attributes are handled through Trusted Services using
 existing third party or in-house systems. The physical substrate and ZPR
 configuration are also handled elsewhere using their own tools (and hierarchies)
 
-What remains are services, name spaces, and policies. With ZPL, services are
-declared and access to them is controlled. To manage name spaces we tightly
-integrate with DNS. Support for delegating policies is built into the Visa
-Service using a concept called _domains_.
+>__ZPR/ZPL does not directly provide authentication, reference data, or
+>delegation control. Instead, it relies on trusted sources.
+>ZPR enforces network policy through the use of these trusted sources.__
 
-The remainder of this paper focuses on _domains_, our delegation mechanism in
-the Reference Implementation. It describes how delegated policy is constrained,
-verified, and enforced, and how reference data from trusted services is used
-safely to adhere to existing hierarchical access controls.
+## Problem Space
 
+Services
+ - Need to be defined within a delegated name space. The reference implementation
+   supports this with non-delegated configuration files.
+ - Prevent service name collisions and hijacking.
+ - Tightly associate policies with services. Allowances should
+   never be written (or accepted) in any place other than where the service is
+   defined.
+ - Require a method of discovery. _Preferably preventing non-allowed actors
+   from successful discovery_.
 
-## The Problem Space
+Policies
+ - Need restricted access to trusted services to prevent data leakage.  _It is
+   dangerous and outside ZPR's scope to manage/delegate/enforce access to
+   trusted services_.
+ - Should be written by whomever is defining the service.
+ - Should be constrained to a specific name space.
+ - Need to be in implicit priority order.
 
-TODO: background context here...
-TODO: whole section needs work.
-
-
-### Issues that delegation needs to solve (MD)
-
-1. Who can create a service?
-2. Where is a service defined?
-3. What keeps services from being created/modified/deleted by an unauthorized party?
-4. How are services named?
-5. What constraints can be enforced for a service within the service namespace?
-6. Who can use a service?
-7. Who can write "Allow" policies?
-8. What is the scope of these policies?
-9. What order are the policies evaluated (priority)?
-10. Who can write "Never" policies?
-11. What is the scope of these policies?
-12. Who can read policies?
-13. How are the service definitions and access policies audited?
-
-
-
-### Other issues that are related to delegation (MD)
-
-1. How are services resolved?
-2. How dynamic is the resolution?
-3. Can service discovery purposely fail if attributes don't match?
-4. Is there a benefit to obfuscating IP addresses to prevent cross-user hacking attempts?
-
-
-
-## The Solution (Reference Implementation)
+DNS
+ - Define ZPR's relationship to DNS. _This is standard with most VPNs_.
+ - Service discovery for the reference implementation. 
+  
+## Solution
 
 To support policy delegation we added several capabilities to the Reference
 Implementation Visa Service:
@@ -79,50 +60,46 @@ Implementation Visa Service:
 1. Resolution of service names to addresses is fully under ZPR control. The ZPRnet
    provides DNS for services hosted in ZPR.
 
-This gives the visa service the ability to control not just who can place a
-service within a DNS domain, but also who can find it.  The ZPR administrator
-can also make use of DNS `cname` records to reorganize the policy delegation
-hierarchy in arbitrary ways.
+   This gives the visa service the ability to control not just who can place a
+   service within a DNS domain, but also who can find it.  The ZPR administrator
+   can also make use of DNS `cname` records to reorganize the policy delegation
+   hierarchy in arbitrary ways.
 
 
 2. A policy management system (PMS) for creating, updating, reading and deleting
    policy tied to domains.
 
-The Visa Service must enforce a collection of policies that are each constrained
-to parts of the corporate namespace. As a content management system it enforces
-permissioned user access. Interaction with the PMS is through a REST API and
-access is controlled by API keys and/or access tokens. The PMS also allows for a
-domain to be sub-delegated in a way that maps naturally to how domain names are
-used. For example, the domain tied to `marketing.corp.com` could delegate
-`accounts.marketing.corp.com` to another administrator.
-
+   The Visa Service must enforce a collection of policies that are each constrained
+   to parts of the corporate namespace. As a content management system it enforces
+   permissioned user access. Interaction with the PMS is through a REST API and
+   access is controlled by API keys and/or access tokens. The PMS also allows for a
+   domain to be sub-delegated in a way that maps naturally to how domain names are
+   used. For example, the domain tied to `marketing.corp.com` could delegate
+   `accounts.marketing.corp.com` to another administrator.
 
 3. Policy domains use their own credentials to interact with trusted services.
 
-To fit in with access control on existing trusted services (eg, attribute
-databases, LDAP, etc) each domain is given credentials that permit it
-domain-appropriate trusted service access.
-
+   To fit in with access control on existing trusted services (eg, attribute
+   databases, LDAP, etc) each domain is given credentials that permit it
+   domain-appropriate trusted service access.
 
 4. Within a domain, policy is subject to restrictions set by whomever configured
    the domain.
 
-When a domain is created, the creator can use a subset of ZPL and assertions to
-set restrictions on the kinds of policy rules that can be used in the domain. If
-a domain is part of a chain of delegated domains, it is subject to all the
-restrictions in the chain.
-
+   When a domain is created, the creator can use a subset of ZPL and assertions to
+   set restrictions on the kinds of policy rules that can be used in the domain. If
+   a domain is part of a chain of delegated domains, it is subject to all the
+   restrictions in the chain.
 
 5. The Visa Service handles compilation of ZPL.
 
-The Visa Service needs to enforce ZPL restrictions that are authored separately
-from a domain policy. To make this work the Visa Service is responsible for
-actually compiling the domain policy, which it does in the presence of all
-applicable restrictions. Only policies that pass compilation can be applied to
-the network.
+   The Visa Service needs to enforce ZPL restrictions that are authored separately
+   from a domain policy. To make this work the Visa Service is responsible for
+   actually compiling the domain policy, which it does in the presence of all
+   applicable restrictions. Only policies that pass compilation can be applied to
+   the network.
 
-
-# Policy Domains
+## Policy Domains
 
 ZPR uses the concept of a **domain** to describe the unit of delegation of a ZPR
 policy.  A domain incorporates:
@@ -155,9 +132,7 @@ namespace. For example:
 
 In the above `services` means "services in this domain".
 
-
-
-# Configuring a domain
+## Configuring a domain
 
 To delegate policy a top level ZPR administrator first needs to organize the
 service namespace. This step is tightly coupled to service discovery for which
@@ -199,11 +174,15 @@ address assignment. However, even if IP addresses are set in the configuration,
 duplicate address assignment can be caught by the visa service at policy install
 time.
 
-
 (TODO: We do not permit policy to write allow rules about services in other
 domains, right? Like in finance domain you can't say 'never allow finance users
 to access marketing services'. So if that is desired policy, you need the finance
-admin to add a rule. Right?)
+admin to add a rule. Right?  
+
+*** Not exactly.  It is logical to prohibit services
+within a domain (e.g. payment system) from accessing another service outside
+the first domain (e.g. web proxy)).  This would be a Never Allow statement that
+is scoped to the first domain.  ***
 
 (TODO: Probably need to talk a bit about CNAMEs here too.)
 
@@ -848,7 +827,6 @@ protocol = "odb"
 
 # TODO: ORPHANS - maybe use / maybe throw out
 
-
 ## Triangle
 
 In addition to policy, ZPR incorporates reference data from trusted services,
@@ -862,8 +840,6 @@ The "Triangle of Auditability" diagram below illustrates that a complete ZPR
 environment involves three separately managed domains.
 
 ![The Triangle of Auditability](triangle.png){height="3in"}
-
-
 
 
 ## Delegation Hierarchies (MD)
@@ -890,5 +866,63 @@ huge potential security vulnerability for ZPR)
 
 
 
+### Issues that delegation needs to solve (MD)
 
+1. Who can create a service?
+2. Where is a service defined?
+3. What keeps services from being created/modified/deleted by an unauthorized party?
+4. How are services named?
+5. What constraints can be enforced for a service within the service namespace?
+6. Who can use a service?
+7. Who can write "Allow" policies?
+8. What is the scope of these policies?
+9. What order are the policies evaluated (priority)?
+10. Who can write "Never" policies?
+11. What is the scope of these policies?
+12. Who can read policies?
+13. How are the service definitions and access policies audited?
+
+
+
+### Other issues that are related to delegation (MD)
+
+1. How are services resolved?
+2. How dynamic is the resolution?
+3. Can service discovery purposely fail if attributes don't match?
+4. Is there a benefit to obfuscating IP addresses to prevent cross-user hacking attempts?
+
+>>>The remainder of this paper focuses on __domains__, our delegation mechanism in
+the Reference Implementation. It describes how delegated policy is constrained,
+verified, and enforced, and how reference data from trusted services is used
+safely to adhere to existing hierarchical access controls.
+
+>>>Policy delegation is the mechanism that allows a central authority to
+safely share control of network access policy with subordinate policy authors
+while still enforcing a coherent global security posture. As ZPR deployments
+grow in size and organizational complexity, delegation becomes necessary to
+distribute policy authoring without fragmenting control or weakening security
+guarantees.
+
+## Domains
+
+This RFC is focused on what we are calling _"domains"_.  It is oriented
+to the ZPR reference implementation but may become the general standard for ZPR.
+All other areas of delegation are outside of ZPR and managed within their existing
+systems.
+
+Definition:
+
+>Domains are the unit of delegation for defining services and their policies.
+>They consist of a delegator and a delegatee - different groups with different
+>abilities.
+>
+>The delegator assigns a name space (think DNS), credentials, common definitions, Never Allow policies,
+>and assertions to the domain. These are immutable and can't be eclipsed or
+>overwritten.  Any trusted service used by policies in the domain use the associated credentials.
+>
+>The delegatee defines services and their policies. The actual service FQDNs
+>start with service name and append the domain's name.
+>
+>One, and only one, domain can exist for a given name space. Delegators can only
+>delegate a portion of a name space they control.
 
