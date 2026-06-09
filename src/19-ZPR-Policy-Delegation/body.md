@@ -471,21 +471,21 @@ Here is the model used by the Visa Service for a **domain**:
 
 ```
 Domain
- ├── envelope
- │    ├── namespace
- │    ├── restrictions
- │    ├── trusted service bindings
- │    └── delegation metadata
- │
- ├── policy
- │    ├── zpl
- │    ├── configuration
- │    ├── revisions
- │    └── compiled artifacts
- │
- ├── users
- │
- └── audit history
+ +-- envelope
+ |    +-- namespace
+ |    +-- restrictions
+ |    +-- trusted service bindings
+ |    \-- delegation metadata
+ |
+ +-- policy
+ |    +-- zpl
+ |    +-- configuration
+ |    +-- revisions
+ |    \-- compiled artifacts
+ |
+ +-- users
+ |
+ \-- audit history
  ```
 
 The visa service manages its own set of administrators along with what domain
