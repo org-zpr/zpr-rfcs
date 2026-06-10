@@ -87,8 +87,8 @@ Implementation Visa Service:
    This gives the visa service the ability to control not just who can place a
    service within a DNS domain, but also who can find it.  The ZPR administrator
    can also make use of DNS `cname` records to reorganize the policy delegation
-   hierarchy in arbitrary ways.
-
+   hierarchy in arbitrary ways.  The Visa Service has a service lookup API which
+   is accessed by CoreDNS via a plugin.
 
 2. A policy management system (PMS) for creating, updating, reading and deleting
    policy tied to domains.
@@ -198,15 +198,12 @@ address assignment. However, even if IP addresses are set in the configuration,
 duplicate address assignment can be caught by the visa service at policy install
 time.
 
-(TODO: We do not permit policy to write allow rules about services in other
-domains, right? Like in finance domain you can't say 'never allow finance users
-to access marketing services'. So if that is desired policy, you need the finance
-admin to add a rule. Right?
-
-*** Not exactly.  It is logical to prohibit services
-within a domain (e.g. payment system) from accessing another service outside
-the first domain (e.g. web proxy)).  This would be a Never Allow statement that
-is scoped to the first domain.  ***
+Within a domain a policy can include `allow` and `never allow` statements that
+control access to services declared in the domain. The policy can also include
+`never allow` statements that restrict access _from_ services declared in the
+domain _to_ other services regardless of their domain. Note that a domain policy
+can never include `allow` statements that control access to services declared
+outside of the domain.
 
 (TODO: Probably need to talk a bit about CNAMEs here too.)
 
@@ -250,13 +247,13 @@ But, assuming that all the marketing services have an attribute like
 > `Define shadow-service as a service with marketing-service-role:dbserver.`
 > `Allow dept:finance users to access shadow-service.`
 
-In the above example the finance admin is trying to gain access to a marketing
-database service. The namespace controls ensure that the service will be found
-under the name `shadow-service.finance.corp.com`, but if the only provider
-constraint is based on `marketing-service-role` then the finance ZPR
+In the above example the finance admin is trying to bind a marketing database
+service to the finance domain. The namespace controls ensure that the service
+will be found under the name `shadow-service.finance.corp.com`, but if the only
+provider constraint is based on `marketing-service-role` then the finance ZPR
 administrator has essentially created an alias to the marketing database.
 However if the finance domain credentials used to access the attribute service
-is configured to never return the `marketing-service-role` attribute then the
+are configured to never return the `marketing-service-role` attribute then the
 ZPL will never match anything, and would cause a compilation error.
 
 Using a domain specific attribute tied to an access credential as illustrated
