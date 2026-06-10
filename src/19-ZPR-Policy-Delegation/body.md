@@ -312,11 +312,43 @@ If no `never` statement matches in the delegation chain then the visa service
 tries to match the request against the domain `allow` statements (in the order
 as written in ZPL). If an `allow` is found a visa is granted.
 
-(TODO: DOES THIS SEEM RIGHT? ==> the DENY path only looks restrictions on the
-domain, and on any parent domain, and then in the domain policy itself. The
-ALLOW path only looks at the domain policy itself.)
+## Evaluation Process
 
+Since we allow a domain policy to restrict what services can do when acting as
+clients, the visa service has two general types of access requests to asses as
+the following examples illustrate.
 
+Example 1: _A client (not a service) attempts to access a service in domain `Ds`._
+
+A visa is **denied** if:
+
+> 1. The policy for domain `Ds` has a matching `never allow` or assertion.
+> 2. The envelope for domain `Ds` has a matching `never allow` or assertion.
+> 3. The envelope for the parent domain of `Ds` (and so on until root) has a
+>    matching `never allow` or assertion.
+
+Otherwise a visa is **granted** if:
+
+> 1. The policy for domain `Ds` has a matching `allow` statement.
+
+__Example 2__: _A client that is also a service in domain `Dc` attempts to access a service in domain `Ds`._
+
+A visa is **denied** if:
+
+> 1. The policy for domain `Ds` has a matching `never allow` or assertion.
+> 2. The envelope for domain `Ds` has a matching `never allow` or assertion.
+> 3. The envelope for the parent domain of `Ds` (and so on until root) has a
+>    matching `never allow` or assertion.
+> 4. The policy for domain `Dc` has a matching `never allow` or assertion.
+> 5. The envelope for domain `Dc` has a matching `never allow` or assertion.
+> 6. The envelope for the parent domain of `Dc` (and so on until root) has a
+>    matching `never allow` or assertion.
+
+Otherwise a visa is **granted** if:
+
+> 1. The policy for domain `Ds` has a matching `allow` statement.
+
+( TODO: DOES THIS SEEM RIGHT? )
 
 
 
