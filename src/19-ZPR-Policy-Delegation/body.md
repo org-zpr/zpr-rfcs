@@ -1,57 +1,81 @@
 # RFC-19 Policy Delegation
 
-**Delegation** is the act of assigning (potentially) constrained authority,
-responsibility, and specific tasks to another person or group.
 
-A non-trivial ZPR network relies (at minimum) on the configuration data below.
-These data should be managed by different parts of an organization and
-properly delegated to others.
+**Delegation** is the act of assigning authority, responsibility, and specific
+tasks to another person or group, typically with defined constraints.
 
-ZPR Network Data
-- Directory management (access to AD/LDAP)
-- User/group/attribute management
-- Service/policy management
-- Credential management
-- Physical and virtual machine management
-- Physical and ZPR network management
+A non-trivial ZPR deployment relies on several categories of organizational data
+and configuration:
 
-These systems/data sources support their own means of delegation. For example, Active
-Directory, most databases and applications manage users, groups, etc. and
-determine who is allowed to create/read/edit/delete (CRED).  They also manage who
-is allowed to bestow and manage such authority to others (delegation).
+## ZPR Network Data
 
-Authentication and attributes are handled through Trusted Services using
-existing third party or in-house systems. The physical substrate and ZPR
-configuration are also handled elsewhere using their own tools (and hierarchies)
+* Directory services (AD/LDAP)
+* User, group, and attribute management
+* Service and policy management
+* Credential management
+* Physical and virtual infrastructure management
+* Physical and ZPR network management
 
->__ZPR/ZPL does not directly provide authentication, reference data, or
->delegation control. Instead, it relies on trusted sources.
->ZPR enforces network policy through the use of these trusted sources.__
+Responsibility for these systems is typically distributed across different
+organizational teams. Each system implements its own mechanisms for
+authorization and delegation. For example, Active Directory, databases, and
+enterprise applications define who may create, read, modify, and delete
+information, and who may delegate those permissions to others.
+
+These systems act as trusted sources for ZPR. Authentication, attribute
+management, infrastructure management, and ZPR deployment continue to be
+administered using existing tools and organizational hierarchies.
+
+> **ZPR/ZPL does not directly provide authentication, reference data, or
+> delegation management. Instead, it relies on trusted sources. ZPR enforces
+> network policy using information obtained from those trusted sources.**
+
 
 ## Problem Space
 
-Services
- - Need to be defined within a delegated name space. The reference implementation
-   supports this with non-delegated configuration files.
- - Prevent service name collisions and hijacking.
- - Tightly associate policies with services. Allowances should
-   never be written (or accepted) in any place other than where the service is
-   defined.
- - Require a method of discovery. _Preferably preventing non-allowed actors
-   from successful discovery_.
+Delegation in a ZPR network introduces challenges in three related areas:
+service definition, policy management, and service discovery.
 
-Policies
- - Need restricted access to trusted services to prevent data leakage.  _It is
-   dangerous and outside ZPR's scope to manage/delegate/enforce access to
-   trusted services_.
- - Should be written by whomever is defining the service.
- - Should be constrained to a specific name space.
- - Need to be in implicit priority order.
+### Services
 
-DNS
- - Define ZPR's relationship to DNS. _This is standard with most VPNs_.
- - Service discovery for the reference implementation. 
-  
+Services are the objects being delegated and protected. A delegation model must:
+
+* Define services within delegated administrative namespaces.
+* Prevent service name collisions between administrative domains.
+* Prevent unauthorized parties from claiming or redefining existing services.
+* Ensure that access policy remains tightly coupled to the service definition.
+* Provide a mechanism for service discovery.
+* Optionally restrict service discovery so that unauthorized actors cannot
+  determine whether a service exists.
+
+### Policies
+
+Policies express delegated authority over services. A delegation model must:
+
+* Ensure that policy authors can only define policy within their delegated
+  scope.
+* Prevent policy authors from affecting services outside their delegated
+  namespace.
+* Support restricted access to trusted services and attribute sources.
+* Prevent policy definitions from becoming a source of unauthorized information
+  disclosure.
+* Define a deterministic priority model when multiple delegated policies apply.
+
+### Service Discovery
+
+Services are typically located by name rather than by address. A delegation
+model must therefore integrate with existing naming and discovery systems.
+
+A delegation model should:
+
+* Support the resolution of service names into network addresses.
+* Allow service visibility to vary according to policy.
+* Permit different actors to receive different service endpoints for the same
+  service.
+* Permit service endpoints to vary between sessions when required.
+* Treat service discovery itself as a policy-controlled operation.
+
+
 ## Solution
 
 To support policy delegation we added several capabilities to the Reference
@@ -177,7 +201,7 @@ time.
 (TODO: We do not permit policy to write allow rules about services in other
 domains, right? Like in finance domain you can't say 'never allow finance users
 to access marketing services'. So if that is desired policy, you need the finance
-admin to add a rule. Right?  
+admin to add a rule. Right?
 
 *** Not exactly.  It is logical to prohibit services
 within a domain (e.g. payment system) from accessing another service outside
