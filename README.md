@@ -32,4 +32,17 @@ then,
 $ docker run --rm -v /path/to/zpr-rfcs:/work -w /work rfcgen:latest sh -lc "git config --global --add safe.directory /work && make"
 ```
 
+## Contributing
 
+We use unix line endings in the text and markdown files in this repo. To work comfortably in your
+environment:
+
+**Windows Developers**
+```bash
+git config --global core.autocrlf true
+```
+
+**Linux/MacOs Developers**
+```bash
+git config --global core.autocrlf input
+```
