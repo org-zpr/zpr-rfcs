@@ -267,10 +267,10 @@ outside of the domain.
 # Nested Delegation
 
 The policy domain system is flexible enough to support nested delegation to
-arbitrary levels: a delegatee can further delegate their namespace to others.
-For example, an admin in charge of `marketing.corp.com` can delegate
-`it.marketing.corp.com` or any other subordinate domain (in the DNS sense) as
-she sees fit.
+arbitrary levels: a delegatee can be permitted to further delegate their
+namespace to others. For example, an admin in charge of `marketing.corp.com` can
+delegate `it.marketing.corp.com` or any other subordinate domain (in the DNS
+sense) as she sees fit.
 
 Restrictions imposed by any ancestor domain are enforced at all levels; a deeply
 nested delegatee cannot circumvent a `never allow` restriction set by any of its
