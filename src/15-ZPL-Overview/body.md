@@ -29,9 +29,10 @@ communicators, not network addresses, a database server could be moved anywhere 
 the ZPRnet, say from one cloud to another or from on-premises to the cloud, without any
 change in security policy.
 
-***Trusted sources*** are used to determine the attribute values of the communicators. The ZPL
-compiler combines policy statements with a ***configuration description*** to generate
-enforcement rules that implement the security policies.
+***Trusted sources*** are used to determine the attribute values of the
+authenticated communicators. The ZPL compiler combines policy statements with a
+***configuration description*** to generate enforcement rules that implement the
+security policies.
 
 # Key Concepts
 
@@ -94,11 +95,12 @@ service involved in the flow.
 
 ## What is ZPL's Concept of Identity?
 
-Every device, user or service in a ZPR network (ZPRnet) has an identity that is unique
-within the ZPRnet. Each identity is authenticated and associated with a device, user or
-service. The identity is used as a retrieval token to look up associated attributes.
-Identities are also used for logging and statistics. Policy statements are expressed in
-terms of the attributes of the communicators, not their identities.
+Every device, user or service in a ZPR network (ZPRnet) has an identity that is
+unique within the ZPRnet. Each identity is authenticated and associated with a
+device, user or service. The identity is used as a retrieval token to look up
+associated attributes from trusted services. Identities are also used for
+logging and statistics. Policy statements are expressed in terms of the
+attributes of the communicators, not their identities.
 
 ## What is an Attribute?
 
@@ -120,7 +122,7 @@ of tags.
 ## What are Denials?
 
 Denials are statements of intent that limit what permissions are allowed. They are
-written using the keyword never. Denials apply to the combined policies of the entire
+written using the **never** keyword. Denials apply to the combined policies of the entire
 ZPRnet and override any contradictory permissions. Any inconsistency of denials with
 permissions will always be reported when or before denied communications are attempted.
 
