@@ -63,3 +63,11 @@
     c.  In section 4.1, introduce the "over" keyword with examples.
 
     d.  In section 4.3, added a "never...over" example.
+
+7. Revision as of June 10, 2026
+
+    a. Adopt Option 6 naming: replace "endpoint" with "device" throughout, including the predefined ZPL classes (devices, users, services; servers as a sub-class of devices), section headings, and policy examples.
+
+    b. Reword the device definition in section 2.3 to avoid circularity ("A device is a real or virtual processor that has a network interface and connects to the ZPRnet").
+
+    c. Note: the permissioned communicator as a whole is called an actor in ZPR-RFC-12 and ZPR-RFC-16; ZPL policy is written in terms of the actor's components (devices, users, services), so the word actor does not appear in ZPL statements.
