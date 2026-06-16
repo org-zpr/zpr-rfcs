@@ -3,10 +3,10 @@
 ZPL (pronounced "zipple") is an acronym for Zero-trust Policy Language. ZPL is used to
 define security policies for network communication that are independent of network
 configuration. The policies ZPL defines are enforced across a group of interconnected
-networks called a ZPRnet. The policies are defined in terms of the attributes of the
-communicators. ZPL provides a way to express permissions that allow communication under
-specific circumstances and denials that can override the permissions. A ZPL compiler
-generates enforcement rules for implementing the policies.
+networks called a ***ZPRnet***. The policies are defined in terms of the ***attributes*** of the
+communicators. ZPL provides a way to express ***permissions*** that allow communication under
+specific circumstances and ***denials*** that can override the permissions. A ZPL compiler
+generates ***enforcement rules*** for implementing the policies.
 
 Any communication through a ZPRnet must be specifically allowed by a permission
 statement. Policy is written in terms of permissions that state what is allowed to
@@ -22,15 +22,15 @@ grants a non-employee access to customer databases, the enforcement mechanism wi
 the communication and report the policy conflict.
 
 The permission example above would be expressed in a single ZPL statement that gives
-devices with specified attributes (the laptops) operated by users with specified
-attributes (the sales employees) access to services with specified attributes (the
+***devices*** with specified attributes (the laptops) operated by ***users*** with specified
+attributes (the sales employees) access to ***services*** with specified attributes (the
 customer databases). Since ZPL polices are stated in terms of attributes of the
 communicators, not network addresses, a database server could be moved anywhere within
 the ZPRnet, say from one cloud to another or from on-premises to the cloud, without any
 change in security policy.
 
-Trusted sources are used to determine the attribute values of the communicators. The ZPL
-compiler combines policy statements with a configuration description to generate
+***Trusted sources*** are used to determine the attribute values of the communicators. The ZPL
+compiler combines policy statements with a ***configuration description*** to generate
 enforcement rules that implement the security policies.
 
 # Key Concepts
@@ -44,9 +44,9 @@ rereading the introduction.
 ZPL security policies apply to a real or virtual network or to a group of co-managed
 interconnected networks, such as an enterprise's internal networks and cloud tenancies.
 The network or group of networks over which the security policies apply is called a
-ZPRnet. ZPL specifies the policies that are enforced throughout the ZPRnet.
+***ZPRnet***. ZPL specifies the policies that are enforced throughout the ZPRnet.
 
-ZPR (pronounced "zipper") is an acronym for Zero-trust Packet Routing, a method of
+***ZPR*** (pronounced "zipper") is an acronym for Zero-trust Packet Routing, a method of
 network-based policy enforcement. It is an IP-layer protocol that can be implemented as
 a software-defined network over a conventional IP network or can be used directly as the
 IP-layer protocol of a network. Every policy that can be expressed in ZPL can be
@@ -102,11 +102,11 @@ terms of the attributes of the communicators, not their identities.
 
 ## What is an Attribute?
 
-All devices, users and services have attributes associated with their identity, such as
+All devices, users and services have ***attributes*** associated with their identity, such as
 the manager of a device or the roles of an employee. Attributes come in three forms:
 tags (name only), single-valued attributes (name with one value), and multi-valued
-attributes (name with a set of values). These are called tags, single-valued attributes
-and multi-valued attributes, respectively. No two attributes of an identity have the
+attributes (name with a set of values). These are called ***tags***, ***single-valued*** attributes
+and ***multi-valued*** attributes, respectively. No two attributes of an identity have the
 same name.
 
 An attribute value is a string. If it contains only numerals, it may be interpreted as
@@ -188,21 +188,21 @@ floating-point numbers if they contain a decimal point.
 
 For example:
 
-> `'12-34' is a string`
+> `'12-34'` is a string
 
-> `"12'34" is a string with an apostrophe in the middle position`
+> `"12'34"` is a string with an apostrophe in the middle position
 
-> `'1 2 3 4' is a string with spaces`
+> `'1 2 3 4'` is a string with spaces
 
-> `1234 is a string that can represent an integer`
+> `1234` is a string that can represent an integer
 
-> `123.4 is a string that can represent a floating-point number`
+> `123.4` is a string that can represent a floating-point number
 
 Single quotes, double quotes and backslash characters may be included in a string by
 preceding them with a backslash. For example, here is a string that contains five
 characters:
 
-> `'12\\34' has a single backslash in the middle position`
+> `'12\\34'` has a single backslash in the middle position
 
 ## Names
 
@@ -228,15 +228,15 @@ namespace:
 
 > `sales.Web-server`
 
-In the above example, the namespace name sales is in the default namespace. Namespaces
+In the above example, the namespace name `sales` is in the default namespace. Namespaces
 are hierarchical. Here is a name in the support namespace that exists within the sales
 namespace:
 
 > `sales.support.Web-server`
 
-The default namespace at the top of the hierarchy is named global, although it is rarely
+The default namespace at the top of the hierarchy is named `global`, although it is rarely
 referenced explicitly. Other namespaces are either predefined or created the first time
-they are referenced in a define statement.
+they are referenced in a `define` statement.
 
 ## Attributes
 
@@ -270,21 +270,21 @@ access to the referenced entity's attributes.
 ## Classes
 
 ZPL comes with predefined classes of entities that have identity and attributes:
-devices, users and services, and a predefined sub-class of devices called servers, that
-has a set-valued attribute called services. Additional classes can be defined that
+`devices`, `users` and `services`, and a predefined sub-class of `devices` called `servers`, that
+has a set-valued attribute called `services`. Additional classes can be defined that
 inherit their attributes from a previously defined class, forming a strict hierarchy.
 The class definitions can also specify additional attributes for members of the class.
 The definition can also restrict the allowable values of the attributes that it
-inherits. For example, a subclass of devices called mobile-devices can be defined with
-an attribute named device-type. Another class called mobile-phones can be defined as a
-subclass of mobile-devices with an attribute named phone-number and a required value of
-"phone" for the device-type attribute. Permissions that are given to mobile-phones will
+inherits. For example, a subclass of `devices` called `mobile-devices` can be defined with
+an attribute named `device-type`. Another class called `mobile-phones` can be defined as a
+subclass of `mobile-devices` with an attribute named `phone-number` and a required value of
+"phone" for the `device-type` attribute. Permissions that are given to `mobile-phones` will
 be restricted to mobile devices that have this attribute value.
 
 To make policy easier to read, the names of classes are synonymous with their standard
-plurals (adding S or ES). For example, mobile-phone and mobile-phones can be used
-interchangeably, as can service and services, user and users, device and devices, or
-server and servers. Non-standard plurals can also be specified, as described in Section
+plurals (adding S or ES). For example, `mobile-phone` and `mobile-phones` can be used
+interchangeably, as can `service` and `services`, `user` and `users`, `device` and `devices`, or
+`server` and `servers`. Non-standard plurals can also be specified, as described in Section
 4.2.
 
 Class names are case-insensitive, but by convention they normally are written in lower
@@ -294,7 +294,7 @@ case.
 
 As shown in the example above, statements are terminated by a period.
 
-Punctuation marks are also used for comments. All characters on a line after # or // are
+Punctuation marks are also used for comments. All characters on a line after `#` or `//` are
 ignored by the compiler. For example:
 
 > `# Comments (like this) don't need a period at the end!`
@@ -321,13 +321,13 @@ to be used by sales employees to access customer databases:
 
 In this example employees, laptops, and databases have been defined as classes of users,
 devices and services, respectively (How this happens is described in section 3.5). The
-words sales, managed, and customer are tags. For the permission to apply, the user would
-need to have attribute tag sales, the laptop would need to have tag managed, and the
-service would need to have tag customer. The class definition would also specify various
+words `sales`, `managed`, and `customer` are tags. For the permission to apply, the user would
+need to have attribute tag `sales`, the laptop would need to have tag `managed`, and the
+service would need to have tag `customer`. The class definition would also specify various
 required attributes, which would need to be present for the permission to apply.
 
 Notice that the relationship of the users to the laptop they are using is expressed
-using the keyword on.
+using the keyword `on`.
 
 This single statement may give permission to many different pairs of laptops and
 database services. If the permission depends only on the attributes of the users and not
@@ -338,24 +338,24 @@ the devices they are using, it could be written like this:
 This statement allows any device to access the service, as long as the user has the
 required attributes.
 
-When the keyword "on" appears before the "to access..." phrase then it describes device
-attributes of the accessor. When it appears after "to access" and after a service clause
+When the `on` keyword appears before the `to access...` phrase then it describes device
+attributes of the accessor. When it appears after `to access` and after a service clause
 it describes device attributes of that which is being accessed. For example:
 
 > `Allow sales employees to access customer databases on sales devices.`
 
 The above statement only applies, and permission is only granted if the communicator
-offering the database service has a device tag named "sales".
+offering the database service has a device tag named `sales`.
 
-If employees have a department attribute instead of a sales tag, the permission would be
+If employees have a `department` attribute instead of a `sales` tag, the permission would be
 written differently. In this case, permission could be expressed like this:
 
 > `Allow department:sales employees on managed laptops to access customer databases.`
 
-An expression of the form <name>:<value> will match either a single-valued attribute
+An expression of the form `<name>:<value>` will match either a single-valued attribute
 with the specified value or a multi-valued attribute with a set of values that contains
 the specified value. So, in the above example, the permission will be granted to users
-that have a set of departments that includes sales.
+that have a set of departments that includes `sales`.
 
 In the examples above, the statements may give permission to access any number of
 services. It is sometimes useful to write a permission that allows access to a single
@@ -364,11 +364,11 @@ statement, like this:
 
 > `Allow HR employees to access Timesheet-database.`
 
-In this example Timesheet-database is the name of a service, defined in the
+In this example `Timesheet-database` is the name of a service, defined in the
 configuration description. By convention, proper names of services are capitalized,
 although this convention is not enforced by the compiler.
 
-The named Timesheet-database service might be provided by a load balancer that connects
+The named `Timesheet-database` service might be provided by a load balancer that connects
 to a group of servers through the ZPRnet, in which case a permission statement would be
 needed to allow the load balancer to communicate with the servers that implement the
 service, like this:
@@ -382,7 +382,7 @@ permissioned.
 
 ## Statements that Define New Classes
 
-The only classes that are predefined in ZPL are devices, users, services and servers
+The only classes that are predefined in ZPL are `devices`, `users`, `services` and `servers`
 (which are a sub-class of devices). ZPL also allows new classes to be defined as
 variants of an existing class with additional attributes. For example, a user of type
 employee might be defined to be a user that has additional attributes:
@@ -391,10 +391,10 @@ employee might be defined to be a user that has additional attributes:
 
 There are several syntactic constructions illustrated in this statement. The statement
 uses the keywords a and an, which are ignored by the compiler and are included only for
-readability. The possible tags are listed after the keyword pair optional tags.
+readability. The possible tags are listed after the keyword pair `optional tags`.
 
-Here is a statement that defines gateway as a service with a single-valued attribute
-named external-network-connection, with a value that specifies the network on the far
+Here is a statement that defines `gateway` as a `service` with a single-valued attribute
+named `external-network-connection`, with a value that specifies the network on the far
 side of the gateway:
 
 > `Define gateway as a service with an external-network-connection.`
@@ -412,7 +412,7 @@ it defines. This is done by adding an AKA (Also Known As) clause before the as k
 
 > `Define mouse AKA mice as peripheral with function:pointing.`
 
-In this example, both mouses and mice will be defined as synonyms for mouse.
+In this example, both `mouses` and `mice` will be defined as synonyms for `mouse`.
 
 Redefining ZPL keywords or reserved words is not permitted. Attempts to do so will be
 flagged by the compiler.
@@ -423,20 +423,21 @@ To make the policies easier to understand and audit, ZPL permission statements a
 normally written as positive allowances. The advantage of this is that the consequences
 of each statement can be determined without inspecting other statements and it allows
 components of policy to be compiled incrementally to produce additive enforcement rules.
-Communication that is not intended to be allowed can be specified by a denial. Denials
+Communication that is not intended to be allowed can be specified by a
+***denial***. Denials
 should not contradict permissions, but if they do the denial takes priority and the
 system reports the conflict.
 
-ZPL provides a Never statement for asserting that a specific type of communication
-should not be allowed. A Never statement looks like an allow statement with the keyword
-Never added at the front:
+ZPL provides a `Never` statement for asserting that a specific type of communication
+should not be allowed. A `Never` statement looks like an allow statement with the keyword
+`Never` added at the front:
 
 > `Never allow internet-gateways to access internal services.`
 
 > `Never allow role:intern users to access classified services.`
 
-(Note: the keyword Never is used instead of Deny because it is consistent with English
-grammar, and because Deny has different meanings in other policy languages.)
+(Note: the keyword `Never` is used instead of `Deny` because it is consistent with English
+grammar, and because `Deny` has different meanings in other policy languages.)
 
 ## Statements that Depend on Circumstances
 
@@ -445,7 +446,7 @@ they describe the state of affairs when communication takes place. Their values 
 always determined at runtime. The time, date, and measures of the amount of data
 recently communicated are examples of circumstances.
 
-Any allow or never statement can be conditioned by circumstances. For example:
+Any `allow` or `never` statement can be conditioned by circumstances. For example:
 
 > `Never allow backup:nightly servers to access backup-services before 18:00 GMT.`
 
@@ -456,7 +457,7 @@ Any allow or never statement can be conditioned by circumstances. For example:
 ## Statements that Cause Signaling
 
 ZPL provides a way to specify a message to be sent to a signal handler whenever a
-permission matches, by appending an and signal clause to an allow or never statement.
+permission matches, by appending an `and signal` clause to an `allow` or `never` statement.
 For example, this statement will cause a specific type of permissioned access to be
 reported to a logging service:
 
@@ -484,4 +485,3 @@ ZPL policies can also be used to create reports. For example, it is possible to 
 the names of all users that have access to a given resource, or all services that can be
 accessed from the Internet gateway. These reports may be helpful in the approval or
 auditing of policies.
-
