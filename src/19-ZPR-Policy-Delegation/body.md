@@ -4,58 +4,7 @@
 **Delegation** is the act of assigning authority, responsibility, and specific
 tasks to another person or group, typically with defined constraints. This
 document briefly introduces the problems that delegation solves, and then
-described the solution we have implemented in the Reference Implementation.
-
-## Definitions
-
-The following terms are used throughout this document.
-
-**Assertion**: A declarative ZPL statement of policy intent that is used to
-check whether policy permits communication that should not be permitted.
-
-**Domain (Policy Domain)**: The unit of policy delegation in the ZPR reference
-implementation. A domain combines a service namespace, credentials for trusted
-services, restrictions on permitted policy, and a ZPL policy and configuration.
-A domain owns service names under its DNS root, and policy in that domain can
-define and allow access only to services in that domain.
-
-**Domain envelope**: The portion of a domain controlled by the delegator. The
-envelope includes the namespace, trusted service bindings, credentials,
-restrictions, and delegation metadata that constrain the domain contents.
-
-**Identity**: A key used to look up attributes associated with an endpoint,
-user, device, or service. ZPR uses authenticated identities to retrieve
-attributes and evaluate policy.
-
-**Namespace**: A context in which names are defined. It must be hierarchical. In
-this document, a delegated namespace is usually represented as a DNS root, such
-as `marketing.corp.com`, under which a domain may define service names.
-
-**Root domain**: The top-level domain in a delegated ZPR deployment. The root
-domain owns the base namespace and may delegate portions of that namespace to
-child domains.
-
-**Service**: An application that sends or receives packets and has a name, an
-identity and attributes. In delegated policy, services are the protected objects
-defined inside a domain namespace.
-
-**Service discovery**: The process of resolving a service name into the protocol
-details and network address information needed to reach the service. In this
-document, service discovery is treated as a policy-controlled operation.
-
-**Service name**: A name used to locate a service. In delegated domains, service
-names are interpreted within the domain namespace and resolved to fully
-qualified DNS names under the domain DNS root.
-
-**Trusted service**: A trusted source made available through the Visa Service or
-ZPR configuration, such as an LDAP or attribute service, that returns reference
-data and attributes used by policy evaluation.
-
-**ZPL**: Zero-trust Policy Language. ZPL is the human-readable language used to
-define, audit, and enforce communication policy in a ZPRnet.
-
-**ZPRnet**: A ZPR network or group of interconnected ZPR nodes that enforce
-communication policy using visas, compliant flows, and ZPL rules.
+describes the solution we have implemented in the Reference Implementation.
 
 
 ## Why Delegation?
@@ -930,6 +879,56 @@ protocol = "odb"
 | `/v1/audit/trace`                                  | `POST`   | `PolicyTraceRequest`, `PolicyTraceResult`            | Return a detailed rule-by-rule explanation of policy evaluation and restriction matching.                 |
 
 
+## Definitions
+
+The following terms are used throughout this document.
+
+**Assertion**: A declarative ZPL statement of policy intent that is used to
+check whether policy permits communication that should not be permitted.
+
+**Domain (Policy Domain)**: The unit of policy delegation in the ZPR reference
+implementation. A domain combines a service namespace, credentials for trusted
+services, restrictions on permitted policy, and a ZPL policy and configuration.
+A domain owns service names under its DNS root, and policy in that domain can
+define and allow access only to services in that domain.
+
+**Domain envelope**: The portion of a domain controlled by the delegator. The
+envelope includes the namespace, trusted service bindings, credentials,
+restrictions, and delegation metadata that constrain the domain contents.
+
+**Identity**: A key used to look up attributes associated with an endpoint,
+user, device, or service. ZPR uses authenticated identities to retrieve
+attributes and evaluate policy.
+
+**Namespace**: A context in which names are defined. It must be hierarchical. In
+this document, a delegated namespace is usually represented as a DNS root, such
+as `marketing.corp.com`, under which a domain may define service names.
+
+**Root domain**: The top-level domain in a delegated ZPR deployment. The root
+domain owns the base namespace and may delegate portions of that namespace to
+child domains.
+
+**Service**: An application that sends or receives packets and has a name, an
+identity and attributes. In delegated policy, services are the protected objects
+defined inside a domain namespace.
+
+**Service discovery**: The process of resolving a service name into the protocol
+details and network address information needed to reach the service. In this
+document, service discovery is treated as a policy-controlled operation.
+
+**Service name**: A name used to locate a service. In delegated domains, service
+names are interpreted within the domain namespace and resolved to fully
+qualified DNS names under the domain DNS root.
+
+**Trusted service**: A trusted source made available through the Visa Service or
+ZPR configuration, such as an LDAP or attribute service, that returns reference
+data and attributes used by policy evaluation.
+
+**ZPL**: Zero-trust Policy Language. ZPL is the human-readable language used to
+define, audit, and enforce communication policy in a ZPRnet.
+
+**ZPRnet**: A ZPR network or group of interconnected ZPR nodes that enforce
+communication policy using visas, compliant flows, and ZPL rules.
 
 
 
