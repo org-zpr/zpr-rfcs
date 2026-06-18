@@ -134,7 +134,7 @@ policy.  A domain incorporates:
 1. The namespace for all services.
 2. Credentials for accessing reference data through trusted services.
 3. Restrictions on what is allowed to be expressed in the domain policy.
-4. A policy and configuration written in ZPL.
+4. A policy written in ZPL.
 
 The first three items in a domain are managed by the domain creator (aka
 _delegator_), and we can think of these as comprising the domain "envelope". The
@@ -200,8 +200,8 @@ set policy for anything outside the namespace defined by its delegator.
 Since domains set service namespaces, and services have names, it is best
 practice to leave the assignment of addresses to the ZPRnet itself. That way
 there can be no accidental duplicate address assignment. However, even if IP
-addresses are set in the configuration, duplicate address assignment can be
-caught by the visa service at policy install time.
+addresses are set in the policy, duplicate address assignment can be caught by
+the visa service at policy install time.
 
 Within a domain a policy can include `allow` and `never allow` statements that
 control access to services declared in the domain. The policy can also include
@@ -408,11 +408,11 @@ marketing department. The company initially deploys ZPR without delegation using
 the default domain.  We first show the monolithic single-domain setup, then show
 how it decomposes under delegation.
 
-This assumes some familiarity with ZPL and the TOML configuration syntax used in
-the reference implementation.
+This assumes some familiarity with existing ZPL and introduces some pre-release
+ZPL features (notably `declare` and `use`).
 
 
-## Starting point: A single policy and configuration
+## Starting point: A single policy
 
 The visa service is configured with the DNS root set to `corp.com` so all the
 services in ZPL are found at the root (eg, "aboutus.corp.com").
@@ -527,7 +527,7 @@ marketing and one for accounting.
 ### The Root Policy
 
 This is the policy for the root domain of `corp.com`.  All it does is declare
-two trusted services.
+two trusted services and some attribute mappings.
 
 
 ```
@@ -539,6 +539,9 @@ declare octa-auth as an AuthenticationService
     device.zpr.adapter.cn:"octa1.foo".
 
 declare ldap-svc as an AttributeService
+  with
+    attr-mapping:"aud -> service.aud",
+    attr-mapping:"pubgw -> #endpoint.internet-gateway"
   provided-by
     device.apr.adapter.cn:"ldap.foo".
 ```
@@ -590,9 +593,7 @@ The marketing ZPL:
 use octa-auth.corp.com.
 
 use ldap-svc.corp.com with
-  attr-mapping:"marketing-service-role -> service.marketing-service-role",
-  attr-mapping:"aud -> service.aud",
-  attr-mapping:"pubgw -> #endpoint.internet-gateway".
+  attr-mapping:"marketing-service-role -> service.marketing-service-role".
 
 
 declare aboutus as a service with port:443 and
@@ -653,9 +654,7 @@ The accounting ZPL is similarly the accounting-relevant subset of the monolithic
 use octa-auth.corp.com.
 
 use ldap-svc.corp.com with
-  attr-mapping:"accounting-service-role -> service.accounting-service-role",
-  attr-mapping:"aud -> service.aud",
-  attr-mapping:"pubgw -> #endpoint.internet-gateway".
+  attr-mapping:"accounting-service-role -> service.accounting-service-role".
 
 
 declare timetrack as a service with port:443
@@ -751,7 +750,7 @@ Visa Service supports a set of roles that can be assigned to users.
 
 For this example, the ZPR administrator adds the `marketing_editor` and the
 `accounting_editor` to the visa service user database, each given write access to
-their domain.  Here is the configuration for the `marketing_editor`:
+their domain.  Here is the definition of the `marketing_editor`:
 
 ```json
 {
@@ -797,10 +796,9 @@ here is the `auditor` record which is authenticated by an Okta service.
 ```
 
 
-Each domain editor creates their own ZPL and configuration details and installs
-them into the visa service using the API. When the domain policies are
-submitted, the visa service performs compilation and incorporates all the
-restrictions applied through delegation.
+Each domain editor creates their own ZPL and installs it into the visa service
+using the API. When the domain policies are submitted, the visa service performs
+compilation and incorporates all the restrictions applied through delegation.
 
 Note that the visa service is not configured with the trusted service
 credentials directly -- those are provided to the domain administrators out of
@@ -817,9 +815,9 @@ check whether policy permits communication that should not be permitted.
 
 **Domain (Policy Domain)**: The unit of policy delegation in the ZPR reference
 implementation. A domain combines a service namespace, credentials for trusted
-services, restrictions on permitted policy, and a ZPL policy and configuration.
-A domain owns service names under its DNS root, and policy in that domain can
-define and allow access only to services in that domain.
+services, restrictions on permitted policy, and a ZPL policy. A domain owns
+service names under its DNS root, and policy in that domain can define and allow
+access only to services in that domain.
 
 **Domain envelope**: The portion of a domain controlled by the delegator. The
 envelope includes the namespace, trusted service bindings, credentials,
@@ -849,9 +847,9 @@ document, service discovery is treated as a policy-controlled operation.
 names are interpreted within the domain namespace and resolved to fully
 qualified DNS names under the domain DNS root.
 
-**Trusted service**: A trusted source made available through the Visa Service or
-ZPR configuration, such as an LDAP or attribute service, that returns reference
-data and attributes used by policy evaluation.
+**Trusted service**: A trusted source of authentication or attributes. These are
+declared or referenced in ZPL and configured with credentials through a  policy
+domain.
 
 **ZPL**: Zero-trust Policy Language. ZPL is the human-readable language used to
 define, audit, and enforce communication policy in a ZPRnet.
