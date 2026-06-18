@@ -421,13 +421,37 @@ The ZPL policy looks like this with rules for both accounting and marketing.
 
 
 ```
-define aboutus as a service with marketing-service-role:abweb.
-define templates as a service with marketing-service-role:templates.
-define mktdb as a service with marketing-service-role:db.
-define timetrack as a service with accounting-service-role:timedb.
-define expenselog as a service with accounting-service-role:expenses.
-define audits as a service with accounting-service-role:audit.
-define actdb as a service with accounting-service-role:db.
+declare octa-auth as an AuthenticationService
+  with
+    attr-mapping:"dept -> user.dept",
+    attr-mapping:"clearance -> user.clearance"
+  provided by
+    device.zpr.adapter.cn:"octa1.foo".
+
+declare ldap-svc as an AttributeService
+  provided-by
+    device.apr.adapter.cn:"ldap.foo".
+
+declare aboutus as a service with port:443
+  provided by marketing-service-role:abweb.
+
+declare templates as a service with port:443
+  provided by marketing-service-role:templates.
+
+declare mktdb as a service with port:3306
+  provided by marketing-service-role:db.
+
+declare timetrack as a service with port:443
+  provided by accounting-service-role:timedb.
+
+declare expenselog as a service with port:4343
+  provided by accounting-service-role:expenses.
+
+declare audits as a service with port:443
+  provided by accounting-service-role:audit.
+
+declare actdb as a service with port:6379
+  provided by accounting-service-role:db.
 
 
 define employee as a user with corp-id:.
@@ -448,104 +472,13 @@ allow employees to access aboutus.
 allow internet-gateway endpoints to access aboutus.
 ```
 
-And the relevant bits of the configuration. Note that by accessing the attribute
-service with a "global" credential, it returns the role attributes for both
-accounting and marketing.
 
-```toml
-[dns]
-root = "corp.com"
-cnames = [
-  "corp.com -> aboutus.corp.com"
-]
-
-[trusted_services.okta_auth]
-api = "validation"
-credential = "global_oktakey.1231299439949"
-returns_attributes = [
-  "corp-id -> user.corp.id",
-  "dept -> user.dept",
-  "emp-type -> user.emp-type",
-  "role -> user.role"
-]
-identity_attributes = [ "corp-id" ]
-
-[trusted_services.ldap1]
-api = "attributes"
-credential = "global_apikey.120301230023002"
-returns_attributes = [
-  "marketing-service-role -> service.marketing-service-role",
-  "accounting-service-role -> service.accounting-service-role",
-  "aud -> service.aud",
-  "pubgw -> #endpoint.internet-gateway"
-]
-
-
-[protocol.https]
-l4protocol = "TCP"
-port = 443
-
-[protocol.redis]
-l4protocol = "TCP"
-port = 6379
-
-[protocol.odb]
-l4protocol = "TCP"
-port = 1521
-
-[services.aboutus]
-protocol = "https"
-
-[services.templates]
-protocol = "https"
-
-[services.mktdb]
-protocol = "redis"
-
-[services.timetrack]
-protocol = "https"
-
-[services.expenselog]
-protocol = "https"
-
-[services.audits]
-protocol = "https"
-
-[services.actdb]
-protocol = "odb"
-```
-
-We now decompose this into two delegated domains, one for marketing and one for
-accounting.
-
-
-## Delegation With Visa Service
+## Delegation Administration With Visa Service
 
 The visa service supports delegation through administrative mechanisms all
 accessed through an API.  It manages a set of domains. The first domains must be
 created by the ZPR administrator but delegated administrators can create domains
 too if they are permission'd to do so.
-
-Here is the model used by the Visa Service for a **domain**:
-
-```
-Domain
- +-- envelope
- |    +-- namespace
- |    +-- restrictions
- |    +-- trusted service bindings
- |    \-- delegation metadata
- |
- +-- policy
- |    +-- zpl
- |    +-- configuration
- |    +-- revisions
- |    \-- compiled artifacts
- |
- +-- users
- |
- \-- audit history
- ```
 
 The visa service manages its own set of administrators along with what domain
 they are in and their associated permissions. Domain policies are submitted via
@@ -558,59 +491,146 @@ correct permissions an auditor can access:
 - All the users who have access to policy and their access level.
 - All historical operations performed on policy and the user access system.
 
-To get started, the ZPR administrator configures a base configuration for the
-`root` domain that includes trusted service information. Note that the `cnames`
-section has been updated since the `aboutus` service is now inside the
-`marketing` domain.
-
-```toml
-[dns]
-root = "corp.com"
-cnames = [
-  "corp.com -> aboutus.marketing.corp.com"
-]
-
-[trusted_services.okta_auth]
-api = "validation"
-credential = "global_oktakey.1231299439949"
-returns_attributes = [
-  "corp-id -> user.corp.id",
-  "dept -> user.dept",
-  "emp-type -> user.emp-type",
-  "role -> user.role"
-]
-identity_attributes = [ "corp-id" ]
-
-[trusted_services.ldap1]
-api = "attributes"
-credential = "zpr_apikey.1208748778383002"
-returns_attributes = [
-  "aud -> service.aud",
-  "pubgw -> #endpoint.internet-gateway"  # is a tag
-]
-
-```
-
-
-The ZPR administrator creates two domains using the visa service REST API.
-Essentially submitting domain data structures.
-
-Here is an example for the "marketing" domain:
+Below is the domain configuration for the monolithic domain. Note that by
+accessing the attribute service with a "global" credential, it returns the role
+attributes for both accounting and marketing.
 
 ```json
 {
-  "parent_domain":"root",
-  "domain":"marketing",
+  "parent_domain":null,
+  "domain":"corp.com",
   "validation_services":[
     {
       "service_id": "okta_auth",
-      "inherit": ["credential", "attributes"]
+      "credential": "global_oktakey.1231299439949"
     }
   ],
   "attribute_services":[
     {
-      "service_id": "ldap1",
-      "inherit": []
+      "service_id": "ldap-svc",
+      "credential": "global_apikey.120301230023002"
+    },
+  ],
+  "cnames":[
+    {
+      "name": "corp.com",
+      "value": "aboutus.corp.com"
+    }
+  ]
+}
+```
+
+We now decompose this into two a root domain and two delegated domains: one for
+marketing and one for accounting.
+
+
+### The Root Policy
+
+This is the policy for the root domain of `corp.com`.  All it does is declare
+two trusted services.
+
+
+```
+declare octa-auth as an AuthenticationService
+  with
+    attr-mapping:"dept -> user.dept",
+    attr-mapping:"clearance -> user.clearance"
+  provided by
+    device.zpr.adapter.cn:"octa1.foo".
+
+declare ldap-svc as an AttributeService
+  provided-by
+    device.apr.adapter.cn:"ldap.foo".
+```
+
+And here is the root domain. The only difference is that we alter the `cname`
+mapping since the marketing sites will now be in a new domain.
+
+```json
+{
+  "parent_domain":null,
+  "domain":"corp.com",
+  "validation_services":[
+    {
+      "service_id": "okta_auth",
+      "credential": "global_oktakey.1231299439949"
+    }
+  ],
+  "attribute_services":[
+    {
+      "service_id": "ldap-svc",
+      "credential": "global_apikey.120301230023002"
+    },
+  ],
+  "cnames":[
+    {
+      "name": "corp.com",
+      "value": "aboutus.marketing.corp.com"
+    }
+  ]
+}
+```
+
+
+
+
+### Marketing Policy
+
+The marketing ZPR administrator only needs to write policy about services
+managed by the marketing department.
+
+All the services defined in the marketing domain will be found in DNS in the
+correct subdomain (which is the domain name, eg, "aboutus.marketing.corp.com")
+and no other domain can add or alter names in the marketing namespace.
+
+
+The marketing ZPL:
+
+```
+use octa-auth.corp.com.
+
+use ldap-svc.corp.com with
+  attr-mapping:"marketing-service-role -> service.marketing-service-role",
+  attr-mapping:"aud -> service.aud",
+  attr-mapping:"pubgw -> #endpoint.internet-gateway".
+
+
+declare aboutus as a service with port:443 and
+  provided by marketing-service-role:abweb.
+
+declare templates as a service with port:443
+  provided by marketing-service-role:templates.
+
+declare mktdb as a service with port:3306
+  provided by marketing-service-role:db.
+
+define employee as a user with corp-id:.
+define marketing-employee as an employee with dept:marketing.
+
+allow aboutus to access mktdb.
+allow templates to access mktdb.
+allow marketing-employees to access templates.
+
+allow employees to access aboutus.
+allow internet-gateway endpoints to access aboutus.
+```
+
+The marketing domain:
+
+```json
+{
+  "parent_domain":"corp.com",
+  "domain":"marketing",
+  "validation_services":[
+    {
+      "service_id": "okta_auth.corp.com",
+      "credential": "_inherit"
+    }
+  ],
+  "attribute_services":[
+    {
+      "service_id": "ldap-svc.corp.com",
+      "credential": "marketing_key.9458488499"
     },
   ],
   "restrictions":[
@@ -619,12 +639,80 @@ Here is an example for the "marketing" domain:
 }
 ```
 
-Since `domain` is set to `marketing` and the `parent_domain` is `root`, the DNS
-root domain for this Visa Service "domain" will be `marketing.corp.com`.
+Since `domain` is set to `marketing` and the `parent_domain` is `corp.com`, the
+DNS root domain for this Visa Service "domain" will be `marketing.corp.com`.
 
 
-It is not shown here, but the JSON for the "accounting" domain follows roughly
-the same structure as "marketing" above.
+
+### Accounting Policy
+
+The accounting ZPL is similarly the accounting-relevant subset of the monolithic policy.
+
+
+```
+use octa-auth.corp.com.
+
+use ldap-svc.corp.com with
+  attr-mapping:"accounting-service-role -> service.accounting-service-role",
+  attr-mapping:"aud -> service.aud",
+  attr-mapping:"pubgw -> #endpoint.internet-gateway".
+
+
+declare timetrack as a service with port:443
+  provided by accounting-service-role:timedb.
+
+declare expenselog as a service with port:4343
+  provided by accounting-service-role:expenses.
+
+declare audits as a service with port:443
+  provided by accounting-service-role:audit.
+
+declare actdb as a service with port:6379
+  provided by accounting-service-role:db.
+
+define employee as a user with corp-id:.
+define fulltimer as an employee with emp-type:fte.
+define auditor as an employee with dept:accounting, role:auditor.
+
+allow timetrack to access actdb.
+allow expenselog to access actdb.
+allow audits to access actdb.
+
+allow auditors to access audits.
+allow employees to access timetrack.
+allow fulltimers to access expenselog.
+```
+
+The accounting domain:
+
+```json
+{
+  "parent_domain":"corp.com",
+  "domain":"accounting",
+  "validation_services":[
+    {
+      "service_id": "okta_auth.corp.com",
+      "credential": "_inherit"
+    }
+  ],
+  "attribute_services":[
+    {
+      "service_id": "ldap-svc.corp.com",
+      "credential": "accounting_key.5652222345"
+    },
+  ],
+  "restrictions":[
+    "never allow aud:internal services to access endpoint.internet-gateway services"
+  ]
+}
+```
+
+Since `domain` is set to `accounting` and the `parent_domain` is `corp.com`, the
+DNS root domain for this Visa Service "domain" will be `accounting.corp.com`.
+
+
+
+## The Policy Management System
 
 The Visa Service manages user access to domain content by keeping a database of
 user records along with their authentication details and domain permissions. The
@@ -719,167 +807,8 @@ credentials directly -- those are provided to the domain administrators out of
 band and submitted with their policy configuration.
 
 
-### Marketing Policy
 
-The marketing ZPR administrator only needs to write policy about services
-managed by the marketing department.
-
-All the services defined in the marketing domain will be found in DNS in the
-correct subdomain (which is the domain name, eg, "aboutus.marketing.corp.com")
-and no other domain can add or alter names in the marketing namespace.
-
-
-The marketing ZPL:
-
-```
-define aboutus as a service with marketing-service-role:abweb.
-define templates as a service with marketing-service-role:templates.
-define mktdb as a service with marketing-service-role:db.
-
-define employee as a user with corp-id:.
-define marketing-employee as an employee with dept:marketing.
-
-allow aboutus to access mktdb.
-allow templates to access mktdb.
-allow marketing-employees to access templates.
-
-allow employees to access aboutus.
-allow internet-gateway endpoints to access aboutus.
-```
-
-And the relevant bits of the marketing configuration is below. Notice that
-this uses a marketing specific credential to talk to the "ldap1" attribute
-service.
-
-```toml
-[trusted_services.okta_auth]
-inherit = true
-
-[trusted_services.ldap1]
-inherit = true
-credential = "marketing_apikey.1208748778383002"
-
-# Replace the inherited mapping with our own.
-returns_attributes = [
-  "marketing-service-role -> service.marketing-service-role",
-  "aud -> service.aud",
-  "pubgw -> #endpoint.internet-gateway"
-]
-
-[protocol.https]
-l4protocol = "TCP"
-port = 443
-
-[protocol.redis]
-l4protocol = "TCP"
-port = 6379
-
-[services.aboutus]
-protocol = "https"
-
-[services.templates]
-protocol = "https"
-
-[services.mktdb]
-protocol = "redis"
-```
-
-### Accounting Policy
-
-The accounting ZPL is similarly the accounting-relevant subset of the monolithic policy.
-
-
-```
-define timetrack as a service with accounting-service-role:timedb.
-define expenselog as a service with accounting-service-role:expenses.
-define audits as a service with accounting-service-role:audit.
-define actdb as a service with accounting-service-role:db.
-
-
-define employee as a user with corp-id:.
-define fulltimer as an employee with emp-type:fte.
-define auditor as an employee with dept:accounting, role:auditor.
-
-allow timetrack to access actdb.
-allow expenselog to access actdb.
-allow audits to access actdb.
-
-allow auditors to access audits.
-allow employees to access timetrack.
-allow fulltimers to access expenselog.
-```
-
-And the relevant bits of the accounting configuration are below. Notice that it
-uses an accounting specific credential to talk to the "ldap1" attribute service.
-
-```toml
-[trusted_services.okta_auth]
-inherit = true
-
-[trusted_services.ldap1]
-inherit = true
-credential = "accounting_apikey.120941238688493002"
-returns_attributes = [
-  "accounting-service-role -> service.accounting-service-role",
-  "aud -> service.aud",
-  "pubgw -> #endpoint.internet-gateway"
-]
-
-
-[protocol.https]
-l4protocol = "TCP"
-port = 443
-
-[protocol.odb]
-l4protocol = "TCP"
-port = 1521
-
-[services.timetrack]
-protocol = "https"
-
-[services.expenselog]
-protocol = "https"
-
-[services.audits]
-protocol = "https"
-
-[services.actdb]
-protocol = "odb"
-```
-
-
-# Visa Service API Outline
-
-(TODO: This does not exist, just a thought experiment for now. Update this as it is built)
-
-| Endpoint                                           | Method   | Primary Data Types                                   | Purpose                                                                                                   |
-| -------------------------------------------------- | -------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `/v1/domains`                                      | `POST`   | `DomainCreateRequest`, `Domain`                      | Create a delegated domain with namespace ownership, trusted service bindings, and inherited restrictions. |
-| `/v1/domains/{domain}`                             | `GET`    | `Domain`                                             | Retrieve domain metadata, delegation chain, restrictions, and trusted service configuration.              |
-| `/v1/domains/{domain}`                             | `PATCH`  | `DomainUpdateRequest`, `Domain`                      | Update mutable domain configuration such as restrictions, inheritance behavior, or status.                |
-| `/v1/domains/{domain}`                             | `DELETE` | `DeleteResult`                                       | Remove a domain and optionally revoke its delegated authority.                                            |
-| `/v1/domains/{domain}/children`                    | `GET`    | `Domain[]`                                           | List delegated subdomains beneath a domain.                                                               |
-| `/v1/domains/{domain}/effective-restrictions`      | `GET`    | `RestrictionSet`                                     | Return all inherited and local restrictions enforced for a domain.                                        |
-| `/v1/domains/{domain}/services`                    | `GET`    | `ServiceDefinition[]`                                | List services defined within a domain namespace.                                                          |
-| `/v1/services/{fqdn}`                              | `GET`    | `ServiceResolution`                                  | Resolve a service name to protocol, address, and owning domain metadata.                                  |
-| `/v1/domains/{domain}/policy`                      | `PUT`    | `PolicyUploadRequest`, `PolicyRevision`              | Upload or replace ZPL policy and associated configuration for a domain.                                   |
-| `/v1/domains/{domain}/policy`                      | `GET`    | `PolicyDocument`                                     | Retrieve the currently active policy and configuration for a domain.                                      |
-| `/v1/domains/{domain}/policy/revisions`            | `GET`    | `PolicyRevision[]`                                   | List historical policy revisions for a domain.                                                            |
-| `/v1/domains/{domain}/policy/revisions/{revision}` | `GET`    | `PolicyDocument`                                     | Retrieve a specific historical revision of a policy.                                                      |
-| `/v1/domains/{domain}/policy/rollback`             | `POST`   | `RollbackRequest`, `PolicyRevision`                  | Roll back the active policy to a previous revision.                                                       |
-| `/v1/domains/{domain}/compile`                     | `POST`   | `CompileRequest`, `CompileResult`                    | Test-compile policy against inherited restrictions and visible attributes without activation.             |
-| `/v1/domains/{domain}/install`                     | `POST`   | `InstallRequest`, `InstallResult`                    | Compile, validate, and activate a policy revision atomically.                                             |
-| `/v1/domains/{domain}/attributes/visible`          | `GET`    | `AttributeVisibility`                                | Return the attributes visible within the domain based on credentials and assertions.                      |
-| `/v1/users`                                        | `POST`   | `UserCreateRequest`, `UserRecord`                    | Create a Visa Service user and assign global or domain-scoped roles.                                      |
-| `/v1/users/{user_id}`                              | `GET`    | `UserRecord`                                         | Retrieve a user account, authentication provider details, and assigned roles.                             |
-| `/v1/users/{user_id}`                              | `PATCH`  | `UserUpdateRequest`, `UserRecord`                    | Modify user permissions, roles, or account status.                                                        |
-| `/v1/domains/{domain}/users`                       | `GET`    | `UserRecord[]`                                       | List users with permissions within a domain.                                                              |
-| `/v1/domains/{domain}/audit`                       | `GET`    | `DomainAuditReport`                                  | Return an auditable view of domain policy, restrictions, delegation lineage, and permissions.             |
-| `/v1/audit/evaluate`                               | `POST`   | `PolicyEvaluationRequest`, `PolicyEvaluationResult`  | Evaluate whether a source identity may access a destination service under current policy.                 |
-| `/v1/audit/trace`                                  | `POST`   | `PolicyTraceRequest`, `PolicyTraceResult`            | Return a detailed rule-by-rule explanation of policy evaluation and restriction matching.                 |
-
-
-## Definitions
+# Definitions
 
 The following terms are used throughout this document.
 
@@ -933,105 +862,4 @@ communication policy using visas, compliant flows, and ZPL rules.
 
 
 
-
-# TODO: ORPHANS - maybe use / maybe throw out
-
-## Triangle
-
-In addition to policy, ZPR incorporates reference data from trusted services,
-manages a namespace for services deployed on the network, and enforces authoring
-permissions for ZPL itself.  Each of these aspects has a delegation component
-which is managed outside of the ZPR ecosystem but supported by it.  In addition,
-to ensure a secure environment, all of these aspects of the network
-configuration must be auditable.
-
-The "Triangle of Auditability" diagram below illustrates that a complete ZPR
-environment involves three separately managed domains.
-
-![The Triangle of Auditability](triangle.png){height="3in"}
-
-
-## Delegation Hierarchies (MD)
-
-PR/ZPL relies $only$ on external systems for authentication, access control, and
-attributes.
-
-These systems support their own delegation mechanisms. For example,
-Active Directory (and most databases and applications) manage users, groups,
-etc. and who is allowed to create/read/edit/delete (CRED), and who is allowed to
-bestow and manage such authority to others.
-
-To use these existing access controls, ZPL uses authenticated credentials
-uniquely associated with each $domain$ to access trusted sources. Visa services
-never use their own credentials, but act on behalf of $domains$.
-
-Trusted sources use $domain$ credentials for access control, and tags from
-authenticated ZPR connections (composite user, app, machine, etc.) to fetch the
-attributes used by policies.
-
-(If ZPR used a superuser to access trusted sources, the onus of enforcing
-delegation and access control would fall on the Visa Services. This would be a
-huge potential security vulnerability for ZPR)
-
-
-
-### Issues that delegation needs to solve (MD)
-
-1. Who can create a service?
-2. Where is a service defined?
-3. What keeps services from being created/modified/deleted by an unauthorized party?
-4. How are services named?
-5. What constraints can be enforced for a service within the service namespace?
-6. Who can use a service?
-7. Who can write "Allow" policies?
-8. What is the scope of these policies?
-9. What order are the policies evaluated (priority)?
-10. Who can write "Never" policies?
-11. What is the scope of these policies?
-12. Who can read policies?
-13. How are the service definitions and access policies audited?
-
-
-
-### Other issues that are related to delegation (MD)
-
-1. How are services resolved?
-2. How dynamic is the resolution?
-3. Can service discovery purposely fail if attributes don't match?
-4. Is there a benefit to obfuscating IP addresses to prevent cross-user hacking attempts?
-
->>>The remainder of this paper focuses on __domains__, our delegation mechanism in
-the Reference Implementation. It describes how delegated policy is constrained,
-verified, and enforced, and how reference data from trusted services is used
-safely to adhere to existing hierarchical access controls.
-
->>>Policy delegation is the mechanism that allows a central authority to
-safely share control of network access policy with subordinate policy authors
-while still enforcing a coherent global security posture. As ZPR deployments
-grow in size and organizational complexity, delegation becomes necessary to
-distribute policy authoring without fragmenting control or weakening security
-guarantees.
-
-## Domains
-
-This RFC is focused on what we are calling _"domains"_.  It is oriented
-to the ZPR reference implementation but may become the general standard for ZPR.
-All other areas of delegation are outside of ZPR and managed within their existing
-systems.
-
-Definition:
-
->Domains are the unit of delegation for defining services and their policies.
->They consist of a delegator and a delegatee - different groups with different
->abilities.
->
->The delegator assigns a name space (think DNS), credentials, common definitions, Never Allow policies,
->and assertions to the domain. These are immutable and can't be eclipsed or
->overwritten.  Any trusted service used by policies in the domain use the associated credentials.
->
->The delegatee defines services and their policies. The actual service FQDNs
->start with service name and append the domain's name.
->
->One, and only one, domain can exist for a given name space. Delegators can only
->delegate a portion of a name space they control.
 
