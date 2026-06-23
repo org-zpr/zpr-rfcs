@@ -210,7 +210,6 @@ domain _to_ other services regardless of their domain. Note that a domain policy
 can never include `allow` statements that control access to services declared
 outside of the domain.
 
-(TODO: Probably need to talk a bit about CNAMEs here too.)
 
 
 # Nested Delegation
@@ -353,8 +352,6 @@ A visa is **denied** if:
 Otherwise a visa is **granted** if:
 
 > 1. The policy for domain `Ds` has a matching `allow` statement.
-
-( TODO: DOES THIS SEEM RIGHT? )
 
 
 
