@@ -6,6 +6,7 @@ This document defines terms used when discussing ZPR and its various components.
 
 | Term | Definition |
 |------|------------|
+| Actor | A user, device, or service with an authenticated identity participating in communication via ZPRnet. |
 | Adapter | Software that allows standard IP-based applications to connect to a ZPRnet through a secure docking session. |
 | Assertion | A declarative statement of policy intent in ZPL used to ensure permissions align with intended security goals and do not permit unintended communication. |
 | Attribute | A property of an identity (user, device, or service); may be a tag, a name/value pair, or a name/multi-value set. |
@@ -49,5 +50,4 @@ This document defines terms used when discussing ZPR and its various components.
 | ZPL | Zero-Trust Policy Language; a human-readable language used to define, audit, and enforce communication policies in ZPRnet, including permissions, assertions, and class definitions. |
 | ZPL Compiler | The component that checks consistency of permissions and assertions and generates enforcement rules. |
 | ZPR | Zero-Trust Packet Routing; a network architecture that enforces communication policies within the network. |
-| ZPR Endpoint | A user, device, or service with an authenticated identity participating in communication via ZPRnet. |
 | ZPRnet | A network or group of interconnected ZPR nodes that enforce communication policies using visas, compliant flows, and ZPL rules. |
