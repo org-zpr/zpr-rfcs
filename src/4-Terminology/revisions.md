@@ -7,3 +7,5 @@
 2.  Revision as of Jun 24, 2026
 
     a.  Updated "ZPR Endpoint" to "Actor"
+
+    b.  Removed a couple of non-terms
