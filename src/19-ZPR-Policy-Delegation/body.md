@@ -1,4 +1,4 @@
-# RFC-19 Policy Delegation
+# RFC-19 Policy Delegation for the ZPR Reference Implementation
 
 
 **Delegation** is the act of assigning authority, responsibility, and specific
@@ -32,6 +32,60 @@ administered using existing tools and organizational hierarchies.
 > **ZPR/ZPL does not directly provide authentication, reference data, or
 > delegation management. Instead, it relies on trusted sources. ZPR enforces
 > network policy using information obtained from those trusted sources.**
+
+
+# Definitions
+
+The following terms are used throughout this document.
+
+**Assertion**: A declarative ZPL statement of policy intent that is used to
+verify whether the provided policy correctly permits or denies communication.
+that should not be permitted.
+
+**Domain (Policy Domain)**: The unit of policy delegation in the ZPR reference
+implementation. A domain combines a service namespace, credentials for trusted
+services, restrictions on permitted policy, and a ZPL policy. A domain is
+restricted to owns service names under its DNS root, and policy in that domain
+can define and allow access only to services in that domain.
+
+**Domain envelope**: The portion of a domain controlled by the delegator. The
+envelope includes the namespace, trusted service bindings, credentials,
+restrictions, and delegation metadata that constrain the domain contents.
+
+**Identity**: A key used to look up attributes associated with an endpoint,
+user, device, or service. ZPR uses authenticated identities to retrieve
+attributes and evaluate policy.
+
+**Namespace**: A context in which names are defined. It must be hierarchical. In
+this document, a delegated namespace is usually represented as a DNS suffix , such
+as `.marketing.corp.com`, under which a domain may define service names.
+
+**Root domain**: The top-level domain in a delegated ZPR deployment. The root
+domain owns the base namespace and may delegate portions of that namespace to
+child domains.
+
+**Service**: An application that sends or receives packets and has a name, an
+identity and attributes. In delegated policy, services are the protected objects
+defined inside a domain namespace.
+
+**Service discovery**: The process of resolving a service name into the protocol
+details and network address information needed to reach the service. In this
+document, service discovery is treated as a policy-controlled operation.
+
+**Service name**: A name used to locate a service. In delegated domains, service
+names are interpreted within the domain namespace and resolved to fully
+qualified DNS names under the domain’s  DNS suffix.
+
+**Trusted service**: A trusted source of authentication or attributes. These are
+declared or referenced in ZPL and configured and accessed with credentials
+through a  policy domain.
+
+**ZPL**: Zero-trust Policy Language. ZPL is the human-readable language used to
+define, audit, and enforce communication policy in a ZPRnet.
+
+**ZPRnet**: A ZPR network or group of interconnected ZPR nodes that enforce
+communication policy using visas, compliant flows, and ZPL rules.
+
 
 
 ## Problem Space
@@ -107,13 +161,13 @@ Implementation Visa Service:
 3. Policy domains use their own credentials to interact with trusted services.
 
    To fit in with access control on existing trusted services (eg, attribute
-   databases, LDAP, etc) each domain is given credentials that permit it
-   domain-appropriate trusted service access.
+   databases, LDAP, etc) each domain is given credentials by the delegator that
+   permit it domain-appropriate trusted service access.
 
-4. Within a domain, policy is subject to restrictions set by whomever configured
-   the domain.
+4. Within a domain, policy is subject to restrictions set by whoever configured
+   the domain -- its **delegator**.
 
-   When a policy domain is created, the creator can use a subset of ZPL and
+   When a policy domain is created, the delegator can use a subset of ZPL and
    assertions to set restrictions on the kinds of policy rules that can be used
    in the domain. If a domain is part of a chain of delegated domains, it is
    subject to all the restrictions in the chain.
@@ -142,11 +196,10 @@ final item, the policy, can be thought of as the "contents" of the "envelope".
 The "contents", written in ZPL by the _delegatee_, define services and their
 associated policies.
 
-When users access services in ZPRnet they do so using DNS names. Each domain's
-namespace is a DNS root in which all the defined services can be found and so
-sets the services place in DNS. Attributes from trusted services match services
-to their providers, and at runtime a request to a service is matched by address,
-protocol and port.
+Each domain's namespace is defined by a DNS suffix (a partial name such as
+.marketing.corp.com) under which all of its services can be found. Attributes
+from trusted services match services to their providers, and at runtime a
+request to a service is matched by address, protocol and port.
 
 ZPL (policy) always exists in a domain. A simple ZPRnet installation has a
 single, unnamed domain; explicit domain naming is only required when you want to
@@ -158,7 +211,8 @@ namespace. For example:
 
 > `Allow interns to access lifecycle:test services`
 
-In the above `services` means "services in this domain".
+In the above `services` means "services in this domain" such as
+"webservice.marketing.corp.com".
 
 ## Configuring a domain
 
@@ -173,17 +227,19 @@ the marketing department is free to define services with names like
 finance department can define services with names like
 `database.finance.corp.com`, etc.
 
-Next the administrator decides how each domain will access the reference
-data available on the network. Reference data is accessed through _trusted
-services_, for example an LDAP service. Access to those services requires
-credentials which must be specified for each domain.  Attributes available to a
-user with a finance role may be different from those available to a user with a
-marketing role.  This is an organizational IT decision not managed by ZPR, but
-the support for domain credentials means ZPR adheres to organizational policies.
+Next the administrator decides how each domain will access the reference data
+available on the network. Reference data, such as attributes, is accessed
+through _trusted services_, for example an LDAP service. Access to those
+services requires credentials which must be specified for each domain.
+Attributes available to a user with a finance role may be different from those
+available to a user with a marketing role.  This is an organizational IT
+decision not managed by ZPR, but the support for domain credentials means ZPR
+adheres to organizational policies.
 
-Finally the administrator adds restrictions to each domain. The restrictions
-are written in a subset of ZPL: only `never allow` statements and assertions are
-permitted.  As an example, the administrator may include a statement such as:
+Finally the administrator adds restrictions to each delegated domain. The
+restrictions are written in a subset of ZPL: only `never allow` statements and
+assertions are permitted.  As an example, the administrator may include a
+statement such as:
 
 > `Never allow role:finance services to access internet-gateway services.`
 
@@ -291,9 +347,9 @@ network policy context.
 
 # Visa Service Behavior
 
-In a non delegated environment, a visa service runs a single policy in the
+In a non delegated environment, a visa service processes a single policy in the
 global domain, and makes decisions based purely on that policy. In a delegated
-environment, the visa service runs many domains at once.
+environment, the visa service processes many domains at once.
 
 A crucial invariant is that `never allow` rules and assertions are enforced
 everywhere in the delegation hierarchy.  When traffic is evaluated, the visa
@@ -308,7 +364,7 @@ global credentials when talking to the authentication service because identity
 verification is a shared concern, not scoped per domain.
 
 To grant a visa for a specific request, the visa service first identifies the
-service by comparing its protocol details (address, protocol, port). If the
+service by verifying its protocol details (address, protocol, port). If the
 service is bound to a domain, the visa service checks for any `never allow`
 statements in the domain policy or its restrictions. Then it looks for any
 `never allow` statements in all parent policy restrictions.
@@ -320,7 +376,7 @@ as written in ZPL). If an `allow` is found a visa is granted.
 ## Evaluation Process
 
 Since we allow a domain policy to restrict what services can do when acting as
-clients, the visa service has two general types of access requests to asses as
+clients, the visa service has two general types of access requests to assess as
 the following examples illustrate.
 
 Example 1: _A client (not a service) attempts to access a service in domain `Ds`._
@@ -360,9 +416,9 @@ Otherwise a visa is **granted** if:
 
 To summarize how domains work:
 
-- A domain owns service names under its DNS root.
+- A domain owns service names under its DNS suffix.
 - A domain policy may define and allow access only to services in that domain.
-- Ancestor restrictions always constrain descendants.
+- Delegator restrictions always constrain delegatee policy.
 - Policy rules in a domain only apply to that domain.
 - Restrictions compile/evaluate with the delegator’s authority, not the delegatee’s.
 - Attribute visibility is determined by domain credentials and may be narrowed by assertions.
@@ -800,61 +856,6 @@ compilation and incorporates all the restrictions applied through delegation.
 Note that the visa service is not configured with the trusted service
 credentials directly -- those are provided to the domain administrators out of
 band and submitted with their policy configuration.
-
-
-
-# Definitions
-
-The following terms are used throughout this document.
-
-**Assertion**: A declarative ZPL statement of policy intent that is used to
-check whether policy permits communication that should not be permitted.
-
-**Domain (Policy Domain)**: The unit of policy delegation in the ZPR reference
-implementation. A domain combines a service namespace, credentials for trusted
-services, restrictions on permitted policy, and a ZPL policy. A domain owns
-service names under its DNS root, and policy in that domain can define and allow
-access only to services in that domain.
-
-**Domain envelope**: The portion of a domain controlled by the delegator. The
-envelope includes the namespace, trusted service bindings, credentials,
-restrictions, and delegation metadata that constrain the domain contents.
-
-**Identity**: A key used to look up attributes associated with an endpoint,
-user, device, or service. ZPR uses authenticated identities to retrieve
-attributes and evaluate policy.
-
-**Namespace**: A context in which names are defined. It must be hierarchical. In
-this document, a delegated namespace is usually represented as a DNS root, such
-as `marketing.corp.com`, under which a domain may define service names.
-
-**Root domain**: The top-level domain in a delegated ZPR deployment. The root
-domain owns the base namespace and may delegate portions of that namespace to
-child domains.
-
-**Service**: An application that sends or receives packets and has a name, an
-identity and attributes. In delegated policy, services are the protected objects
-defined inside a domain namespace.
-
-**Service discovery**: The process of resolving a service name into the protocol
-details and network address information needed to reach the service. In this
-document, service discovery is treated as a policy-controlled operation.
-
-**Service name**: A name used to locate a service. In delegated domains, service
-names are interpreted within the domain namespace and resolved to fully
-qualified DNS names under the domain DNS root.
-
-**Trusted service**: A trusted source of authentication or attributes. These are
-declared or referenced in ZPL and configured with credentials through a  policy
-domain.
-
-**ZPL**: Zero-trust Policy Language. ZPL is the human-readable language used to
-define, audit, and enforce communication policy in a ZPRnet.
-
-**ZPRnet**: A ZPR network or group of interconnected ZPR nodes that enforce
-communication policy using visas, compliant flows, and ZPL rules.
-
-
 
 
 
