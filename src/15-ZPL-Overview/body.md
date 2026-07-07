@@ -93,6 +93,15 @@ on them. There is always at least one service associated with a flow. Services h
 identities and associated attributes, and permissions can depend on attributes of a
 service involved in the flow.
 
+
+## What is a Link?
+
+A link is a connection between two network nodes in a ZPRnet. Links may have
+identities and associated attributes, such as location, provider, security
+level, or cost tier. Link information is specified in the configuration
+description. Policy statements may constrain the links over which communication
+is allowed or denied.
+
 ## What is ZPL's Concept of Identity?
 
 Every device, user or service in a ZPR network (ZPRnet) has an identity that is
@@ -272,16 +281,19 @@ access to the referenced entity's attributes.
 ## Classes
 
 ZPL comes with predefined classes of entities that have identity and attributes:
-`devices`, `users` and `services`, and a predefined sub-class of `devices` called `servers`, that
-has a set-valued attribute called `services`. Additional classes can be defined that
-inherit their attributes from a previously defined class, forming a strict hierarchy.
-The class definitions can also specify additional attributes for members of the class.
-The definition can also restrict the allowable values of the attributes that it
-inherits. For example, a subclass of `devices` called `mobile-devices` can be defined with
-an attribute named `device-type`. Another class called `mobile-phones` can be defined as a
-subclass of `mobile-devices` with an attribute named `phone-number` and a required value of
-"phone" for the `device-type` attribute. Permissions that are given to `mobile-phones` will
-be restricted to mobile devices that have this attribute value.
+`devices`, `users` and `services`, and a predefined sub-class of `devices`
+called `servers`, that has a set-valued attribute called `services`. ZPL
+includes a predefined class `link` with the plural synonym `links`. Additional
+classes can be defined that inherit their attributes from a previously defined
+class, forming a strict hierarchy. The class definitions can also specify
+additional attributes for members of the class. The definition can also restrict
+the allowable values of the attributes that it inherits. For example, a subclass
+of `devices` called `mobile-devices` can be defined with an attribute named
+`device-type`. Another class called `mobile-phones` can be defined as a subclass
+of `mobile-devices` with an attribute named `phone-number` and a required value
+of "phone" for the `device-type` attribute. Permissions that are given to
+`mobile-phones` will be restricted to mobile devices that have this attribute
+value.
 
 To make policy easier to read, the names of classes are synonymous with their standard
 plurals (adding S or ES). For example, `mobile-phone` and `mobile-phones` can be used
@@ -340,7 +352,7 @@ the devices they are using, it could be written like this:
 This statement allows any device to access the service, as long as the user has the
 required attributes.
 
-When the `on` keyword appears before the `to access...` phrase then it describes device
+When the keyword `on` appears before the `to access...` phrase then it describes device
 attributes of the accessor. When it appears after `to access` and after a service clause
 it describes device attributes of that which is being accessed. For example:
 
@@ -381,6 +393,17 @@ service, like this:
 
 In other words, both the load balancer and the server devices must be separately
 permissioned.
+
+An `allow` statement may include an `over` clause that constrains the links used
+by the communication path.  Examples:
+
+> `Allow sales employees to access customer databases over secure links.`
+
+> `Allow finance users to access payroll-services over location:usa links.`
+
+A statement with an `over` clause applies only if there exists an allowed
+communications path whose links all satisfy the specified link description.
+
 
 ## Statements that Define New Classes
 
@@ -438,6 +461,8 @@ should not be allowed. A `Never` statement looks like an allow statement with th
 
 > `Never allow role:intern users to access classified services.`
 
+> `Never allow regulated services to access backup-services over foreign links.`
+
 (Note: the keyword `Never` is used instead of `Deny` because it is consistent with English
 grammar, and because `Deny` has different meanings in other policy languages.)
 
@@ -487,3 +512,5 @@ ZPL policies can also be used to create reports. For example, it is possible to 
 the names of all users that have access to a given resource, or all services that can be
 accessed from the Internet gateway. These reports may be helpful in the approval or
 auditing of policies.
+
+
