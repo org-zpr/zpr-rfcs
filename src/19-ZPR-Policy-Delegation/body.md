@@ -172,11 +172,11 @@ Implementation Visa Service:
 4. Within a domain, policy is subject to restrictions set by whoever configured
    the domain -- its **delegator**.
 
-   When a policy domain is created, the delegator can use a subset of ZPL and
-   assertions to set restrictions on the kinds of policy rules that can be used
-   in the domain. The restrictions set on a domain cannot be changed from within
-   the domain. If a domain is part of a hierarchy of delegated domains, it is
-   subject to all the restrictions imposed by every enclosing domain.
+   When a policy domain is created, its creator can use a subset of ZPL and
+   assertions to restrict the kinds of policy rules that may be used within the
+   domain. These restrictions cannot be changed from within the domain. A domain
+   in a hierarchy of delegated domains is subject to the restrictions imposed by
+   every domain above it in the hierarchy.
 
 5. The Visa Service handles compilation of ZPL.
 
@@ -202,18 +202,10 @@ final item, the policy, can be thought of as the "contents" of the "envelope".
 The "contents", written in ZPL by the _delegatee_, declares services and their
 associated policies.
 
-<<<<<<< HEAD
 Each domain's namespace is defined by a DNS suffix (a partial name such as
 .marketing.corp.com) under which all of its services can be found. Attributes
 from trusted services match services to their providers, and at runtime a
 request to a service is matched by address, protocol and port.
-=======
-When users access services in ZPRnet they do so using DNS names. Each domain's
-namespace is a DNS root in which all the declared services can be found and so
-sets the services place in DNS. Attributes from trusted services match services
-to their providers, and at runtime a request to a service is matched by address,
-protocol and port.
->>>>>>> ec5bb03 (tighten based on frank comments)
 
 ZPL (policy) always exists in a domain. A simple ZPRnet installation has a
 single, unnamed domain; explicit domain naming is only required when you want to
@@ -298,45 +290,43 @@ to the domain it is in.
 
 # Delegation Attributes
 
-Attributes must be carefully controlled in order to keep policy in a domain from
-matching things it should not.  Within a domain, attributes can be controlled
-through careful configuration of access credentials and/or through the use of
-assertions in the domain restriction.
+Attributes must be carefully controlled to prevent policy within a domain from
+matching actors or resources that it should not match. Within a domain, access
+to attributes can be controlled through the careful configuration of access
+credentials, through assertions included in the domain restrictions, or through
+both mechanisms.
 
-Recall that in ZPL the only way to bind a service to a providing identity is
-through attributes. Attribute names may be system wide so a domain administrator
-could theoretically reference attributes outside of their authority unless care
-is taken. To prevent the binding of services that lie outside of the
-administrative control of the domain administrator you must restrict the
-attributes in use.
+A service declared within a domain may be bound only to an actor whose
+attributes identify it as a member of that domain. The trusted service that
+provides the domain attribute, and the site-specific name of that attribute, are
+defined in the ZPRnet configuration. Every actor that provides a service in the
+ZPRnet must be assigned a domain attribute before it may provide that service.
 
-For example, it is perfectly acceptable for the finance administrator to write a
-ZPL statement to permit marketing users to access some financial service like
-this:
+When a service is declared, the system checks the domain attribute
+automatically. The domain attribute does not need to be included manually in the
+service declaration. If it is included, it may refer only to the current domain.
 
-> `Allow dept:marketing users to access finance-website-01.`.
+For example, the following declaration would not be permitted within the `finance`
+domain:
 
-But, assuming that all the marketing services have an attribute like
-`marketing-service-role`, this should not be allowed in the finance domain:
+> `Declare shadow-service as a service with port:443 provided by domain:marketing.`
 
-> `Declare shadow-service as a service with marketing-service-role:dbserver.`
-> `Allow dept:finance users to access shadow-service.`
+This declaration is not permitted because the finance domain may declare
+services only on actors that belong to the finance domain. The declaration
+attempts to bind a service to an actor in the marketing domain.
 
-In the above example the finance admin is trying to bind a marketing database
-service to the finance domain. The namespace controls ensure that the service
-will be found under the name `shadow-service.finance.corp.com`, but if the only
-provider constraint is based on `marketing-service-role` then the finance ZPR
-administrator has essentially created an alias to the marketing database.
-However if the finance domain credentials used to access the attribute service
-are configured to never return the `marketing-service-role` attribute then the
-ZPL will never match anything, and would cause a compilation error.
+The set of attributes returned for an actor may depend on the credentials used
+to access the attribute service. For example, policies in the `marketing` domain
+may use attribute names that are not available to policy writers in the `finance`
+domain.
 
-Using a domain specific attribute tied to an access credential as illustrated
-above is best practice. However, you can also add assertions to the domain
-restriction that would prevent the delegated administrator from making use of
-specific attributes:
+Using domain-specific attributes whose availability is controlled by access
+credentials is the preferred practice. Assertions may also be added to the
+domain restrictions to prevent a delegated administrator from using specific
+attributes:
 
 > `Assert that no service uses the attribute marketing-service-role.`
+
 
 
 # Compiler Responsibilities
@@ -430,15 +420,9 @@ Otherwise a visa is **granted** if:
 
 To summarize how domains work:
 
-<<<<<<< HEAD
 - A domain owns service names under its DNS suffix.
 - A domain policy may define and allow access only to services in that domain.
 - Delegator restrictions always constrain delegatee policy.
-=======
-- A domain owns service names under its DNS root.
-- A domain policy may declare and allow access only to services in that domain.
-- Ancestor restrictions always constrain descendants.
->>>>>>> ec5bb03 (tighten based on frank comments)
 - Policy rules in a domain only apply to that domain.
 - Restrictions compile/evaluate with the delegator’s authority, not the delegatee’s.
 - Attribute visibility is determined by domain credentials and may be narrowed by assertions.
