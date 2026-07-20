@@ -33,6 +33,10 @@ administered using existing tools and organizational hierarchies.
 > delegation management. Instead, it relies on trusted sources. ZPR enforces
 > network policy using information obtained from those trusted sources.**
 
+In addition to allowing policy to be compartmentalized along organizational
+lines, delegation makes a large policy easier to manage because each
+author is responsible for only a small portion closely related to their
+infrastructure.
 
 # Definitions
 
@@ -97,7 +101,7 @@ service definition, policy management, and service discovery.
 
 Services are the objects being delegated and protected. A delegation model must:
 
-* Define services within delegated administrative namespaces.
+* Declare services within delegated administrative namespaces.
 * Prevent service name collisions between administrative domains.
 * Prevent unauthorized parties from claiming or redefining existing services.
 * Ensure that access policy remains tightly coupled to the service definition.
@@ -118,10 +122,11 @@ Policies express delegated authority over services. A delegation model must:
   disclosure.
 * Define a deterministic priority model when multiple delegated policies apply.
 
-### Service Discovery
+### Service Definition
 
-Services are typically located by name rather than by address. A delegation
-model must therefore integrate with existing naming and discovery systems.
+Services are given names in policy and are typically located by their name
+rather than by address. A delegation model must therefore integrate with
+existing naming and discovery systems.
 
 A delegation model should:
 
@@ -169,8 +174,9 @@ Implementation Visa Service:
 
    When a policy domain is created, the delegator can use a subset of ZPL and
    assertions to set restrictions on the kinds of policy rules that can be used
-   in the domain. If a domain is part of a chain of delegated domains, it is
-   subject to all the restrictions in the chain.
+   in the domain. The restrictions set on a domain cannot be changed from within
+   the domain. If a domain is part of a hierarchy of delegated domains, it is
+   subject to all the restrictions imposed by every enclosing domain.
 
 5. The Visa Service handles compilation of ZPL.
 
@@ -193,20 +199,28 @@ policy.  A domain incorporates:
 The first three items in a domain are managed by the domain creator (aka
 _delegator_), and we can think of these as comprising the domain "envelope". The
 final item, the policy, can be thought of as the "contents" of the "envelope".
-The "contents", written in ZPL by the _delegatee_, define services and their
+The "contents", written in ZPL by the _delegatee_, declares services and their
 associated policies.
 
+<<<<<<< HEAD
 Each domain's namespace is defined by a DNS suffix (a partial name such as
 .marketing.corp.com) under which all of its services can be found. Attributes
 from trusted services match services to their providers, and at runtime a
 request to a service is matched by address, protocol and port.
+=======
+When users access services in ZPRnet they do so using DNS names. Each domain's
+namespace is a DNS root in which all the declared services can be found and so
+sets the services place in DNS. Attributes from trusted services match services
+to their providers, and at runtime a request to a service is matched by address,
+protocol and port.
+>>>>>>> ec5bb03 (tighten based on frank comments)
 
 ZPL (policy) always exists in a domain. A simple ZPRnet installation has a
 single, unnamed domain; explicit domain naming is only required when you want to
 use delegation.
 
 Within a domain, policy statements can only reference attributes accessible via
-the domain's credentials, and can only affect services defined within the domain's
+the domain's credentials, and can only affect services declared within the domain's
 namespace. For example:
 
 > `Allow interns to access lifecycle:test services`
@@ -222,9 +236,9 @@ we rely on DNS.  For example, if the root namespace is "corp.com" the
 administrator may split the namespace into "marketing.corp.com" and
 "finance.corp.com" with the intention of delegating those service areas to
 separate groups within the organization.  What this means in practice is that
-the marketing department is free to define services with names like
+the marketing department is free to declare services with names like
 `database.marketing.corp.com` or `addserver.marketing.corp.com`, while the
-finance department can define services with names like
+finance department can declare services with names like
 `database.finance.corp.com`, etc.
 
 Next the administrator decides how each domain will access the reference data
@@ -250,7 +264,7 @@ Note that the restrictions on a domain run under the credential of the domain
 creator -- not the delegatee.
 
 The key consequence of domain delegation is that the delegator always retains
-the ability to define restrictions for a delegated namespace. A delegatee cannot
+the ability to set restrictions for a delegated namespace. A delegatee cannot
 set policy for anything outside the namespace defined by its delegator.
 
 Since domains set service namespaces, and services have names, it is best
@@ -305,7 +319,7 @@ this:
 But, assuming that all the marketing services have an attribute like
 `marketing-service-role`, this should not be allowed in the finance domain:
 
-> `Define shadow-service as a service with marketing-service-role:dbserver.`
+> `Declare shadow-service as a service with marketing-service-role:dbserver.`
 > `Allow dept:finance users to access shadow-service.`
 
 In the above example the finance admin is trying to bind a marketing database
@@ -416,9 +430,15 @@ Otherwise a visa is **granted** if:
 
 To summarize how domains work:
 
+<<<<<<< HEAD
 - A domain owns service names under its DNS suffix.
 - A domain policy may define and allow access only to services in that domain.
 - Delegator restrictions always constrain delegatee policy.
+=======
+- A domain owns service names under its DNS root.
+- A domain policy may declare and allow access only to services in that domain.
+- Ancestor restrictions always constrain descendants.
+>>>>>>> ec5bb03 (tighten based on frank comments)
 - Policy rules in a domain only apply to that domain.
 - Restrictions compile/evaluate with the delegator’s authority, not the delegatee’s.
 - Attribute visibility is determined by domain credentials and may be narrowed by assertions.
