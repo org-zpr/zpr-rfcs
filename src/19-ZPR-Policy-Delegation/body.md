@@ -306,8 +306,9 @@ When a service is declared, the system checks the domain attribute
 automatically. The domain attribute does not need to be included manually in the
 service declaration. If it is included, it may refer only to the current domain.
 
-For example, the following declaration would not be permitted within the `finance`
-domain:
+For example, if the system is configured to use a domain attribute named
+`domain`, then the following declaration would not be permitted within the
+`finance` domain:
 
 > `Declare shadow-service as a service with port:443 provided by domain:marketing.`
 
@@ -603,13 +604,18 @@ declare ldap-svc as an AttributeService
     device.apr.adapter.cn:"ldap.foo".
 ```
 
-And here is the root domain. The only difference is that we alter the `cname`
-mapping since the marketing sites will now be in a new domain.
+And here is the root domain. The only differences are that we alter the `cname`
+mapping since the marketing sites will now be in a new domain, and we add the
+`domain_attribute` configuration section:
 
 ```json
 {
   "parent_domain":null,
   "domain":"corp.com",
+  "domain_attribute": {
+    "name": "zpr_domain",
+    "provider": "okta_auth"
+  },
   "validation_services":[
     {
       "service_id": "okta_auth",

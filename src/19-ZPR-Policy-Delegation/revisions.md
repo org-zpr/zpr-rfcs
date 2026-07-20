@@ -1,12 +1,16 @@
 # Revision History
 
-1. Jan 26, 2026
+1. Jun 27, 2026
 
-2. May 13, 2026
+   a. Initial version.
 
-   a. Introduce "realm" concept.
+2. Jul 20, 2026
 
-   b. Introduce service namespace and ZPR control of DNS.
+   a. Slightly expanded 1.1, "Why Delegation?"
+
+   b. Rename 1.2.3, "Service Discovery" to "Service Definition".
+
+   c. Rewrote section 3, "Delegation Attributes".
 
 3. Jun 27, 2026
 
