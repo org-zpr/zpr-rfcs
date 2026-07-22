@@ -169,7 +169,7 @@ produce the appropriate enforcement rules for each part of the network.
 # ZPL Policy
 
 A ZPL policy description is a set of statements, each beginning on a new line
-and terminated by a period followed either by a newline or the end of the
+and terminated by a period followed by either a newline or the end of the
 file. The order of the statements does not matter to the compiler. A statement
 may contain keywords, names, attributes, whitespace characters and punctuation
 marks. Extra whitespace characters are ignored.
