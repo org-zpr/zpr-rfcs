@@ -1,6 +1,3 @@
-# RFC-19 Policy Delegation for the ZPR Reference Implementation
-
-
 **Delegation** is the act of assigning authority, responsibility, and specific
 tasks to another person or group, typically with defined constraints. This
 document briefly introduces the problems that delegation solves, and then
@@ -290,21 +287,28 @@ to the domain it is in.
 
 # Delegation Attributes
 
-Attributes must be carefully controlled to prevent policy within a domain from
-matching actors or resources that it should not match. Within a domain, access
-to attributes can be controlled through the careful configuration of access
-credentials, through assertions included in the domain restrictions, or through
-both mechanisms.
 
-A service declared within a domain may be bound only to an actor whose
-attributes identify it as a member of that domain. The trusted service that
-provides the domain attribute, and the site-specific name of that attribute, are
-defined in the ZPRnet configuration. Every actor that provides a service in the
-ZPRnet must be assigned a domain attribute before it may provide that service.
+Attributes must be carefully controlled to prevent policy defined within a
+domain from matching actors that it should not match. Within a domain, access to
+attributes can be controlled through careful configuration of access
+credentials, through assertions in the domain restrictions, or through both
+mechanisms.
 
-When a service is declared, the system checks the domain attribute
-automatically. The domain attribute does not need to be included manually in the
-service declaration. If it is included, it may refer only to the current domain.
+A service declared within a domain may be bound only to an actor that is
+permitted to provide it. This permission is determined from the attributes
+specified in the service declaration together with the actor's _domain attribute_,
+which must identify the domain in which the service is declared. The
+trusted service that supplies the domain attribute, and the site-specific name
+of that attribute, are defined in the ZPRnet configuration. Every actor that
+provides a service in the ZPRnet must have the appropriate domain attribute
+before it may provide services in that domain.
+
+When a service is declared, the system automatically includes and checks the
+required domain attribute. The domain attribute therefore does not need to be
+written explicitly in the service declaration. If it is written explicitly, it
+may refer only to the current domain and must be consistent with the
+automatically applied requirement.
+
 
 For example, if the system is configured to use a domain attribute named
 `domain`, then the following declaration would not be permitted within the
@@ -312,7 +316,7 @@ For example, if the system is configured to use a domain attribute named
 
 > `Declare shadow-service as a service with port:443 provided by domain:marketing.`
 
-This declaration is not permitted because the finance domain may declare
+The declaration above is not permitted because the finance domain may declare
 services only on actors that belong to the finance domain. The declaration
 attempts to bind a service to an actor in the marketing domain.
 
@@ -322,9 +326,9 @@ may use attribute names that are not available to policy writers in the `finance
 domain.
 
 Using domain-specific attributes whose availability is controlled by access
-credentials is the preferred practice. Assertions may also be added to the
-domain restrictions to prevent a delegated administrator from using specific
-attributes:
+credentials is the preferred method to restrict the set of attributes used in a
+policy. Assertions may also be added to the domain restrictions to prevent a
+delegated administrator from using specific attributes:
 
 > `Assert that no service uses the attribute marketing-service-role.`
 
