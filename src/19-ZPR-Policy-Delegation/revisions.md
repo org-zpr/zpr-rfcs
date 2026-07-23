@@ -1,18 +1,10 @@
 # Revision History
 
-1. Jun 27, 2026
+1. Jun 9, 2026
 
    a. Initial version.
 
-2. Jul 20, 2026
-
-   a. Slightly expanded 1.1, "Why Delegation?"
-
-   b. Rename 1.2.3, "Service Discovery" to "Service Definition".
-
-   c. Rewrote section 3, "Delegation Attributes".
-
-3. Jun 27, 2026
+2. Jun 27, 2026
 
    a. Reframe as an RFC for the Reference Implementation.
 
@@ -28,3 +20,12 @@
    e. Add a worked example decomposing a monolithic policy into root,
       marketing, and accounting domains.
 
+3. Jul 20, 2026
+
+   a. Slightly expanded 1.1, "Why Delegation?"
+
+   b. Rename 1.2.3, "Service Discovery" to "Service Definition".
+
+   c. Rewrote section 3, "Delegation Attributes" and patched up example.
+
+   d. Consistently use "declare" for services.
